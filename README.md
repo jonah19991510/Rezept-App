@@ -70,12 +70,24 @@ Einladungen über die Admin-Seite funktionieren trotzdem, weil sie mit dem Secre
 - **Site URL:** `http://localhost:3000` (nach dem Deployment auf deine Vercel-Adresse ändern)
 - **Redirect URLs:** `http://localhost:3000/**` hinzufügen (später zusätzlich `https://DEINE-APP.vercel.app/**`)
 
-### 4. E-Mail-Vorlagen anpassen
+### 4. E-Mail-Vorlagen (nichts zu tun)
 
-**Authentication → Emails → Templates.** Die Links in den Mails müssen auf unsere Seite `/auth/confirm`
-zeigen. Ersetze in diesen drei Vorlagen jeweils den Inhalt (Betreff und Text darfst du frei anpassen):
+Die App funktioniert mit den **Standard-Vorlagen** von Supabase. Du musst dort nichts ändern. Wichtig
+ist nur, dass Site URL und Redirect URLs aus Schritt 3 stimmen, denn dorthin führen die Links in den Mails.
 
-**Invite user** – Betreff: `Du bist zum Rezeptbuch eingeladen`
+Die Standard-Mails sind auf Englisch („You have been invited“). Solange Supabase den eingebauten
+Mailversand nutzt, lassen sich die Vorlagen im Dashboard nicht bearbeiten (so war es bei uns). Mit einem eigenen SMTP-Dienst
+(steht ohnehin auf der Checkliste in [DATENVERARBEITUNG.md](DATENVERARBEITUNG.md)) geht das. Dann lohnen sich
+deutsche Vorlagen mit diesen Links, die zusätzlich vor Link-Scannern in Mailprogrammen schützen
+(die App löst sie erst nach einem Klick auf einen Knopf ein):
+
+| Vorlage | Link |
+|---|---|
+| Invite user | `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite` |
+| Reset Password | `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery` |
+| Confirm signup | `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email` |
+
+Beispiel für „Invite user“ (Betreff: `Du bist zum Rezeptbuch eingeladen`):
 
 ```html
 <h2>Du bist eingeladen!</h2>
@@ -83,25 +95,6 @@ zeigen. Ersetze in diesen drei Vorlagen jeweils den Inhalt (Betreff und Text dar
 <p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite">Einladung annehmen</a></p>
 <p>Über den Link legst du deinen Anzeigenamen und dein Passwort fest.</p>
 ```
-
-**Reset Password** – Betreff: `Neues Passwort für dein Rezeptbuch`
-
-```html
-<h2>Passwort zurücksetzen</h2>
-<p>Klicke auf den Link, um ein neues Passwort festzulegen:</p>
-<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery">Neues Passwort festlegen</a></p>
-<p>Wenn du das nicht angefordert hast, kannst du diese Mail ignorieren.</p>
-```
-
-**Confirm signup** (nur relevant bei `SIGNUP_MODE=open`) – Betreff: `Bitte bestätige deine E-Mail`
-
-```html
-<h2>Fast geschafft</h2>
-<p><a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email">E-Mail-Adresse bestätigen</a></p>
-```
-
-Warum? Die App löst den Link erst nach einem Klick auf einen Knopf ein. So können Link-Scanner in
-Mailprogrammen (z. B. Outlook) den Einmal-Link nicht vorab „verbrauchen“.
 
 > Der Standard-Mailversand von Supabase ist stark begrenzt (nur wenige Mails pro Stunde) und
 > eigentlich für Tests gedacht. Für die Familie reicht das meist; bei Problemen siehe
@@ -112,8 +105,8 @@ Mailprogrammen (z. B. Outlook) den Einmal-Link nicht vorab „verbrauchen“.
 Weil die freie Registrierung aus ist, legst du den ersten Account im Dashboard an:
 
 **Authentication → Users → Add user → Send invitation**, deine E-Mail-Adresse eintragen.
-Dann `npm run dev` starten, den Link in der Mail öffnen, „Einladung annehmen“ antippen und Anzeigenamen
-und Passwort festlegen.
+Dann `npm run dev` starten und den Link in der Mail („Accept the invite“) öffnen. Die App meldet dich an
+und führt dich zur Seite, auf der du Anzeigenamen und Passwort festlegst.
 
 (Alternative ohne Mail: **Add user → Create new user**, E-Mail und Passwort eintragen, „Auto Confirm User“
 anhaken. Dann direkt unter <http://localhost:3000/login> anmelden.)

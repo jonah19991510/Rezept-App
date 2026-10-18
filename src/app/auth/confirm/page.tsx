@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Brand } from "@/components/layout/brand";
 import { AuthCard } from "@/components/layout/auth-card";
 import { confirmSchema } from "@/lib/validation/auth";
+import { ConfirmFallback } from "./confirm-fallback";
 import { ConfirmForm } from "./confirm-form";
 
 export const metadata: Metadata = { title: "Bestätigen" };
@@ -37,12 +38,7 @@ export default async function ConfirmPage({ searchParams }: PageProps<"/auth/con
             />
           </AuthCard>
         ) : (
-          <AuthCard
-            title="Link unvollständig"
-            description="Dieser Link ist nicht vollständig. Öffne ihn bitte direkt aus der E-Mail oder fordere einen neuen an."
-          >
-            <p className="text-sm text-muted-foreground">Du kannst dieses Fenster schließen.</p>
-          </AuthCard>
+          <ConfirmFallback />
         )}
       </main>
     </div>

@@ -84,7 +84,7 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
       der Standardversand ist stark limitiert
 - [ ] `SIGNUP_MODE=open` in Vercel gesetzt und neu deployt
 - [ ] Freie Registrierung in Supabase wieder aktiviert (Authentication → Sign In / Providers → „Allow new users to sign up“)
-- [ ] Vorlage „Confirm signup“ angepasst (README, Schritt 4)
+- [ ] Mail-Vorlagen auf Deutsch umgestellt (geht erst mit eigenem SMTP, README Schritt 4)
 - [ ] noindex-Regeln bewusst überprüft (robots.txt, Meta-Tag, `X-Robots-Tag`): sollen sie bleiben?
 
 ## Änderungsverlauf

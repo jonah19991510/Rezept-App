@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getSignupMode } from "@/lib/env";
 import { safeRedirectPath } from "@/lib/redirect";
 import { getSiteUrl } from "@/lib/site-url";
+import { createAnonClient } from "@/lib/supabase/anon";
 import { createClient } from "@/lib/supabase/server";
 import {
   confirmSchema,
@@ -37,7 +38,7 @@ export async function forgotPasswordAction(
   const parsed = parseForm(forgotPasswordSchema, formData);
   if (!parsed.success) return { fieldErrors: parsed.fieldErrors };
 
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   const siteUrl = await getSiteUrl();
   // Ergebnis bewusst nicht unterscheiden: Niemand soll herausfinden können, ob eine Adresse registriert ist.
   await supabase.auth.resetPasswordForEmail(parsed.data.email, {
@@ -121,7 +122,7 @@ export async function signupAction(_prev: ActionState, formData: FormData): Prom
   const parsed = parseForm(signupSchema, formData);
   if (!parsed.success) return { fieldErrors: parsed.fieldErrors };
 
-  const supabase = await createClient();
+  const supabase = createAnonClient();
   const siteUrl = await getSiteUrl();
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,

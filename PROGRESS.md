@@ -9,7 +9,7 @@
 | 3–15 | offen |
 
 **Nächster Schritt:** Nutzer erledigt die Supabase-Schritte aus der README (Secret Key, Registrierung aus,
-URLs, E-Mail-Vorlagen, eigenen Account anlegen, Admin per SQL, optional Beispielrezepte) und testet
+URLs, eigenen Account anlegen, Admin per SQL, optional Beispielrezepte) und testet
 Phase 1. Erst nach seinem OK mit Phase 2 beginnen.
 
 ## Was in Phase 1 entstanden ist
@@ -43,7 +43,7 @@ Phase 1. Erst nach seinem OK mit Phase 2 beginnen.
 
 ## Wie der Nutzer Phase 1 testet
 
-1. README Schritte 1–6 erledigen, `npm run dev`, <http://localhost:3000>.
+1. README Schritte 1–6 erledigen (Schritt 4, die Mail-Vorlagen, entfällt), `npm run dev`, <http://localhost:3000>.
 2. Mit dem eigenen Account anmelden → Rezepte-Seite mit Leer-Zustand, Navigation unten (Handy) bzw. links (Desktop).
 3. Profilmenü → Nutzerverwaltung → eine zweite eigene Adresse einladen, Mail öffnen, Einladung annehmen,
    Anzeigenamen + Passwort setzen.
@@ -75,8 +75,13 @@ Phase 1. Erst nach seinem OK mit Phase 2 beginnen.
 9. **`ingredients.diet`** (vegan/vegetarisch/keine): per Trigger aus der Zutatengruppe vorbelegt, `other`
    gilt vorsichtshalber als „keine“. Grundlage für die Auto-Tags vegetarisch/vegan.
 10. **Kohlenhydrate nach EU-Konvention** (ohne Ballaststoffe), passend zu Open Food Facts.
-11. **E-Mail-Links** zeigen über angepasste Vorlagen auf `/auth/confirm?token_hash=…&type=…`; die Seite
-    löst den Token erst nach Klick ein (Schutz vor Link-Scannern). Statt Route Handler eine Seite mit Server Action.
+11. **E-Mail-Links:** Die Vorlagen lassen sich mit dem eingebauten Supabase-Mailversand nicht bearbeiten
+    (Rückmeldung des Nutzers). Deshalb verarbeitet die App die Standard-Links: Supabase leitet mit den
+    Tokens im URL-Fragment zurück, `AuthHashHandler` (im Root-Layout) setzt die Session, entfernt die Tokens
+    aus der Adresszeile und leitet je nach Typ weiter (Einladung → Passwort + Anzeigename setzen).
+    Abgelaufene Links zeigen eine Meldung. Passwort-Reset und Registrierung laufen über einen Client mit
+    Implicit Flow (`src/lib/supabase/anon.ts`), damit der Link auch auf einem anderen Gerät funktioniert.
+    Der `token_hash`-Weg über `/auth/confirm` mit Knopf bleibt für eigene Vorlagen (mit eigenem SMTP) erhalten.
 12. **Impressum/Datenschutz-Platzhalter** schon jetzt angelegt (eigentlich Phase 8), weil das
     Registrierungsformular bei `SIGNUP_MODE=open` darauf verlinkt.
 13. **Supabase-Keys:** neue Key-Typen (`sb_publishable_…`, `sb_secret_…`); Variable `SUPABASE_SECRET_KEY`.
@@ -95,5 +100,8 @@ Phase 1. Erst nach seinem OK mit Phase 2 beginnen.
 - Security-Advisor meldet `public.rls_auto_enable()` als für `anon` ausführbar. Das ist eine von Supabase
   selbst angelegte Event-Trigger-Funktion (Einstellung „RLS automatisch aktivieren“), nicht aus unseren
   Migrationen, und lässt sich per API nicht sinnvoll aufrufen. Bewusst nicht angefasst.
+- Standard-Mails von Supabase sind englisch. Ihr Einmal-Link kann von Link-Scannern mancher Mailprogramme
+  (z. B. Outlook mit „Safe Links“) vorab verbraucht werden; dann erscheint „Link abgelaufen“ und eine neue
+  Einladung hilft. Abhilfe dauerhaft: eigener SMTP-Dienst + eigene Vorlagen (README Schritt 4).
 - Performance-Advisor meldet „unused index“ für alle Indizes – normal bei leerer Datenbank.
 - `SIGNUP_MODE` wird teilweise beim Build ausgewertet (statische Seiten). Nach einer Änderung neu bauen/deployen.
