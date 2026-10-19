@@ -24,6 +24,11 @@ export function addDays(iso: string, days: number): string {
   return fromUtc(date);
 }
 
+/** Tage von `from` bis `to` (negativ, wenn `to` davor liegt). */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((toUtc(to).getTime() - toUtc(from).getTime()) / 86_400_000);
+}
+
 /** ISO-Wochentag: 1 = Montag … 7 = Sonntag */
 export function isoWeekday(iso: string): number {
   const day = toUtc(iso).getUTCDay();

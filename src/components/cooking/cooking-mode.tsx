@@ -24,6 +24,7 @@ import type { Unit } from "@/lib/domain/units";
 import { formatScaledQuantity } from "@/lib/format-quantity";
 import { cn } from "@/lib/utils";
 import { CookDone } from "./cook-done";
+import { PantryConsumption } from "./pantry-consumption";
 import { useCookTimers, type CookTimer } from "./use-cook-timers";
 import { useWakeLock } from "./use-wake-lock";
 
@@ -255,7 +256,12 @@ export function CookingMode({
         ) : null}
 
         {phase === "done" ? (
-          <CookDone recipeId={recipeId} servings={servings} onBack={steps.length > 0 ? () => setPhase("steps") : () => setPhase("start")} />
+          <>
+            <CookDone recipeId={recipeId} servings={servings} onBack={steps.length > 0 ? () => setPhase("steps") : () => setPhase("start")} />
+            <div className="mx-auto max-w-xl px-4 pb-8 md:px-8">
+              <PantryConsumption recipeId={recipeId} servings={servings} />
+            </div>
+          </>
         ) : null}
       </main>
 

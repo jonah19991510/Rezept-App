@@ -1,7 +1,7 @@
 "use client";
 
-import { useOptimistic, useRef, useState, useTransition, type FormEvent } from "react";
-import { Check, Eye, EyeOff, Plus, Trash2, X } from "lucide-react";
+import { useOptimistic, useRef, useState, useSyncExternalStore, useTransition, type FormEvent } from "react";
+import { Check, ClipboardCopy, Eye, EyeOff, PackageCheck, Plus, Share2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   addManualItemAction,
@@ -10,23 +10,30 @@ import {
   setHideStaplesAction,
   setItemCheckedAction,
 } from "@/app/(app)/einkauf/actions";
+import { moveCheckedToPantryAction } from "@/app/(app)/einkauf/pantry-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { departmentIndex, formatShoppingAmount, type FoodGroup } from "@/lib/domain/shopping";
-import { FOOD_GROUP_LABELS } from "@/lib/labels";
+import { coverShoppingItem, shoppingListText, type Coverage, type PantryAmount } from "@/lib/domain/pantry";
+import { departmentLabel, departmentOrder, formatShoppingAmount } from "@/lib/domain/shopping";
+import { dayMonth, weekdayShort } from "@/lib/domain/week";
 import type { ShoppingItem } from "@/lib/server/shopping";
 import { cn } from "@/lib/utils";
 
 type OptimisticAction = { type: "check"; id: string; checked: boolean } | { type: "delete"; id: string };
 
-function departmentLabel(group: FoodGroup | null) {
-  if (group == null) return "Eigene Einträge";
-  if (group === "fruit" || group === "vegetables") return "Obst & Gemüse";
-  return FOOD_GROUP_LABELS[group];
-}
-
 /** Liste nach Supermarkt-Abteilung, große Tippflächen, Abhaken reagiert sofort (optimistisch). */
-export function ShoppingList({ items, hideStaples }: { items: ShoppingItem[]; hideStaples: boolean }) {
+export function ShoppingList({
+  items,
+  hideStaples,
+  pantry,
+  today,
+}: {
+  items: ShoppingItem[];
+  hideStaples: boolean;
+  /** Vorrat je Zutat für „hast du schon“ */
+  pantry: Record<string, PantryAmount[]>;
+  today: string;
+}) {
   const [optimisticItems, applyOptimistic] = useOptimistic(items, (state: ShoppingItem[], action: OptimisticAction) =>
     action.type === "delete"
       ? state.filter((i) => i.id !== action.id)
@@ -89,6 +96,9 @@ export function ShoppingList({ items, hideStaples }: { items: ShoppingItem[]; hi
     });
   }
 
+  const coverage = (item: ShoppingItem): Coverage =>
+    item.ingredientId ? coverShoppingItem(item, pantry[item.ingredientId] ?? []) : { status: "none", pantryText: null, remaining: null };
+
   const open = optimisticItems.filter((i) => !i.checked);
   const checked = optimisticItems.filter((i) => i.checked);
   const hiddenStaples = optimisticHide ? open.filter((i) => i.isStaple) : [];
@@ -98,12 +108,57 @@ export function ShoppingList({ items, hideStaples }: { items: ShoppingItem[]; hi
   const groups = new Map<string, { order: number; items: ShoppingItem[] }>();
   for (const item of visible) {
     const label = departmentLabel(item.foodGroup);
-    const order = item.foodGroup === "vegetables" ? departmentIndex("fruit") : departmentIndex(item.foodGroup);
+    const order = departmentOrder(item.foodGroup);
     const entry = groups.get(label) ?? { order, items: [] };
     entry.items.push(item);
     groups.set(label, entry);
   }
   const sortedGroups = [...groups.entries()].sort((a, b) => a[1].order - b[1].order);
+  const movable = checked.filter((i) => i.ingredientId != null).length;
+
+  // Text für Kopieren/Teilen: nur, was noch gekauft werden muss
+  function listAsText() {
+    return shoppingListText(
+      sortedGroups.map(([label, group]) => ({
+        label,
+        items: group.items
+          .map((item) => ({ item, cov: coverage(item) }))
+          .filter(({ cov }) => cov.status !== "have")
+          .map(({ item, cov }) => ({ name: item.name, amount: cov.status === "partial" ? cov.remaining : item.amount, unit: item.unit })),
+      })),
+      `Einkaufsliste (${weekdayShort(today)}, ${dayMonth(today)})`,
+    );
+  }
+
+  async function copyText() {
+    const text = listAsText();
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Liste kopiert. Du kannst sie jetzt z. B. in WhatsApp einfügen.");
+    } catch {
+      // Ohne HTTPS (z. B. im WLAN über http://192…) gibt es keine Zwischenablage: Text zum Markieren anzeigen
+      window.prompt("Liste markieren und kopieren:", text);
+    }
+  }
+
+  async function shareText() {
+    try {
+      await navigator.share({ title: "Einkaufsliste", text: listAsText() });
+    } catch (e) {
+      if (e instanceof Error && e.name !== "AbortError") void copyText();
+    }
+  }
+
+  function moveToPantry() {
+    startTransition(async () => {
+      const result = await moveCheckedToPantryAction();
+      if (result.ok) toast.success(result.message ?? "In den Vorrat übernommen.");
+      else toast.error(result.message);
+    });
+  }
+
+  // Teilen gibt es nur in manchen Browsern (v. a. Handy); beim Server-Rendern „nein“, damit das HTML gleich bleibt
+  const canShare = useSyncExternalStore(noopSubscribe, () => typeof navigator.share === "function", () => false);
 
   return (
     <div className="space-y-6">
@@ -128,11 +183,26 @@ export function ShoppingList({ items, hideStaples }: { items: ShoppingItem[]; hi
             {group.items
               .sort((a, b) => a.name.localeCompare(b.name, "de"))
               .map((item) => (
-                <ItemRow key={item.id} item={item} onToggle={() => toggle(item)} onDelete={() => remove(item)} />
+                <ItemRow key={item.id} item={item} coverage={coverage(item)} onToggle={() => toggle(item)} onDelete={() => remove(item)} />
               ))}
           </ul>
         </section>
       ))}
+
+      {visible.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={copyText}>
+            <ClipboardCopy aria-hidden />
+            Als Text kopieren
+          </Button>
+          {canShare ? (
+            <Button type="button" variant="outline" size="sm" onClick={shareText}>
+              <Share2 aria-hidden />
+              Teilen
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       {optimisticHide && hiddenStaples.length > 0 ? (
         <button
@@ -173,10 +243,16 @@ export function ShoppingList({ items, hideStaples }: { items: ShoppingItem[]; hi
               Erledigte löschen
             </Button>
           </div>
+          {movable > 0 ? (
+            <Button type="button" variant="outline" onClick={moveToPantry}>
+              <PackageCheck aria-hidden />
+              {movable} {movable === 1 ? "Einkauf" : "Einkäufe"} in den Vorrat übernehmen
+            </Button>
+          ) : null}
           {showChecked ? (
             <ul className="divide-y overflow-hidden rounded-2xl border bg-card/60">
               {checked.map((item) => (
-                <ItemRow key={item.id} item={item} onToggle={() => toggle(item)} onDelete={() => remove(item)} />
+                <ItemRow key={item.id} item={item} coverage={null} onToggle={() => toggle(item)} onDelete={() => remove(item)} />
               ))}
             </ul>
           ) : null}
@@ -194,8 +270,20 @@ export function ShoppingList({ items, hideStaples }: { items: ShoppingItem[]; hi
   );
 }
 
-function ItemRow({ item, onToggle, onDelete }: { item: ShoppingItem; onToggle: () => void; onDelete: () => void }) {
-  const amount = formatShoppingAmount(item.amount, item.unit);
+function ItemRow({
+  item,
+  coverage,
+  onToggle,
+  onDelete,
+}: {
+  item: ShoppingItem;
+  coverage: Coverage | null;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  const have = !item.checked && coverage?.status === "have";
+  const partial = !item.checked && coverage?.status === "partial";
+  const amount = partial ? `noch ${formatShoppingAmount(coverage.remaining, item.unit)}` : formatShoppingAmount(item.amount, item.unit);
   return (
     <li className="flex items-stretch">
       <button
@@ -214,11 +302,17 @@ function ItemRow({ item, onToggle, onDelete }: { item: ShoppingItem; onToggle: (
         >
           {item.checked ? <Check className="size-4" /> : null}
         </span>
-        <span className={cn("min-w-0 flex-1 text-base", item.checked && "text-muted-foreground line-through")}>
+        <span className={cn("min-w-0 flex-1 text-base", (item.checked || have) && "text-muted-foreground", item.checked && "line-through")}>
           {item.name}
+          {!item.checked && coverage?.pantryText && coverage.status !== "none" ? (
+            <span className={cn("block text-xs", have ? "font-medium text-sage" : "text-muted-foreground")}>
+              {have ? "hast du schon · " : ""}
+              {coverage.pantryText}
+            </span>
+          ) : null}
         </span>
         {amount ? (
-          <span className={cn("shrink-0 text-sm tabular-nums", item.checked ? "text-muted-foreground" : "font-medium")}>
+          <span className={cn("shrink-0 text-sm tabular-nums", item.checked || have ? "text-muted-foreground" : "font-medium")}>
             {amount}
           </span>
         ) : null}
@@ -233,4 +327,8 @@ function ItemRow({ item, onToggle, onDelete }: { item: ShoppingItem; onToggle: (
       </button>
     </li>
   );
+}
+
+function noopSubscribe() {
+  return () => undefined;
 }

@@ -1,5 +1,6 @@
 import type { Enums } from "@/lib/supabase/database.types";
 import { formatNumber } from "@/lib/format";
+import { FOOD_GROUP_LABELS } from "@/lib/labels";
 import { PINCH_GRAMS, UNIT_ML, type Unit } from "./units";
 
 // Einkaufsliste aus dem Wochenplan: Zutaten aller geplanten Mahlzeiten zusammenfassen.
@@ -113,6 +114,18 @@ export const DEPARTMENT_ORDER: FoodGroup[] = [
   "liqueurs_wine",
   "other",
 ];
+
+/** Abteilung im Laden; Obst und Gemüse liegen meist zusammen. Ohne Gruppe: eigene Einträge. */
+export function departmentLabel(group: FoodGroup | null): string {
+  if (group == null) return "Eigene Einträge";
+  if (group === "fruit" || group === "vegetables") return "Obst & Gemüse";
+  return FOOD_GROUP_LABELS[group];
+}
+
+/** Sortierschlüssel der Abteilung (Gemüse wie Obst). */
+export function departmentOrder(group: FoodGroup | null): number {
+  return group === "vegetables" ? departmentIndex("fruit") : departmentIndex(group);
+}
 
 export function departmentIndex(group: FoodGroup | null): number {
   if (group == null) return DEPARTMENT_ORDER.length; // manuelle Einträge ganz am Ende

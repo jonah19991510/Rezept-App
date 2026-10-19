@@ -16,11 +16,13 @@
 | 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | **in Arbeit** |
 | 11–15 | offen |
 
-**Nächster Schritt:** Nutzer testet Phase 9 (siehe „Wie der Nutzer Phase 9 testet“), zunächst über den
-LAN-Server; live geht es erst nach seinem OK (Push auf `master`). Erst danach Phase 10. Geprüft hat Claude:
-Kochmodus, Skalieren und Umrechner auf einer vorübergehenden Vorschauseite mit Beispieldaten bei 375 px (Timer
-gestartet, Ablauf nach 30 s mit „Fertig!“, Schrittwechsel, Gekocht-Bildschirm), Hydration-Fehler gefunden und behoben.
-Speichern des Koch-Log-Eintrags und den Editor mit Login hat Claude nicht selbst ausgeführt.
+**Nächster Schritt (Phase 10 unterbrochen, 19.10.2026):** Code für Phase 10 ist gebaut und lokal committet (nicht live):
+Vorratsschrank `/einkauf/vorrat` (Küche/Bar, Menge und Ablaufdatum freiwillig), „Was kochen?“ `/einkauf/was-kochen`
+(Alles da / 1 fehlt / 2–3 fehlen, Fehlendes auf die Liste), Einkaufsliste mit „hast du schon“/„noch …“, „In Vorrat
+übernehmen“, „Als Text kopieren“/„Teilen“, Kochmodus „Vorrat aktualisieren“. Domänenlogik `pantry.ts` mit Tests
+(178 Tests grün, Typecheck und Lint sauber). **Offen:** Build, Browser-Check (Vorschauseite mit Beispieldaten,
+375 px), Abschnitte „Was in Phase 10 entstanden ist“/„Wie der Nutzer Phase 10 testet“, README und
+DATENVERARBEITUNG (pantry_items jetzt genutzt), dann Nutzer testen lassen und erst nach OK pushen.
 
 **Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
 (Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`

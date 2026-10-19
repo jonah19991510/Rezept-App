@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export type ShoppingItem = {
   id: string;
+  /** null bei eigenen Einträgen ohne Zutat */
+  ingredientId: string | null;
   name: string;
   amount: number | null;
   unit: string | null;
@@ -19,7 +21,7 @@ export async function getShoppingList(userId: string): Promise<{ items: Shopping
   const [list, settings] = await Promise.all([
     supabase
       .from("shopping_list_items")
-      .select("id, name, amount, unit, checked, source, ingredients!shopping_list_items_ingredient_id_fkey(food_group, is_staple)")
+      .select("id, ingredient_id, name, amount, unit, checked, source, ingredients!shopping_list_items_ingredient_id_fkey(food_group, is_staple)")
       .eq("user_id", userId)
       .order("created_at"),
     supabase.from("user_settings").select("hide_staples").eq("user_id", userId).maybeSingle(),
@@ -30,6 +32,7 @@ export async function getShoppingList(userId: string): Promise<{ items: Shopping
     hideStaples: settings.data?.hide_staples ?? true,
     items: list.data.map((row) => ({
       id: row.id,
+      ingredientId: row.ingredient_id,
       name: row.name,
       amount: row.amount,
       unit: row.unit,
