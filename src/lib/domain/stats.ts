@@ -1,6 +1,6 @@
 import { CATEGORY_LABELS, type AutoTag } from "@/lib/labels";
 import type { Enums } from "@/lib/supabase/database.types";
-import { entryMacros, type DayMacros } from "./plan";
+import { entryMacros, type DayMacros, type Goals } from "./plan";
 
 // Statistiken über das eigene Rezeptbuch und den Wochenplan. Reine Logik, getestet.
 
@@ -191,14 +191,39 @@ export type StatsPlanEntry = {
   perServing: DayMacros | null;
 };
 
-export type WeekPoint = { monday: string; plannedDays: number; kcal: number | null; protein: number | null };
+export type WeekPoint = {
+  monday: string;
+  plannedDays: number;
+  /** Davon Trainingstage (Phase 11) */
+  trainingDays: number;
+  kcal: number | null;
+  protein: number | null;
+  /** Durchschnitt der Tagesziele der geplanten Tage (Trainingstage haben eigene Ziele) */
+  goalKcal: number | null;
+  goalProtein: number | null;
+};
+
+export type DayInfo = (date: string) => { training: boolean; goals: Goals };
+
+function averageOrNull(values: (number | null)[]): number | null {
+  const known = values.filter((v): v is number => v != null);
+  return known.length ? known.reduce((a, b) => a + b, 0) / known.length : null;
+}
 
 /** mondays aufsteigend; Wochen ohne Planung bekommen null (Lücke in der Linie). */
-export function weeklyPlanSeries(entries: StatsPlanEntry[], mondays: string[], mondayOf: (iso: string) => string): WeekPoint[] {
+export function weeklyPlanSeries(
+  entries: StatsPlanEntry[],
+  mondays: string[],
+  mondayOf: (iso: string) => string,
+  dayInfo: DayInfo = () => ({ training: false, goals: { kcal: null, protein: null, carbs: null, fat: null } }),
+): WeekPoint[] {
   return mondays.map((monday) => {
     const week = entries.filter((e) => mondayOf(e.date) === monday);
     const days = new Set(week.map((e) => e.date));
-    if (days.size === 0) return { monday, plannedDays: 0, kcal: null, protein: null };
+    if (days.size === 0) {
+      return { monday, plannedDays: 0, trainingDays: 0, kcal: null, protein: null, goalKcal: null, goalProtein: null };
+    }
+    const info = [...days].map(dayInfo);
     const sum = week.reduce(
       (acc, e) => {
         const m = entryMacros(e);
@@ -206,7 +231,15 @@ export function weeklyPlanSeries(entries: StatsPlanEntry[], mondays: string[], m
       },
       { kcal: 0, protein: 0 },
     );
-    return { monday, plannedDays: days.size, kcal: sum.kcal / days.size, protein: sum.protein / days.size };
+    return {
+      monday,
+      plannedDays: days.size,
+      trainingDays: info.filter((i) => i.training).length,
+      kcal: sum.kcal / days.size,
+      protein: sum.protein / days.size,
+      goalKcal: averageOrNull(info.map((i) => i.goals.kcal)),
+      goalProtein: averageOrNull(info.map((i) => i.goals.protein)),
+    };
   });
 }
 

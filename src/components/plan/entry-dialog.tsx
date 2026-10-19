@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { ExternalLink, Trash2 } from "lucide-react";
+import { Boxes, ExternalLink, Repeat, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deletePlanEntryAction, updatePlanEntryAction } from "@/app/(app)/wochenplan/actions";
 import { MacroSummary } from "@/components/recipes/macro-summary";
@@ -12,21 +12,34 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { entryMacros, MEAL_SLOTS, SLOT_LABELS, type MealSlot } from "@/lib/domain/plan";
 import { dayMonth, weekdayLong } from "@/lib/domain/week";
-import type { PlanEntry } from "@/lib/server/plan";
+import { formatNumber } from "@/lib/format";
+import type { PlanBatch, PlanEntry } from "@/lib/server/plan";
 import { ServingsStepper } from "./servings-stepper";
 
 /** Eintrag ändern: Portionen, Tag, Mahlzeit; oder entfernen. */
-export function EntryDialog({ entry, days, onClose }: { entry: PlanEntry | null; days: string[]; onClose: () => void }) {
+export function EntryDialog({
+  entry,
+  days,
+  batches,
+  onClose,
+}: {
+  entry: PlanEntry | null;
+  days: string[];
+  batches: PlanBatch[];
+  onClose: () => void;
+}) {
   return (
     <Dialog open={entry != null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
-        {entry ? <EntryForm key={entry.id} entry={entry} days={days} onDone={onClose} /> : null}
+        {entry ? (
+          <EntryForm key={entry.id} entry={entry} days={days} batch={batches.find((b) => b.id === entry.batchId) ?? null} onDone={onClose} />
+        ) : null}
       </DialogContent>
     </Dialog>
   );
 }
 
-function EntryForm({ entry, days, onDone }: { entry: PlanEntry; days: string[]; onDone: () => void }) {
+function EntryForm({ entry, days, batch, onDone }: { entry: PlanEntry; days: string[]; batch: PlanBatch | null; onDone: () => void }) {
   const [servings, setServings] = useState(entry.servings);
   const [date, setDate] = useState(entry.date);
   const [slot, setSlot] = useState<MealSlot>(entry.slot);
@@ -45,7 +58,7 @@ function EntryForm({ entry, days, onDone }: { entry: PlanEntry; days: string[]; 
     startTransition(async () => {
       const result = await deletePlanEntryAction({ id: entry.id });
       if (result.ok) {
-        toast.success("Aus dem Plan entfernt.");
+        toast.success(result.message ?? "Aus dem Plan entfernt.");
         onDone();
       } else toast.error(result.message);
     });
@@ -82,6 +95,30 @@ function EntryForm({ entry, days, onDone }: { entry: PlanEntry; days: string[]; 
           ) : (
             <p className="text-sm text-muted-foreground">Für dieses Rezept gibt es noch keine Nährwerte.</p>
           )}
+          {entry.batchId ? (
+            <p className="flex items-start gap-2 rounded-2xl bg-muted/60 px-3 py-2 text-sm">
+              {entry.isLeftover ? (
+                <>
+                  <Repeat className="mt-0.5 size-4 shrink-0 text-sage" aria-hidden />
+                  <span>
+                    Reste vom Meal Prep{batch ? ` (gekocht ${weekdayLong(batch.cookDate)}, ${dayMonth(batch.cookDate)})` : ""}. Zählt
+                    nicht extra auf der Einkaufsliste.
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Boxes className="mt-0.5 size-4 shrink-0 text-sage" aria-hidden />
+                  <span>
+                    Kochtag eines Meal Preps
+                    {batch
+                      ? `: ${formatNumber(batch.servingsCooked, 2)} Portionen kochen, ${formatNumber(batch.planned, 2)} eingeplant`
+                      : ""}
+                    . Entfernen nimmt auch alle Reste mit.
+                  </span>
+                </>
+              )}
+            </p>
+          ) : null}
           <ServingsStepper value={servings} onChange={setServings} />
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
@@ -109,7 +146,7 @@ function EntryForm({ entry, days, onDone }: { entry: PlanEntry; days: string[]; 
             <div className="flex gap-1">
               <Button type="button" variant="destructive" onClick={remove} disabled={pending}>
                 <Trash2 aria-hidden />
-                Entfernen
+                {entry.batchId && !entry.isLeftover ? "Mit Resten entfernen" : "Entfernen"}
               </Button>
               <Link href={`/rezepte/${entry.recipeId}`} className="inline-flex min-h-11 items-center gap-1 px-2 text-sm text-primary underline-offset-4 hover:underline">
                 Rezept

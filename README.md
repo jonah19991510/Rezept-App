@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 10 (Vorratsschrank, „Was kann ich kochen?“, Vorrat in der Einkaufsliste, Text-Export; davor: Kochmodus mit Timern, Portionen skalieren, Einheiten-Umrechnung, Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 11 (Trainingstage mit eigenem Ziel, Lücken-Hinweis, Meal Prep, Reste-Vorschläge; davor: Vorratsschrank, „Was kann ich kochen?“, Vorrat in der Einkaufsliste, Text-Export, Kochmodus mit Timern, Portionen skalieren, Einheiten-Umrechnung, Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -193,6 +193,14 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
 - **Tagesziele** unter Einstellungen → Tagesziele. Der Plan zeigt pro Tag Soll gegen Ist; bei kcal,
   Kohlenhydraten und Fett gilt mehr als 110 % als „über dem Ziel“, Protein darf drüber.
 - **Woche kopieren** in die nächste oder eine beliebige Woche, ergänzend oder ersetzend.
+- **Trainingstage:** Unter Einstellungen → Trainingstage die Standard-Wochentage und ein eigenes Ziel festlegen
+  (z. B. mehr Protein und kcal). Im Plan schaltet die Hantel einen Tag um; der Tag nutzt dann das passende Ziel.
+- **Lücken-Hinweis:** Pro Tag „Bis zum Ziel fehlen noch 35 g Protein …“ mit Rezepten aus dem eigenen Buch, die die
+  Lücke am besten schließen, ohne über das Ziel zu kommen.
+- **Meal Prep:** Beim Einplanen „Für mehrere Tage kochen“: einmal kochen, Reste an den gewählten Folgetagen. Die
+  Einkaufsliste zählt das nur einmal. Übrige Portionen schlägt der Plan an den Folgetagen vor.
+- **Reste-Vorschläge:** Nach einem Gericht mit Reis, Nudeln oder Kartoffeln schlägt der Plan für die nächsten zwei
+  Tage eigene Rezepte mit derselben Basis vor (z. B. Bratreis).
 
 ## Einkaufsliste
 

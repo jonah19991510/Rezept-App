@@ -14,10 +14,11 @@
 | 8 – PWA, Feinschliff, Einstellungen, Deployment | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | **fertig** (19.10.2026), live, vom Nutzer abgenommen (Teilen am Handy erst über HTTPS prüfbar) |
-| 11 – Trainingstage, Lücken-Hinweis, Meal Prep, Reste-Vorschläge | **in Arbeit** |
+| 11 – Trainingstage, Lücken-Hinweis, Meal Prep, Reste-Vorschläge | **fertig** (19.10.2026), wartet auf Test und OK des Nutzers, noch nicht gepusht/live |
 | 12–15 | offen |
 
-**Nächster Schritt:** Phase 11 bauen, prüfen, committen (nicht pushen), Nutzer testen lassen, nach OK pushen.
+**Nächster Schritt:** Der Nutzer testet Phase 11 über den LAN-Server (Anleitung unten) und gibt das OK. Danach
+`git push` (geht live) und erst dann Phase 12.
 
 **Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
 (Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`
@@ -73,6 +74,58 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 11 entstanden ist
+
+Keine Migration nötig: `plan_days`, `meal_prep_batches`, `meal_plan_entries.batch_id/is_leftover`,
+`user_goals` (Typ „training“) und `user_settings.training_weekdays` gab es seit Phase 1 (RLS, Cascade, Datenexport).
+
+- **Trainingstage:** Einstellungen → „Trainingstage“: Standard-Wochentage (Mo–So antippen) und ein eigenes Ziel für
+  Trainingstage (leere Felder übernehmen das normale Tagesziel). Im Wochenplan pro Tag mit der Hantel umschaltbar
+  (Handy: Knopf über dem Tagesfortschritt, PC: kleine Hantel im Tageskopf); eine Abweichung vom Standard landet in
+  `plan_days`, wer zurückschaltet, löscht sie wieder. Der Tag nutzt automatisch das passende Ziel, in der Tagesleiste
+  steht eine kleine Hantel. Der Wochenschnitt vergleicht mit dem Schnitt der Tagesziele.
+- **Lücken-Hinweis** (`training.ts`): „Bis zum Ziel fehlen noch 35 g Protein · 420 kcal“ (ab 5 g bzw. 100 kcal) und
+  bis zu drei Rezepte aus dem eigenen Buch und Entdecken, die die Lücke am besten schließen (½ oder 1 Portion,
+  nichts, was kcal/KH/Fett über 110 % brächte, Favoriten bei Gleichstand zuerst). „Einplanen“ öffnet den Dialog mit
+  Rezept, Portionen und passender Mahlzeit (kleine Sachen als Snack, sonst die erste freie Mahlzeit).
+- **Meal Prep** (`mealprep.ts`): Im Einplanen-Dialog „Für mehrere Tage kochen“: Folgetage (bis 6, auch über die
+  Woche hinaus) antippen, Reste stehen im selben Slot; „Insgesamt kochen“ (mindestens so viel wie eingeplant).
+  Als Meal Prep markierte Rezepte schlagen das mit zwei Folgetagen gleich vor. Kochtag mit Kisten-Symbol, Reste mit
+  Pfeil-Symbol; der Eintrag-Dialog erklärt, was dazugehört. Kochtag entfernen nimmt alle Reste mit, Kochtag
+  verschieben verschiebt den Batch. Die **Einkaufsliste zählt den Batch einmal** am Kochtag mit allen gekochten
+  Portionen, Reste gar nicht.
+- **Reste-Vorschläge** (`leftovers.ts`): Übrige Meal-Prep-Portionen erscheinen 1–3 Tage nach dem Kochen
+  („Vom Meal Prep Chili sind noch 2 Portionen übrig“ → „Als Abend einplanen“). Wurde an einem der zwei Vortage etwas
+  mit Reis, Nudeln oder Kartoffeln gekocht (erkannt am Zutatennamen), schlägt der Tag eigene Rezepte mit derselben
+  Basis vor („Reis von gestern übrig? Damit passt: Bratreis, Reissalat“).
+- **Am PC** zeigt der Wochenplan unter der Woche den gewählten Tag im Detail (Tageskopf antippen): Ziele, Lücke,
+  Reste.
+- **Statistik:** Die Wochenplan-Diagramme vergleichen mit dem Ø-Ziel der geplanten Tage (Trainingstage mit ihrem
+  Ziel; schwankt es, als gestrichelte Linie), Wochen mit Trainingstagen haben einen Ring um den Punkt, Tooltip und
+  Tabelle nennen die Trainingstage.
+- 197 Tests (neu: `training.test.ts`, `mealprep.test.ts`, `leftovers.test.ts`, Statistik mit Trainingstagen),
+  Typecheck, Lint und Build grün; Browser-Check bei 375 px und am PC über eine Vorschauseite mit Beispieldaten
+  (wieder gelöscht).
+
+## Wie der Nutzer Phase 11 testet
+
+Über den LAN-Server (PC: <http://localhost:3000>, Handy: <http://192.168.178.47:3000>).
+
+1. Einstellungen → **Trainingstage**: z. B. Mo, Mi, Fr antippen, speichern. Darunter das Ziel an Trainingstagen,
+   z. B. 2600 kcal und 170 g Protein, speichern.
+2. Wochenplan: Mo/Mi/Fr haben in der Tagesleiste eine kleine Hantel und zeigen das höhere Ziel. Bei einem anderen
+   Tag die Hantel antippen → wird Trainingstag; nochmal antippen → wieder normal.
+3. An einem Tag nur ein Frühstück planen: darunter „Bis zum Ziel fehlen noch …“ mit Vorschlägen. Bei einem
+   „Einplanen“ antippen → Dialog mit vorausgewähltem Rezept → Einplanen.
+4. Ein Rezept (z. B. Chili) einplanen, „Für mehrere Tage kochen“ anhaken, zwei Folgetage wählen, „Insgesamt kochen“
+   auf eine Portion mehr stellen → Einplanen. Kochtag mit Kisten-Symbol, Reste mit Pfeil-Symbol.
+5. Am Tag nach dem Kochen: „Vom Meal Prep … noch 1 Portion übrig“ → einplanen.
+6. Einkauf → „Aus Wochenplan“ für die Woche: das Chili zählt einmal mit allen gekochten Portionen.
+7. Rezept mit Reis/Nudeln/Kartoffeln einplanen: am nächsten Tag „Reis von gestern übrig?“ mit passenden Rezepten
+   (nur wenn es im Buch weitere Rezepte mit Reis gibt).
+8. Kochtag des Meal Preps antippen → „Mit Resten entfernen“: alle Reste sind weg.
+9. Statistik: in „Wochenplan: Kalorien“ Tooltip und Tabelle zeigen Trainingstage und Ø-Ziel.
 
 ## Was in Phase 10 entstanden ist
 
@@ -540,7 +593,31 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
     markiert werden.
 50. **Phase 10 – Tabs ohne Icons unter 400 px Breite**, damit „Was kochen?“ auf schmalen Handys ganz zu lesen ist.
 
+19.10.2026 (Umsetzung Phase 11):
+
+51. **Phase 11 – Trainingsziel ergänzt das Standardziel feldweise:** Leere Felder im Trainingsziel übernehmen das
+    normale Ziel (meist will man nur kcal und Protein ändern).
+52. **Phase 11 – Umschalten im Plan speichert nur Abweichungen** (`plan_days`); stimmt der Tag wieder mit dem
+    Standard überein, wird die Zeile gelöscht, damit spätere Änderungen an den Standard-Wochentagen greifen.
+53. **Phase 11 – Lücken-Vorschläge ohne Überschießen:** Ein Vorschlag darf kcal/Kohlenhydrate/Fett nicht über 110 %
+    bringen (gleiche Grenze wie „über dem Ziel“); Protein darf drüber. Bewertet wird der Abstand zum Ziel (Protein
+    stärker gewichtet), ½ Portion nur, wenn sie deutlich besser passt.
+54. **Phase 11 – Meal Prep als Batch mit gekochten Portionen:** Die Einkaufsliste zählt `servings_cooked` am Kochtag,
+    Reste nie extra (auch nicht, wenn der Kochtag vor dem Zeitraum liegt). Mehr eingeplant als gekocht hebt
+    `servings_cooked` an, weniger lässt es stehen (der Rest erscheint als „übrig“). Batches ohne Kochtag-Eintrag
+    gelten als verworfen.
+55. **Phase 11 – Reste-Basen per Zutatenname** (Reis, Nudeln/Pasta-Sorten, Kartoffeln; nicht Reisessig, Stärke,
+    Süßkartoffel) statt einer neuen Spalte; reicht für die drei Basen aus der SPEC. Vorschläge nur aus dem eigenen Buch.
+56. **Phase 11 – Reste eines Batches erst ab dem Folgetag** und bis 3 Tage nach dem Kochen vorschlagen.
+57. **Phase 11 – Statistik „Trainingstage markiert“ mit umgesetzt** (stand in der SPEC bei den Statistiken):
+    Ø-Ziel je Woche statt fester Ziellinie, Ring um Wochen mit Trainingstagen.
+
 ## Offene Punkte
+
+- Meal Prep: „Woche kopieren“ übernimmt Kochtag und Reste als normale Einträge (ohne Batch), d. h. in der Zielwoche
+  zählt die Einkaufsliste jeden Eintrag einzeln. „Ersetzen“ beim Kopieren löscht Einträge, lässt aber den Batch der
+  Zielwoche stehen (er wird ignoriert, weil sein Kochtag fehlt). Bei Gelegenheit `copy_plan_week` per Migration
+  batch-fähig machen und verwaiste Batches aufräumen.
 
 - Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
 - Kochmodus: Timer überleben kein Neuladen der Seite (nur im Arbeitsspeicher). Läuft das Handy in den Ruhezustand,

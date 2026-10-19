@@ -26,8 +26,8 @@ function toNumberOrNull(value: string): number | null {
   return parseDecimal(value) ?? Number.NaN;
 }
 
-/** Tagesziele. Leere Felder bedeuten: für diesen Wert kein Ziel. */
-export function GoalsForm({ initial }: { initial: Goals }) {
+/** Tagesziele. Leere Felder bedeuten: für diesen Wert kein Ziel. „training“: Ziel für Trainingstage. */
+export function GoalsForm({ initial, goalType = "default" }: { initial: Goals; goalType?: "default" | "training" }) {
   const [values, setValues] = useState<Record<Key, string>>({
     kcal: formatDecimalInput(initial.kcal, 0),
     protein: formatDecimalInput(initial.protein, 1),
@@ -58,8 +58,8 @@ export function GoalsForm({ initial }: { initial: Goals }) {
     setErrors({});
     setMessage(undefined);
     startTransition(async () => {
-      const result = await saveGoalsAction(input);
-      if (result.ok) toast.success("Tagesziele gespeichert.");
+      const result = await saveGoalsAction(input, goalType);
+      if (result.ok) toast.success(goalType === "training" ? "Ziele für Trainingstage gespeichert." : "Tagesziele gespeichert.");
       else {
         setErrors(result.fieldErrors ?? {});
         setMessage(result.message);
@@ -75,7 +75,7 @@ export function GoalsForm({ initial }: { initial: Goals }) {
           <FormField
             key={f.key}
             label={f.label}
-            name={`goal-${f.key}`}
+            name={`goal-${goalType}-${f.key}`}
             inputMode="decimal"
             placeholder={f.placeholder}
             value={values[f.key]}

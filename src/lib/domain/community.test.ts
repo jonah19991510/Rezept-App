@@ -111,7 +111,7 @@ describe("planRecipeOptions", () => {
     expect(options.own.map((o) => o.id)).toEqual(["o1", "r2"]);
     expect(options.own.every((o) => o.authorName === null)).toBe(true);
     expect(options.community).toEqual([
-      { id: "r1", title: "Dal", kcal: 300, protein: 18, isFavorite: false, authorName: "Anna" },
+      { id: "r1", title: "Dal", kcal: 300, protein: 18, carbs: 0, fat: 0, isMealPrep: false, isFavorite: false, authorName: "Anna" },
     ]);
   });
 
@@ -121,6 +121,9 @@ describe("planRecipeOptions", () => {
       title: "Mein Curry",
       kcal: 500,
       protein: 30,
+      carbs: 0,
+      fat: 0,
+      isMealPrep: false,
       isFavorite: true,
       authorName: null,
     });

@@ -5,7 +5,7 @@ import type { StatsPlanEntry, StatsRecipe } from "@/lib/domain/stats";
 import { addDays, mondayOf, todayInBerlin } from "@/lib/domain/week";
 import { Constants, type Json } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
-import { getDefaultGoals } from "./plan";
+import { getAllGoals, getTrainingDays } from "./plan";
 
 const FOOD_GROUPS = new Set<string>(Constants.public.Enums.food_group);
 
@@ -24,7 +24,8 @@ export type StatsData = {
   planEntries: StatsPlanEntry[];
   recipeTitles: Record<string, string>;
   mondays: string[];
-  goals: Goals;
+  goals: { default: Goals; training: Goals };
+  training: { weekdays: number[]; overrides: Record<string, boolean> };
 };
 
 /** Anzahl Wochen im Wochenplan-Verlauf (inklusive der aktuellen). */
@@ -35,7 +36,7 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   const currentMonday = mondayOf(todayInBerlin());
   const mondays = Array.from({ length: STATS_WEEKS }, (_, i) => addDays(currentMonday, (i - STATS_WEEKS + 1) * 7));
 
-  const [recipes, nutrition, plan, goals] = await Promise.all([
+  const [recipes, nutrition, plan, goals, training] = await Promise.all([
     supabase.from("recipes").select("id, title, category, servings, is_meal_prep").eq("owner_id", userId).eq("recipe_type", "dish"),
     supabase
       .from("recipe_nutrition")
@@ -48,7 +49,8 @@ export async function getStatsData(userId: string): Promise<StatsData> {
       .eq("user_id", userId)
       .gte("date", mondays[0])
       .lte("date", addDays(currentMonday, 6)),
-    getDefaultGoals(userId),
+    getAllGoals(userId),
+    getTrainingDays(userId, mondays[0], addDays(currentMonday, 6)),
   ]);
   if (recipes.error || nutrition.error || plan.error) throw new Error("Statistiken konnten nicht geladen werden.");
 
@@ -90,5 +92,5 @@ export async function getStatsData(userId: string): Promise<StatsData> {
     };
   });
 
-  return { recipes: statsRecipes, planEntries, recipeTitles, mondays, goals };
+  return { recipes: statsRecipes, planEntries, recipeTitles, mondays, goals, training };
 }

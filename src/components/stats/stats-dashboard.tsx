@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import { MacroDot } from "@/components/recipes/macro-dot";
 import { Button } from "@/components/ui/button";
 import type { Goals } from "@/lib/domain/plan";
+import { goalsForDay, isTrainingDay } from "@/lib/domain/training";
 import {
   applySelection,
   autoTagShares,
@@ -37,12 +38,14 @@ export function StatsDashboard({
   recipeTitles,
   mondays,
   goals,
+  training,
 }: {
   recipes: StatsRecipe[];
   planEntries: StatsPlanEntry[];
   recipeTitles: Record<string, string>;
   mondays: string[];
-  goals: Goals;
+  goals: { default: Goals; training: Goals };
+  training: { weekdays: number[]; overrides: Record<string, boolean> };
 }) {
   const [selection, setSelection] = useState<StatsSelection | null>(null);
   const listRef = useRef<HTMLElement>(null);
@@ -54,7 +57,14 @@ export function StatsDashboard({
     () => withNutrition(recipes).map((r) => ({ id: r.id, title: r.title, kcal: r.kcal, protein: r.protein, highProtein: r.isHighProtein })),
     [recipes],
   );
-  const weeks = useMemo(() => weeklyPlanSeries(planEntries, mondays, mondayOf), [planEntries, mondays]);
+  const weeks = useMemo(
+    () =>
+      weeklyPlanSeries(planEntries, mondays, mondayOf, (date) => {
+        const isTraining = isTrainingDay(date, training.weekdays, training.overrides);
+        return { training: isTraining, goals: goalsForDay(isTraining, goals.default, goals.training) };
+      }),
+    [planEntries, mondays, training, goals],
+  );
   const top = useMemo(() => mostPlanned(planEntries, new Map(Object.entries(recipeTitles))), [planEntries, recipeTitles]);
   const selected = useMemo(() => applySelection(recipes, selection), [recipes, selection]);
 
@@ -201,15 +211,21 @@ export function StatsDashboard({
 
         <ChartCard
           title="Wochenplan: Kalorien"
-          description="Durchschnitt pro geplantem Tag, die letzten Wochen im Vergleich zum Ziel."
+          description="Durchschnitt pro geplantem Tag, die letzten Wochen im Vergleich zum Ziel (an Trainingstagen das Trainingsziel)."
           table={
             <DataTable
-              head={["Woche", "Ø kcal", "Geplante Tage"]}
-              rows={weeks.map((w) => [`KW ${isoWeekNumber(w.monday)}`, w.kcal == null ? "–" : Math.round(w.kcal), w.plannedDays])}
+              head={["Woche", "Ø kcal", "Ø Ziel", "Geplante Tage", "Trainingstage"]}
+              rows={weeks.map((w) => [
+                `KW ${isoWeekNumber(w.monday)}`,
+                w.kcal == null ? "–" : Math.round(w.kcal),
+                w.goalKcal == null ? "–" : Math.round(w.goalKcal),
+                w.plannedDays,
+                w.trainingDays,
+              ])}
             />
           }
         >
-          <PlanTrend points={weeks} metric="kcal" goal={goals.kcal} color="var(--macro-kcal)" unit=" kcal" />
+          <PlanTrend points={weeks} metric="kcal" color="var(--macro-kcal)" unit=" kcal" />
         </ChartCard>
 
         <ChartCard
@@ -217,12 +233,18 @@ export function StatsDashboard({
           description="Durchschnitt pro geplantem Tag in Gramm."
           table={
             <DataTable
-              head={["Woche", "Ø Protein (g)", "Geplante Tage"]}
-              rows={weeks.map((w) => [`KW ${isoWeekNumber(w.monday)}`, w.protein == null ? "–" : Math.round(w.protein), w.plannedDays])}
+              head={["Woche", "Ø Protein (g)", "Ø Ziel (g)", "Geplante Tage", "Trainingstage"]}
+              rows={weeks.map((w) => [
+                `KW ${isoWeekNumber(w.monday)}`,
+                w.protein == null ? "–" : Math.round(w.protein),
+                w.goalProtein == null ? "–" : Math.round(w.goalProtein),
+                w.plannedDays,
+                w.trainingDays,
+              ])}
             />
           }
         >
-          <PlanTrend points={weeks} metric="protein" goal={goals.protein} color="var(--macro-protein)" unit=" g" />
+          <PlanTrend points={weeks} metric="protein" color="var(--macro-protein)" unit=" g" />
         </ChartCard>
 
         <ChartCard

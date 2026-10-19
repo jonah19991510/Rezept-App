@@ -60,6 +60,10 @@ export type PlanRecipeOption = {
   title: string;
   kcal: number | null;
   protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  /** Rezept ist als Meal Prep markiert (Phase 11: „Für mehrere Tage kochen“ vorschlagen) */
+  isMealPrep: boolean;
   isFavorite: boolean;
   /** null = eigenes Rezept */
   authorName: string | null;
@@ -78,6 +82,9 @@ export function planRecipeOptions(
     title: r.title,
     kcal: r.nutrition?.kcal_per_serving ?? null,
     protein: r.nutrition?.protein_per_serving ?? null,
+    carbs: r.nutrition?.carbs_per_serving ?? null,
+    fat: r.nutrition?.fat_per_serving ?? null,
+    isMealPrep: r.is_meal_prep,
     isFavorite: r.isFavorite,
     authorName: author,
   });

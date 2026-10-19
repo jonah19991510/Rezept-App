@@ -106,6 +106,13 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 
 ## Änderungsverlauf
 
+- **Phase 11:** Jetzt genutzt: `user_settings.training_weekdays` (Standard-Trainingstage), `user_goals` mit Typ
+  „training“ (Ziel an Trainingstagen), `plan_days` (im Plan umgeschaltete Trainingstage) und `meal_prep_batches`
+  (Kochtag, gekochte Portionen) mit `meal_plan_entries.batch_id/is_leftover`. Alles nur für den Nutzer selbst
+  sichtbar, im Datenexport enthalten und beim Löschen des Accounts per Cascade entfernt. Trainingstage und Ziele
+  lassen Rückschlüsse auf Sport und Ernährung zu (siehe Hinweis oben). Lücken- und Reste-Vorschläge werden nur aus
+  vorhandenen Daten berechnet, nichts davon wird gespeichert. Keine neuen Tabellen, keine neuen Dienstleister.
+
 - **Phase 10:** Vorratsschrank (`pantry_items`: Zutat, freiwillig Menge und Ablaufdatum, Bereich Küche/Bar) wird
   jetzt genutzt, nur für den Nutzer selbst sichtbar, im Datenexport enthalten, beim Löschen des Accounts per Cascade
   entfernt. „Was kann ich kochen?“ gleicht nur eigene Rezepte mit dem eigenen Vorrat ab. Text-Export der

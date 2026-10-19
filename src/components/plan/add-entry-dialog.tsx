@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { BookOpen, Check, Compass, Heart, Search } from "lucide-react";
+import { BookOpen, Boxes, Check, Compass, Heart, Search } from "lucide-react";
 import { toast } from "sonner";
 import { addPlanEntryAction } from "@/app/(app)/wochenplan/actions";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { followingDates } from "@/lib/domain/mealprep";
 import { MEAL_SLOTS, SLOT_LABELS, type MealSlot } from "@/lib/domain/plan";
-import { dayMonth, weekdayLong } from "@/lib/domain/week";
+import { dayMonth, weekdayLong, weekdayShort } from "@/lib/domain/week";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ServingsStepper } from "./servings-stepper";
@@ -39,7 +40,9 @@ export function AddEntryDialog({
     <Dialog open={target != null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="top-4 max-h-[calc(100dvh-2rem)] translate-y-0 overflow-y-auto sm:top-[8dvh] sm:max-w-lg">
         {/* key: Formular bei jedem Öffnen frisch */}
-        {target ? <AddEntryForm key={`${target.date}-${target.slot}`} target={target} days={days} recipes={recipes} onDone={onClose} /> : null}
+        {target ? (
+          <AddEntryForm key={`${target.date}-${target.slot}-${target.recipeId ?? ""}`} target={target} days={days} recipes={recipes} onDone={onClose} />
+        ) : null}
       </DialogContent>
     </Dialog>
   );
@@ -56,13 +59,26 @@ function AddEntryForm({
   recipes: PlanRecipeChoices;
   onDone: () => void;
 }) {
-  // Ohne eigene Rezepte gleich die öffentlichen zeigen
-  const [source, setSource] = useState<Source>(recipes.own.length === 0 && recipes.community.length > 0 ? "community" : "own");
+  // Ohne eigene Rezepte gleich die öffentlichen zeigen; ein Vorschlag bringt sein Rezept schon mit
+  const [source, setSource] = useState<Source>(
+    target.recipeId
+      ? recipes.community.some((r) => r.id === target.recipeId)
+        ? "community"
+        : "own"
+      : recipes.own.length === 0 && recipes.community.length > 0
+        ? "community"
+        : "own",
+  );
   const [query, setQuery] = useState("");
   const [date, setDate] = useState(target.date);
   const [slot, setSlot] = useState<MealSlot>(target.slot);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [servings, setServings] = useState(1);
+  const [selected, setSelected] = useState<string | null>(target.recipeId ?? null);
+  const [servings, setServings] = useState(target.servings ?? 1);
+  // Meal Prep (Phase 11): weitere Tage mit Resten im selben Slot, insgesamt gekochte Portionen
+  const [prep, setPrep] = useState(false);
+  const [prepTouched, setPrepTouched] = useState(false);
+  const [prepDates, setPrepDates] = useState<string[]>([]);
+  const [cooked, setCooked] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
   const options = recipes[source];
@@ -76,6 +92,32 @@ function AddEntryForm({
       .sort((a, b) => Number(b.isFavorite) - Number(a.isFavorite) || a.title.localeCompare(b.title, "de"));
   }, [query, options]);
 
+  const nextDays = followingDates(date);
+  const chosenPrepDates = prep ? prepDates.filter((d) => nextDays.includes(d)).sort() : [];
+  const plannedPortions = servings * (chosenPrepDates.length + 1);
+  const cookedPortions = Math.max(cooked ?? plannedPortions, plannedPortions);
+
+  function enablePrep(on: boolean) {
+    setPrepTouched(true);
+    setPrep(on);
+    if (on && prepDates.length === 0) setPrepDates(nextDays.slice(0, 2));
+  }
+
+  function selectRecipe(id: string) {
+    setSelected(id);
+    // Als Meal Prep markierte Rezepte schlagen gleich zwei Reste-Tage vor
+    const recipe = options.find((r) => r.id === id);
+    if (recipe?.isMealPrep && !prepTouched) {
+      setPrep(true);
+      if (prepDates.length === 0) setPrepDates(nextDays.slice(0, 2));
+    }
+  }
+
+  function togglePrepDate(d: string) {
+    setPrepDates((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
+  }
+
+
   function switchSource(next: Source) {
     setSource(next);
     setSelected(null);
@@ -84,9 +126,15 @@ function AddEntryForm({
   function submit() {
     if (!selected) return;
     startTransition(async () => {
-      const result = await addPlanEntryAction({ date, slot, recipe_id: selected, servings });
+      const result = await addPlanEntryAction({
+        date,
+        slot,
+        recipe_id: selected,
+        servings,
+        ...(chosenPrepDates.length > 0 ? { prepDates: chosenPrepDates, servingsCooked: cookedPortions } : {}),
+      });
       if (result.ok) {
-        toast.success("Eingeplant.");
+        toast.success(result.message ?? "Eingeplant.");
         onDone();
       } else toast.error(result.message);
     });
@@ -161,7 +209,7 @@ function AddEntryForm({
                   <li key={r.id} role="option" aria-selected={isSelected}>
                     <button
                       type="button"
-                      onClick={() => setSelected(r.id)}
+                      onClick={() => selectRecipe(r.id)}
                       className={cn(
                         "flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
                         isSelected && "bg-accent",
@@ -214,8 +262,61 @@ function AddEntryForm({
           </div>
         </div>
 
+        <div className="grid gap-3 rounded-2xl border p-3">
+          <label className="flex min-h-11 cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              checked={prep}
+              onChange={(e) => enablePrep(e.target.checked)}
+              className="size-5 shrink-0 accent-[var(--primary)]"
+            />
+            <span className="flex items-center gap-2 text-sm font-medium">
+              <Boxes className="size-4 text-sage" aria-hidden />
+              Für mehrere Tage kochen (Meal Prep)
+            </span>
+          </label>
+          {prep ? (
+            <>
+              <div>
+                <p className="mb-2 text-sm text-muted-foreground">Reste als {SLOT_LABELS[slot]} an:</p>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tage mit Resten">
+                  {nextDays.map((d) => {
+                    const on = chosenPrepDates.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => togglePrepDate(d)}
+                        className={cn(
+                          "flex min-h-11 min-w-14 flex-col items-center justify-center rounded-xl border px-2 text-xs transition-colors",
+                          on ? "border-primary bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <span className="font-medium">{weekdayShort(d)}</span>
+                        <span>{dayMonth(d).slice(0, 6)}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm">Insgesamt kochen</span>
+                <ServingsStepper value={cookedPortions} onChange={(v) => setCooked(Math.max(v, plannedPortions))} />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Eingeplant sind {formatNumber(plannedPortions, 2)} {plannedPortions === 1 ? "Portion" : "Portionen"}. Die
+                Einkaufsliste zählt das Meal Prep einmal am Kochtag; was übrig bleibt, schlägt der Plan an den Folgetagen vor.
+              </p>
+            </>
+          ) : null}
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <ServingsStepper value={servings} onChange={setServings} />
+          <div className="grid gap-1">
+            {prep ? <span className="text-xs text-muted-foreground">Portionen pro Tag</span> : null}
+            <ServingsStepper value={servings} onChange={setServings} />
+          </div>
           <Button type="button" onClick={submit} disabled={!selected || pending}>
             {pending ? "Wird eingeplant …" : "Einplanen"}
           </Button>

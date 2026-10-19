@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { portionsToBuy } from "@/lib/domain/mealprep";
 import { aggregateShopping, type ShoppingSourceLine } from "@/lib/domain/shopping";
 import { isIsoDate } from "@/lib/domain/week";
 import { createClient } from "@/lib/supabase/server";
@@ -26,16 +27,29 @@ export async function generateFromPlanAction(input: { from: string; to: string }
   const { from, to } = parsed.data;
 
   const supabase = await createClient();
-  const { data: entries, error } = await supabase
-    .from("meal_plan_entries")
-    .select("recipe_id, servings")
-    .eq("user_id", user.id)
-    .gte("date", from)
-    .lte("date", to);
-  if (error) return { ok: false, message: "Der Wochenplan konnte nicht gelesen werden." };
+  const [{ data: entries, error }, { data: batches, error: batchError }] = await Promise.all([
+    supabase.from("meal_plan_entries").select("recipe_id, servings, batch_id").eq("user_id", user.id).gte("date", from).lte("date", to),
+    // Meal Prep: am Kochtag einmal alle gekochten Portionen (nur Batches, deren Kochtag noch im Plan steht)
+    supabase
+      .from("meal_prep_batches")
+      .select("id, recipe_id, cook_date, servings_cooked, meal_plan_entries!meal_plan_entries_batch_id_fkey(is_leftover)")
+      .eq("user_id", user.id)
+      .gte("cook_date", from)
+      .lte("cook_date", to),
+  ]);
+  if (error || batchError) return { ok: false, message: "Der Wochenplan konnte nicht gelesen werden." };
   if (entries.length === 0) return { ok: false, message: "In diesem Zeitraum ist nichts geplant." };
 
-  const recipeIds = [...new Set(entries.map((e) => e.recipe_id))];
+  const portions = portionsToBuy(
+    entries.map((e) => ({ recipeId: e.recipe_id, servings: e.servings, batchId: e.batch_id })),
+    batches
+      .filter((b) => b.meal_plan_entries.some((e) => !e.is_leftover))
+      .map((b) => ({ id: b.id, recipeId: b.recipe_id, cookDate: b.cook_date, servingsCooked: b.servings_cooked })),
+    from,
+    to,
+  );
+  if (portions.length === 0) return { ok: false, message: "In diesem Zeitraum stehen nur Reste, dafür ist schon eingekauft." };
+  const recipeIds = [...new Set(portions.map((e) => e.recipeId))];
   const { data: recipes, error: recipeError } = await supabase
     .from("recipes")
     .select(
@@ -46,8 +60,8 @@ export async function generateFromPlanAction(input: { from: string; to: string }
   const recipeById = new Map(recipes.map((r) => [r.id, r]));
 
   const lines: ShoppingSourceLine[] = [];
-  for (const entry of entries) {
-    const recipe = recipeById.get(entry.recipe_id);
+  for (const entry of portions) {
+    const recipe = recipeById.get(entry.recipeId);
     if (!recipe) continue;
     // Geplante Portionen im Verhältnis zu den Portionen des Rezepts
     const factor = entry.servings / (recipe.servings || 1);

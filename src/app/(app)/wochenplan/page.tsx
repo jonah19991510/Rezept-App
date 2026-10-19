@@ -7,8 +7,10 @@ import { WeekPlanner } from "@/components/plan/week-planner";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { planRecipeOptions } from "@/lib/domain/community";
+import { leftoverIdeas, type LeftoverIdea } from "@/lib/domain/leftovers";
+import { isTrainingDay } from "@/lib/domain/training";
 import { addDays, mondayOf, resolveWeekParam, todayInBerlin, weekDays, weekLabel } from "@/lib/domain/week";
-import { getDefaultGoals, getWeekEntries } from "@/lib/server/plan";
+import { getAllGoals, getPlannedBefore, getRecipeBases, getTrainingDays, getWeekBatches, getWeekEntries } from "@/lib/server/plan";
 import { getOwnRecipeList, getPublicRecipeList } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Wochenplan" };
@@ -20,9 +22,12 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
   const monday = resolveWeekParam(woche, today);
   const days = weekDays(monday);
 
-  const [entries, goals, ownRecipes, publicRecipes] = await Promise.all([
+  const [entries, goals, training, batches, before, ownRecipes, publicRecipes] = await Promise.all([
     getWeekEntries(user.id, monday),
-    getDefaultGoals(user.id),
+    getAllGoals(user.id),
+    getTrainingDays(user.id, monday, addDays(monday, 6)),
+    getWeekBatches(user.id, monday),
+    getPlannedBefore(user.id, monday),
     getOwnRecipeList(user.id),
     getPublicRecipeList(user.id),
   ]);
@@ -30,6 +35,15 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
   // Eigenes Buch und öffentliche Rezepte anderer (Phase 6)
   const recipeOptions = planRecipeOptions(ownRecipes, publicRecipes);
 
+  // Reste-Vorschläge (Phase 11): Basen der geplanten Rezepte und eigene Rezepte mit derselben Basis
+  const plannedByDate: Record<string, string[]> = {};
+  for (const e of [...before, ...entries]) (plannedByDate[e.date] ??= []).push(e.recipeId);
+  const bases = await getRecipeBases([...new Set([...ownRecipes.map((r) => r.id), ...Object.values(plannedByDate).flat()])]);
+  const ideas: Record<string, LeftoverIdea[]> = Object.fromEntries(
+    days.map((d) => [d, leftoverIdeas(d, plannedByDate, bases, ownRecipes)]),
+  );
+
+  const trainingDays = Object.fromEntries(days.map((d) => [d, isTrainingDay(d, training.weekdays, training.overrides)]));
   const isCurrentWeek = monday === mondayOf(today);
 
   return (
@@ -61,7 +75,17 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
       </nav>
 
       {/* key: bei Wochenwechsel den gewählten Tag neu bestimmen */}
-      <WeekPlanner key={monday} days={days} today={today} entries={entries} goals={goals} recipes={recipeOptions} />
+      <WeekPlanner
+        key={monday}
+        days={days}
+        today={today}
+        entries={entries}
+        goals={goals}
+        trainingDays={trainingDays}
+        batches={batches}
+        leftoverIdeas={ideas}
+        recipes={recipeOptions}
+      />
     </>
   );
 }

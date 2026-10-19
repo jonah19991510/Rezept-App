@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/lib/auth";
-import { getDefaultGoals } from "@/lib/server/plan";
+import { getAllGoals, getTrainingWeekdays } from "@/lib/server/plan";
 import { DataSection, DeleteAccount, DisplayNameForm, PasswordForm } from "./account-forms";
 import { GoalsForm } from "./goals-form";
+import { TrainingDaysForm } from "./training-days-form";
 
 export const metadata: Metadata = { title: "Einstellungen" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const goals = await getDefaultGoals(user.id);
+  const [goals, trainingWeekdays] = await Promise.all([getAllGoals(user.id), getTrainingWeekdays(user.id)]);
 
   return (
     <>
@@ -43,7 +44,23 @@ export default async function SettingsPage() {
           Der Wochenplan zeigt dir pro Tag, wie nah du diesen Zielen kommst. Felder, die du leer lässt, werden nicht
           ausgewertet.
         </p>
-        <GoalsForm initial={goals} />
+        <GoalsForm initial={goals.default} />
+      </section>
+
+      <section id="training" className="mb-6 scroll-mt-20 rounded-3xl border bg-card p-5" aria-labelledby="sec-training">
+        <h2 id="sec-training" className="mb-1 text-lg font-semibold">
+          Trainingstage
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          An diesen Wochentagen nutzt der Wochenplan das Ziel für Trainingstage. Im Plan kannst du jeden Tag mit der
+          Hantel einzeln umschalten.
+        </p>
+        <TrainingDaysForm initial={trainingWeekdays} />
+        <h3 className="mt-6 mb-1 font-semibold">Ziel an Trainingstagen</h3>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Zum Beispiel mehr Protein und kcal. Leere Felder übernehmen das normale Tagesziel.
+        </p>
+        <GoalsForm initial={goals.training} goalType="training" />
       </section>
 
       <section className="mb-6 rounded-3xl border bg-card p-5" aria-labelledby="sec-daten">
@@ -64,7 +81,6 @@ export default async function SettingsPage() {
         <DeleteAccount displayName={user.displayName} />
       </section>
 
-      <p className="text-sm text-muted-foreground">Trainingstage und weitere Einstellungen kommen in späteren Phasen dazu.</p>
     </>
   );
 }

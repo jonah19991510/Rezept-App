@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, type TouchEvent } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Boxes, ChevronLeft, ChevronRight, Dumbbell, Plus, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   entryMacros,
@@ -13,11 +13,14 @@ import {
   type Goals,
   type MealSlot,
 } from "@/lib/domain/plan";
+import type { LeftoverIdea } from "@/lib/domain/leftovers";
+import { goalsForDay } from "@/lib/domain/training";
 import { dayMonth, weekdayLong, weekdayShort } from "@/lib/domain/week";
 import { formatNumber } from "@/lib/format";
-import type { PlanEntry } from "@/lib/server/plan";
+import type { PlanBatch, PlanEntry } from "@/lib/server/plan";
 import { cn } from "@/lib/utils";
 import { AddEntryDialog } from "./add-entry-dialog";
+import { DayExtras, TrainingToggle } from "./day-extras";
 import { EntryDialog } from "./entry-dialog";
 import { GoalProgress } from "./goal-progress";
 import { MacroDot } from "@/components/recipes/macro-dot";
@@ -28,12 +31,19 @@ export function WeekPlanner({
   today,
   entries,
   goals,
+  trainingDays,
+  batches,
+  leftoverIdeas,
   recipes,
 }: {
   days: string[];
   today: string;
   entries: PlanEntry[];
-  goals: Goals;
+  /** Standard- und Trainingstag-Ziel (Phase 11) */
+  goals: { default: Goals; training: Goals };
+  trainingDays: Record<string, boolean>;
+  batches: PlanBatch[];
+  leftoverIdeas: Record<string, LeftoverIdea[]>;
   recipes: PlanRecipeChoices;
 }) {
   const [selectedDay, setSelectedDay] = useState(days.includes(today) ? today : days[0]);
@@ -43,6 +53,9 @@ export function WeekPlanner({
   const byDay = useMemo(() => totalsByDay(days, entries), [days, entries]);
   const plannedDates = useMemo(() => new Set(entries.map((e) => e.date)), [entries]);
   const summary = useMemo(() => summarizeWeek(byDay, plannedDates), [byDay, plannedDates]);
+  const goalsFor = (day: string) => goalsForDay(trainingDays[day] ?? false, goals.default, goals.training);
+  // Wochenschnitt gegen den Schnitt der Tagesziele (Trainingstage haben andere Ziele)
+  const averageGoals = averageOf([...plannedDates].filter((d) => days.includes(d)).map(goalsFor));
 
   const entriesFor = (date: string, slot: MealSlot) => entries.filter((e) => e.date === date && e.slot === slot);
   const selectedIndex = days.indexOf(selectedDay);
@@ -69,7 +82,7 @@ export function WeekPlanner({
       <div className="lg:hidden">
         <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-1" role="tablist" aria-label="Wochentage">
           {days.map((day) => {
-            const p = goalProgress(byDay[day].kcal, goals.kcal, "kcal");
+            const p = goalProgress(byDay[day].kcal, goalsFor(day).kcal, "kcal");
             const active = day === selectedDay;
             return (
               <button
@@ -79,11 +92,14 @@ export function WeekPlanner({
                 aria-selected={active}
                 onClick={() => setSelectedDay(day)}
                 className={cn(
-                  "flex min-h-14 min-w-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl border px-2 text-sm transition-colors",
+                  "relative flex min-h-14 min-w-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl border px-2 text-sm transition-colors",
                   active ? "border-primary bg-primary text-primary-foreground" : "bg-card",
                   day === today && !active && "border-primary",
                 )}
               >
+                {trainingDays[day] ? (
+                  <Dumbbell className="absolute top-1 right-0.5 size-2.5 opacity-80" aria-label="Trainingstag" />
+                ) : null}
                 <span className="font-medium">{weekdayShort(day)}</span>
                 <span className={cn("text-xs", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
                   {dayMonth(day).slice(0, 3)}
@@ -134,8 +150,22 @@ export function WeekPlanner({
           </div>
 
           <div className="rounded-3xl border bg-card p-4">
-            <GoalProgress actual={byDay[selectedDay]} goals={goals} />
+            <div className="mb-3 flex justify-end">
+              <TrainingToggle key={selectedDay} date={selectedDay} training={trainingDays[selectedDay] ?? false} />
+            </div>
+            <GoalProgress actual={byDay[selectedDay]} goals={goalsFor(selectedDay)} />
           </div>
+
+          <DayExtras
+            date={selectedDay}
+            actual={byDay[selectedDay]}
+            goals={goalsFor(selectedDay)}
+            dayEntries={entries.filter((e) => e.date === selectedDay)}
+            recipes={recipes}
+            batches={batches}
+            ideas={leftoverIdeas[selectedDay] ?? []}
+            onPlan={setAddTarget}
+          />
 
           {MEAL_SLOTS.map((slot) => (
             <div key={slot} className="space-y-2">
@@ -162,17 +192,33 @@ export function WeekPlanner({
           <div />
           {days.map((day) => {
             const total = byDay[day];
-            const p = goalProgress(total.kcal, goals.kcal, "kcal");
+            const dayGoals = goalsFor(day);
+            const p = goalProgress(total.kcal, dayGoals.kcal, "kcal");
             return (
               <div
                 key={day}
-                className={cn("rounded-2xl border bg-card p-2 text-center", day === today && "border-primary")}
+                className={cn(
+                  "relative rounded-2xl border bg-card p-2 text-center",
+                  day === today && "border-primary",
+                  day === selectedDay && "ring-2 ring-primary/40",
+                )}
               >
-                <div className="text-sm font-semibold">{weekdayShort(day)}</div>
-                <div className="text-xs text-muted-foreground">{dayMonth(day)}</div>
+                <div className="absolute top-1.5 right-1.5">
+                  <TrainingToggle date={day} training={trainingDays[day] ?? false} compact />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedDay(day)}
+                  aria-pressed={day === selectedDay}
+                  aria-label={`${weekdayLong(day)} im Detail zeigen`}
+                  className="rounded-lg px-1 hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                >
+                  <div className="text-sm font-semibold">{weekdayShort(day)}</div>
+                  <div className="text-xs text-muted-foreground">{dayMonth(day)}</div>
+                </button>
                 <div className="mt-1 text-xs tabular-nums">
                   <span className="font-semibold">{formatNumber(Math.round(total.kcal), 0)}</span>
-                  {goals.kcal ? <span className="text-muted-foreground"> / {formatNumber(goals.kcal, 0)}</span> : null}
+                  {dayGoals.kcal ? <span className="text-muted-foreground"> / {formatNumber(dayGoals.kcal, 0)}</span> : null}
                 </div>
                 <div className="flex items-center justify-center gap-1 text-xs tabular-nums">
                   <MacroDot macro="protein" />
@@ -194,6 +240,27 @@ export function WeekPlanner({
             <SlotRow key={slot} slot={slot} days={days} entriesFor={entriesFor} onAdd={setAddTarget} onEdit={setEditEntry} />
           ))}
         </div>
+
+        {/* Gewählter Tag im Detail: Ziele, Lücke, Reste */}
+        <section className="mt-6 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" aria-label={`${weekdayLong(selectedDay)} im Detail`}>
+          <div className="rounded-3xl border bg-card p-4">
+            <h2 className="mb-3 text-lg font-semibold">
+              {weekdayLong(selectedDay)}, {dayMonth(selectedDay)}
+              {trainingDays[selectedDay] ? <span className="ml-2 text-sm font-normal text-primary">Trainingstag</span> : null}
+            </h2>
+            <GoalProgress actual={byDay[selectedDay]} goals={goalsFor(selectedDay)} />
+          </div>
+          <DayExtras
+            date={selectedDay}
+            actual={byDay[selectedDay]}
+            goals={goalsFor(selectedDay)}
+            dayEntries={entries.filter((e) => e.date === selectedDay)}
+            recipes={recipes}
+            batches={batches}
+            ideas={leftoverIdeas[selectedDay] ?? []}
+            onPlan={setAddTarget}
+          />
+        </section>
       </div>
 
       {/* Wochenübersicht */}
@@ -209,7 +276,7 @@ export function WeekPlanner({
               <p className="mb-3 text-sm text-muted-foreground">
                 Durchschnitt pro geplantem Tag ({summary.plannedDays} {summary.plannedDays === 1 ? "Tag" : "Tage"})
               </p>
-              <GoalProgress actual={summary.averagePerPlannedDay} goals={goals} compact />
+              <GoalProgress actual={summary.averagePerPlannedDay} goals={averageGoals} compact />
             </div>
             <dl className="grid grid-cols-2 content-start gap-3 text-sm">
               <div className="rounded-2xl bg-muted/60 p-3">
@@ -254,7 +321,7 @@ export function WeekPlanner({
       </section>
 
       <AddEntryDialog target={addTarget} days={days} recipes={recipes} onClose={() => setAddTarget(null)} />
-      <EntryDialog entry={editEntry} days={days} onClose={() => setEditEntry(null)} />
+      <EntryDialog entry={editEntry} days={days} batches={batches} onClose={() => setEditEntry(null)} />
     </>
   );
 }
@@ -312,6 +379,13 @@ function EntryCard({ entry, onClick, compact = false }: { entry: PlanEntry; onCl
           !entry.available && "text-muted-foreground italic",
         )}
       >
+        {entry.batchId ? (
+          entry.isLeftover ? (
+            <Repeat className="mr-1 inline size-3.5 align-[-2px] text-sage" aria-label="Reste" />
+          ) : (
+            <Boxes className="mr-1 inline size-3.5 align-[-2px] text-sage" aria-label="Meal Prep, Kochtag" />
+          )
+        ) : null}
         {entry.recipeTitle}
       </span>
       <span className={cn("block text-muted-foreground tabular-nums", compact ? "mt-1 text-[0.7rem]" : "shrink-0 text-right text-xs")}>
@@ -326,4 +400,13 @@ function EntryCard({ entry, onClick, compact = false }: { entry: PlanEntry; onCl
       </span>
     </button>
   );
+}
+
+/** Durchschnitt der Tagesziele; ein Feld bleibt leer, wenn es an keinem Tag ein Ziel gibt. */
+function averageOf(list: Goals[]): Goals {
+  const avg = (key: keyof Goals) => {
+    const values = list.map((g) => g[key]).filter((v): v is number => v != null);
+    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+  };
+  return { kcal: avg("kcal"), protein: avg("protein"), carbs: avg("carbs"), fat: avg("fat") };
 }

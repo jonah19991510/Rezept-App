@@ -113,8 +113,27 @@ describe("Wochenplan-Statistik", () => {
 
   it("bildet den Durchschnitt pro geplantem Tag je Woche, leere Wochen bleiben leer", () => {
     const series = weeklyPlanSeries(entries, ["2026-10-05", "2026-10-12"], mondayOf);
-    expect(series[0]).toEqual({ monday: "2026-10-05", plannedDays: 0, kcal: null, protein: null });
+    expect(series[0]).toEqual({
+      monday: "2026-10-05",
+      plannedDays: 0,
+      trainingDays: 0,
+      kcal: null,
+      protein: null,
+      goalKcal: null,
+      goalProtein: null,
+    });
     expect(series[1]).toMatchObject({ plannedDays: 2, kcal: (1800 + 300) / 2, protein: (150 + 18) / 2 });
+  });
+
+  it("markiert Trainingstage und mittelt die Tagesziele der geplanten Tage", () => {
+    const plannedDates = [...new Set(entries.filter((e) => mondayOf(e.date) === "2026-10-12").map((e) => e.date))].sort();
+    const training = new Set([plannedDates[0]]);
+    const series = weeklyPlanSeries(entries, ["2026-10-12"], mondayOf, (date) =>
+      training.has(date)
+        ? { training: true, goals: { kcal: 2600, protein: 160, carbs: null, fat: null } }
+        : { training: false, goals: { kcal: 2000, protein: null, carbs: null, fat: null } },
+    );
+    expect(series[0]).toMatchObject({ trainingDays: 1, goalKcal: 2300, goalProtein: 160 });
   });
 
   it("zählt die meistgeplanten Rezepte", () => {
