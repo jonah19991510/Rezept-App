@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTransition } from "react";
 import { useTheme } from "next-themes";
-import { LogOut, Monitor, Moon, Settings, ShieldCheck, Sun } from "lucide-react";
+import { LogOut, Monitor, Moon, Scale, Settings, ShieldCheck, Sun } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,10 @@ export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmi
         <DropdownMenuItem className={ITEM} render={<Link href="/einstellungen" />}>
           <Settings aria-hidden />
           Einstellungen
+        </DropdownMenuItem>
+        <DropdownMenuItem className={ITEM} render={<Link href="/umrechner" />}>
+          <Scale aria-hidden />
+          Einheiten-Umrechner
         </DropdownMenuItem>
         {isAdmin ? (
           <DropdownMenuItem className={ITEM} render={<Link href="/admin" />}>

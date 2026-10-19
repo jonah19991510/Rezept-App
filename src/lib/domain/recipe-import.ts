@@ -1,4 +1,5 @@
 import type { Enums } from "@/lib/supabase/database.types";
+import { convertFahrenheitInText } from "./us-units";
 
 // Import per Link (Phase 7): liest schema.org/Recipe aus den JSON-LD-Blöcken einer Webseite.
 // Reine Textverarbeitung, kein Netzwerk (das Laden der Seite macht src/lib/server/fetch-page.ts).
@@ -212,13 +213,14 @@ export function toImportedRecipe(node: JsonObject, sourceUrl?: string): Imported
   title = title.slice(0, 200);
   return {
     title,
-    description: text(node.description).slice(0, 2000),
+    description: convertFahrenheitInText(text(node.description)).slice(0, 2000),
     servings: parseYield(node.recipeYield),
     prepMinutes: prep,
     cookMinutes: cook,
     category: guessCategory(text(node.recipeCategory), title, text(node.keywords)),
     ingredientLines,
-    steps: parseInstructions(node.recipeInstructions),
+    // Backofentemperaturen in °F gleich in °C umrechnen
+    steps: parseInstructions(node.recipeInstructions).map(convertFahrenheitInText),
   };
 }
 

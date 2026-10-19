@@ -21,12 +21,15 @@ export function MacroSummary({
   values,
   total,
   caption = "pro Portion",
+  totalLabel = "gesamt",
   compact = false,
   className,
 }: {
   values: MacroValues;
   total?: MacroValues;
   caption?: string;
+  /** Beschriftung der Gesamtwerte, z. B. „für 6 Portionen“ */
+  totalLabel?: string;
   compact?: boolean;
   className?: string;
 }) {
@@ -64,7 +67,7 @@ export function MacroSummary({
       <p className="text-xs text-muted-foreground">
         {caption}
         {values.fiber != null ? ` · Ballaststoffe ${formatNumber(values.fiber)} g` : ""}
-        {total ? ` · gesamt ${formatNumber(Math.round(total.kcal), 0)} kcal, ${formatNumber(total.protein, 0)} g Protein` : ""}
+        {total ? ` · ${totalLabel} ${formatNumber(Math.round(total.kcal), 0)} kcal, ${formatNumber(total.protein, 0)} g Protein` : ""}
       </p>
     </div>
   );

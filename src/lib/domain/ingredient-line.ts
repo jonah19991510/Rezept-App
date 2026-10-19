@@ -1,8 +1,9 @@
 import type { Unit } from "./units";
+import { convertUsAmount, US_UNITS, type UsUnit } from "./us-units";
 
 // Zerlegt Zutatenzeilen aus importierten Rezepten („200 g Mehl“, „1/2 TL Salz“, „2 cups flour“)
-// in Menge, Einheit, Name und Notiz. Amerikanische Einheiten werden dabei metrisch umgerechnet
-// (cup pauschal 240 ml; zutatenabhängige Dichten kommen mit Phase 9).
+// in Menge, Einheit, Name und Notiz. Amerikanische Einheiten werden metrisch umgerechnet (us-units.ts):
+// zunächst ohne Zutat (cup = 240 ml), nach der Zuordnung mit deren Dichte (refineUsLine: 1 cup Mehl ≈ 127 g).
 
 export type ParsedIngredientLine = {
   raw: string;
@@ -12,16 +13,18 @@ export type ParsedIngredientLine = {
   name: string;
   /** Zusätze wie „fein gehackt“, „Dose“, „2–3“ oder die Umrechnung „aus 1 cup“ */
   note: string;
+  /** Ursprüngliche amerikanische Angabe, falls umgerechnet wurde */
+  us: { amount: number; unit: UsUnit } | null;
 };
 
 const FRACTIONS: Record<string, number> = { "½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1 / 3, "⅔": 2 / 3, "⅛": 0.125, "⅕": 0.2 };
 
 /** Einheit, ggf. mit Umrechnungsfaktor und dem Wort, das als Notiz erhalten bleibt. */
-type UnitRule = { unit: Unit; factor?: number; us?: string; keepWord?: boolean };
+type UnitRule = { unit: Unit; factor?: number; us?: UsUnit; keepWord?: boolean };
 
 // Längere Schreibweisen zuerst, damit „fl oz“ vor „oz“ und „Esslöffel“ vor „EL“ greift.
 const UNIT_WORDS: [string, UnitRule][] = [
-  ["fl\\.? ?oz\\.?", { unit: "ml", factor: 29.57, us: "fl oz" }],
+  ["fl\\.? ?oz\\.?", { unit: "ml", us: "fl_oz" }],
   ["esslöffeln?|eßlöffeln?|essl\\.?|el\\.?", { unit: "tbsp" }],
   ["tablespoons?|tbsps?\\.?|tbs\\.?|tbl\\.?", { unit: "tbsp" }],
   ["teelöffeln?|teel\\.?|tl\\.?", { unit: "tsp" }],
@@ -37,12 +40,12 @@ const UNIT_WORDS: [string, UnitRule][] = [
   ["messerspitzen?|msp\\.?", { unit: "pinch", keepWord: true }],
   ["dash(?:es)?|spritzer", { unit: "dash" }],
   ["stücke?|stk\\.?|st\\.", { unit: "piece" }],
-  ["cups?|c\\.", { unit: "ml", factor: 240, us: "cup" }],
-  ["ounces?|oz\\.?", { unit: "g", factor: 28.35, us: "oz" }],
-  ["pounds?|lbs?\\.?", { unit: "g", factor: 453.6, us: "lb" }],
-  ["pints?|pt\\.?", { unit: "ml", factor: 473, us: "pint" }],
-  ["quarts?|qt\\.?", { unit: "ml", factor: 946, us: "quart" }],
-  ["sticks?", { unit: "g", factor: 113, us: "stick" }],
+  ["cups?|c\\.", { unit: "ml", us: "cup" }],
+  ["ounces?|oz\\.?", { unit: "g", us: "oz" }],
+  ["pounds?|lbs?\\.?", { unit: "g", us: "lb" }],
+  ["pints?|pt\\.?", { unit: "ml", us: "pint" }],
+  ["quarts?|qt\\.?", { unit: "ml", us: "quart" }],
+  ["sticks?", { unit: "g", us: "stick" }],
   // Gebinde und Zählwörter: als Stück zählen, das Wort bleibt als Notiz sichtbar
   [
     "dosen?|bund|bunde|packungen?|pck\\.?|pkt\\.?|päckchen|becher|scheiben?|zehen?|knollen?|gläser|glas|tassen?|handvoll|zweige?|stangen?|stängel|blätter|blatt|köpfe?|würfel|tüten?|beutel|flaschen?|cloves?|cans?|slices?",
@@ -119,14 +122,18 @@ export function parseIngredientLine(input: string): ParsedIngredientLine {
   }
 
   let unit: Unit | null = null;
+  let us: ParsedIngredientLine["us"] = null;
   const u = UNIT_PATTERN.exec(rest);
   if (u && amount != null) {
     const word = u[1];
     const rule = ruleFor(word);
     if (rule) {
       unit = rule.unit;
-      if (rule.us) notes.push(`aus ${quantityText.replace(".", ",")} ${rule.us}`);
-      else if (rule.keepWord) notes.push(word.replace(/\.$/, ""));
+      if (rule.us) {
+        notes.push(`aus ${quantityText.replace(".", ",")} ${US_UNITS[rule.us].label}`);
+        us = { amount, unit: rule.us };
+        ({ amount, unit } = convertUsAmount(amount, rule.us));
+      } else if (rule.keepWord) notes.push(word.replace(/\.$/, ""));
       if (rule.factor) amount = roundConverted(amount * rule.factor, rule.unit);
       rest = rest.slice(word.length).trim();
     }
@@ -156,7 +163,18 @@ export function parseIngredientLine(input: string): ParsedIngredientLine {
     unit: amount != null && amount > 0 ? unit : null,
     name: name || raw,
     note: notes.join(", ").slice(0, 200),
+    us: amount != null && amount > 0 ? us : null,
   };
+}
+
+/**
+ * Nach der Zuordnung zu einer Zutat: US-Volumenangaben über deren Dichte genauer umrechnen
+ * („1 cup Mehl“ → 127 g statt 240 ml). Flüssigkeiten und Zeilen ohne US-Einheit bleiben unverändert.
+ */
+export function refineUsLine<T extends ParsedIngredientLine>(line: T, density: number | null | undefined): T {
+  if (!line.us || US_UNITS[line.us.unit].kind !== "volume") return line;
+  const converted = convertUsAmount(line.us.amount, line.us.unit, density);
+  return { ...line, amount: converted.amount, unit: converted.unit };
 }
 
 /** Suchbegriffe für die Zutatensuche: erst der ganze Name, dann einzelne Wörter (längste zuerst). */

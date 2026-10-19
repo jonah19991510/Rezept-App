@@ -1,6 +1,6 @@
 import type { Enums } from "@/lib/supabase/database.types";
 import type { IngredientOption } from "./ingredient-option";
-import type { ParsedIngredientLine } from "./ingredient-line";
+import { refineUsLine, type ParsedIngredientLine } from "./ingredient-line";
 import type { Unit } from "./units";
 
 /** Eine importierte Zutatenzeile mit dem Vorschlag aus der eigenen Zutatentabelle. */
@@ -68,10 +68,12 @@ export function draftToEditorInitial(
       dropped.push(line.raw);
       return;
     }
+    // US-Volumen (cups) über die Dichte der gewählten Zutat umrechnen: 1 cup Mehl → 127 g
+    const refined = refineUsLine(line, choice.ingredient.density_g_per_ml);
     ingredients.push({
       ingredient: choice.ingredient,
-      amount: line.amount,
-      unit: line.amount == null ? null : line.unit,
+      amount: refined.amount,
+      unit: refined.amount == null ? null : refined.unit,
       grams: null,
       note: line.note,
       step_position: null,

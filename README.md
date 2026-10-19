@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 8 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 9 (Kochmodus mit Timern, Portionen skalieren, Einheiten-Umrechnung; davor: Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -175,6 +175,16 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
   schema.org-Format, das fast alle Rezeptseiten haben. In der Bestätigungsansicht ordnest du die Zutaten zu,
   danach geht es in den normalen Editor. Amerikanische Einheiten (cup, oz, lb) werden umgerechnet, Fotos der Seite
   nicht übernommen. Manche Seiten sperren automatische Abrufe; dann hilft nur von Hand anlegen.
+
+- **Portionen skalieren:** Auf der Rezeptseite ändert + / − alle Mengen und die Gesamt-Nährwerte (nur Ansicht).
+  Gerundet wird sinnvoll: Gramm ganzzahlig, Löffel und Stück auf halbe („ca. ½ Ei“).
+- **Kochmodus** („Kochen starten“): Vollbild, ein Schritt pro Ansicht, wischen oder große Pfeile, Zutaten je Schritt,
+  Mise-en-place-Liste zum Abhaken. Zeitangaben im Text („10 Minuten“, „ca. 20–25 Min.“) sind antippbare Timer;
+  mehrere laufen parallel und klingeln mit Ton und Vibration. Der Bildschirm bleibt an (nur über HTTPS, also live).
+  Am Ende „Gekocht!“ mit Bewertung und Notiz.
+- **Editor:** Zutaten einem Schritt zuordnen („Gebraucht in Schritt 2“), Timer pro Schritt in Minuten.
+- **Einheiten-Umrechner** (Profilmenü): cup, tbsp, tsp, fl oz, pint, quart, oz, lb, stick → g/ml (cups zutatenabhängig
+  über die Dichte, z. B. 1 cup Mehl ≈ 127 g, 1 cup Zucker ≈ 204 g), °F ↔ °C. Dieselbe Umrechnung nutzt der Import.
 
 ## Wochenplan
 

@@ -17,6 +17,7 @@ import { RecipeTags } from "@/components/recipes/recipe-tags";
 import { formatDecimalInput, parseDecimal } from "@/lib/domain/decimal";
 import type { IngredientOption } from "@/lib/domain/ingredient-option";
 import { computeRecipeNutrition, type NutritionThresholds } from "@/lib/domain/nutrition";
+import { detectTimers } from "@/lib/domain/timers";
 import { needsManualGrams, resolveLineGrams, type Unit } from "@/lib/domain/units";
 import { formatGrams, formatNumber } from "@/lib/format";
 import { CATEGORY_LABELS, KITCHEN_UNITS, UNIT_LABELS, type AutoTag } from "@/lib/labels";
@@ -55,10 +56,11 @@ type Line = {
   unit: Unit | "";
   manualGrams: string;
   note: string;
-  step_position: number | null;
+  /** Schritt, in dem die Zutat gebraucht wird (über den stabilen Schlüssel, damit Umsortieren nichts verschiebt) */
+  stepKey: number | null;
 };
 
-type Step = { key: number; text: string; timer_seconds: number | null };
+type Step = { key: number; text: string; timerMinutes: string };
 
 // Stabile Schlüssel für Listeneinträge (nur für React, nicht gespeichert)
 let keySequence = 0;
@@ -102,20 +104,25 @@ export function RecipeEditor({
   const [tags, setTags] = useState(initial.tags);
   const [isMealPrep, setIsMealPrep] = useState(initial.is_meal_prep);
   const [sourceUrl, setSourceUrl] = useState(initial.source_url);
-  const [lines, setLines] = useState<Line[]>(() =>
-    initial.ingredients.map((l) => ({
+  const [initialState] = useState(() => {
+    const stepsWithKeys: Step[] = initial.steps.map((s) => ({
+      key: nextKey(),
+      text: s.text,
+      timerMinutes: s.timer_seconds ? formatDecimalInput(s.timer_seconds / 60) : "",
+    }));
+    const linesWithKeys: Line[] = initial.ingredients.map((l) => ({
       key: nextKey(),
       ingredient: l.ingredient,
       amount: formatDecimalInput(l.amount),
       unit: l.unit ?? "",
       manualGrams: needsManualGrams(l.amount, l.unit, l.ingredient) ? formatDecimalInput(l.grams) : "",
       note: l.note,
-      step_position: l.step_position,
-    })),
-  );
-  const [steps, setSteps] = useState<Step[]>(() =>
-    initial.steps.map((s) => ({ key: nextKey(), text: s.text, timer_seconds: s.timer_seconds })),
-  );
+      stepKey: l.step_position != null ? (stepsWithKeys[l.step_position - 1]?.key ?? null) : null,
+    }));
+    return { steps: stepsWithKeys, lines: linesWithKeys };
+  });
+  const [lines, setLines] = useState<Line[]>(initialState.lines);
+  const [steps, setSteps] = useState<Step[]>(initialState.steps);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [replaceKey, setReplaceKey] = useState<number | null>(null);
@@ -154,7 +161,7 @@ export function RecipeEditor({
     const unit = defaultUnit(ingredient);
     setLines((prev) => [
       ...prev,
-      { key: nextKey(), ingredient, amount: unit === "piece" ? "1" : "", unit, manualGrams: "", note: "", step_position: null },
+      { key: nextKey(), ingredient, amount: unit === "piece" ? "1" : "", unit, manualGrams: "", note: "", stepKey: null },
     ]);
   }
 
@@ -184,6 +191,19 @@ export function RecipeEditor({
     ...(isMealPrep ? (["meal_prep"] as const) : []),
   ];
 
+  /** Nummer des Schritts (1, 2, …) zu einem Schlüssel; null, wenn keiner gewählt oder der Schritt gelöscht ist. */
+  function stepNumber(key: number | null): number | null {
+    if (key == null) return null;
+    const index = steps.findIndex((s) => s.key === key);
+    return index >= 0 ? index + 1 : null;
+  }
+
+  function timerSeconds(minutes: string): number | null {
+    if (!minutes.trim()) return null;
+    const value = parseDecimal(minutes);
+    return value == null ? Number.NaN : Math.round(value * 60);
+  }
+
   function buildInput(): RecipeInput {
     return {
       id: initial.id,
@@ -202,9 +222,9 @@ export function RecipeEditor({
         unit: l.unit || null,
         manual_grams: parseDecimal(l.manualGrams),
         note: l.note,
-        step_position: l.step_position,
+        step_position: stepNumber(l.stepKey),
       })),
-      steps: steps.map((s) => ({ text: s.text, timer_seconds: s.timer_seconds })),
+      steps: steps.map((s) => ({ text: s.text, timer_seconds: timerSeconds(s.timerMinutes) })),
     };
   }
 
@@ -362,6 +382,28 @@ export function RecipeEditor({
                       onChange={(e) => updateLine(line.key, { note: e.target.value })}
                     />
                   </div>
+                  {steps.length > 0 ? (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Label htmlFor={`step-${line.key}`} className="text-muted-foreground">
+                        Gebraucht in
+                      </Label>
+                      <NativeSelect
+                        id={`step-${line.key}`}
+                        className="h-9 w-auto min-w-36"
+                        value={stepNumber(line.stepKey)?.toString() ?? ""}
+                        onChange={(e) =>
+                          updateLine(line.key, { stepKey: e.target.value ? (steps[Number(e.target.value) - 1]?.key ?? null) : null })
+                        }
+                      >
+                        <option value="">keinem bestimmten Schritt</option>
+                        {steps.map((s, i) => (
+                          <option key={s.key} value={i + 1}>
+                            Schritt {i + 1}
+                          </option>
+                        ))}
+                      </NativeSelect>
+                    </div>
+                  ) : null}
                   {r.needsManual ? (
                     <div className="flex items-center gap-2 text-sm">
                       <Label htmlFor={`manual-${line.key}`} className="text-muted-foreground">
@@ -445,7 +487,27 @@ export function RecipeEditor({
                     }}
                   />
                   {err(`steps.${index}.text`) ? <p className="text-xs text-destructive">{err(`steps.${index}.text`)?.[0]}</p> : null}
-                  <div className="flex justify-end gap-1">
+                  <div className="flex flex-wrap items-center justify-between gap-1">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <Label htmlFor={`timer-${step.key}`} className="text-muted-foreground">
+                        Timer
+                      </Label>
+                      <Input
+                        id={`timer-${step.key}`}
+                        inputMode="decimal"
+                        className="h-9 w-20"
+                        placeholder="–"
+                        value={step.timerMinutes}
+                        aria-invalid={Boolean(err(`steps.${index}.timer_seconds`)) || undefined}
+                        onChange={(e) => {
+                          setDirty(true);
+                          setSteps((prev) => prev.map((s) => (s.key === step.key ? { ...s, timerMinutes: e.target.value } : s)));
+                        }}
+                      />
+                      <span className="text-muted-foreground">Min.</span>
+                      <StepTimerHint text={step.text} />
+                    </div>
+                    <div className="flex gap-1">
                     <Button type="button" variant="ghost" size="icon" onClick={() => { setDirty(true); setSteps((p) => move(p, index, -1)); }} disabled={index === 0} aria-label="Schritt nach oben">
                       <ArrowUp aria-hidden />
                     </Button>
@@ -455,7 +517,11 @@ export function RecipeEditor({
                     <Button type="button" variant="ghost" size="icon" onClick={() => { setDirty(true); setSteps((p) => p.filter((s) => s.key !== step.key)); }} aria-label={`Schritt ${index + 1} löschen`}>
                       <Trash2 aria-hidden />
                     </Button>
+                    </div>
                   </div>
+                  {err(`steps.${index}.timer_seconds`) ? (
+                    <p className="text-xs text-destructive">Bitte den Timer in Minuten angeben (z. B. 10 oder 1,5), höchstens 24 Stunden.</p>
+                  ) : null}
                 </div>
               </li>
             ))}
@@ -468,7 +534,7 @@ export function RecipeEditor({
           variant="outline"
           onClick={() => {
             setDirty(true);
-            setSteps((prev) => [...prev, { key: nextKey(), text: "", timer_seconds: null }]);
+            setSteps((prev) => [...prev, { key: nextKey(), text: "", timerMinutes: "" }]);
           }}
         >
           <Plus aria-hidden />
@@ -504,4 +570,11 @@ export function RecipeEditor({
       />
     </div>
   );
+}
+
+/** Zeigt, welche Zeitangaben der Kochmodus im Schritttext automatisch als Timer anbietet. */
+function StepTimerHint({ text }: { text: string }) {
+  const found = detectTimers(text);
+  if (found.length === 0) return null;
+  return <span className="text-xs text-muted-foreground">erkannt: {found.map((t) => t.label).join(", ")}</span>;
 }

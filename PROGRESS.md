@@ -11,14 +11,16 @@
 | 5 – Statistiken | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 6 – Community: veröffentlichen, Entdecken, übernehmen | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 7 – Fotos und Import per Link | **fertig** (19.10.2026), vom Nutzer abgenommen |
-| 8 – PWA, Feinschliff, Einstellungen, Deployment | **fertig (19.10.2026)**, live, wartet auf Test und OK des Nutzers |
-| 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | offen, **nächste Phase** |
-| 10–15 | offen |
+| 8 – PWA, Feinschliff, Einstellungen, Deployment | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
+| 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers (noch nicht live) |
+| 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | offen, **nächste Phase** |
+| 11–15 | offen |
 
-**Nächster Schritt:** Nutzer testet Phase 8 live (siehe „Wie der Nutzer Phase 8 testet“). Erst nach seinem OK mit
-Phase 9 beginnen. Geprüft hat Claude: Produktions-Build lokal (Manifest, Icons, Service Worker, Offline-Seite bei
-gestopptem Server), Einstellungen und öffentliche Seiten bei 375 px, Client-Prüfung der Formulare und die Live-Seite
-von außen (siehe „Stand Deployment“). Export, Import und Löschen mit Login hat Claude nicht selbst ausgeführt.
+**Nächster Schritt:** Nutzer testet Phase 9 (siehe „Wie der Nutzer Phase 9 testet“), zunächst über den
+LAN-Server; live geht es erst nach seinem OK (Push auf `master`). Erst danach Phase 10. Geprüft hat Claude:
+Kochmodus, Skalieren und Umrechner auf einer vorübergehenden Vorschauseite mit Beispieldaten bei 375 px (Timer
+gestartet, Ablauf nach 30 s mit „Fertig!“, Schrittwechsel, Gekocht-Bildschirm), Hydration-Fehler gefunden und behoben.
+Speichern des Koch-Log-Eintrags und den Editor mit Login hat Claude nicht selbst ausgeführt.
 
 **Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
 (Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`
@@ -69,6 +71,46 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 9 entstanden ist
+
+- **Migration** `…152106_seed_densities`: Dichten für geriebenen Käse, Nüsse, TK-Beeren, Blattgemüse, Dosenbohnen,
+  Penne; neue Grundbestands-Zutaten Puderzucker, brauner Zucker, Vanillezucker, Kakao, Speisestärke, Backpulver,
+  Dinkel- und Vollkornmehl, Naturjoghurt, Frischkäse, saure Sahne, Kokosmilch, Rosinen (83 Seed-Zutaten, 54 mit Dichte).
+- **Einheiten-Umrechnung** `us-units.ts` (zentral, mit Tests): cup/tbsp/tsp/fl oz/pint/quart/oz/lb/stick; Volumen über
+  die Dichte der Zutat in Gramm, Flüssigkeiten (Dichte 0,95–1,1) bleiben ml; °F → °C auf 5 °C gerundet, auch im Text.
+  Der Import nutzt das: Zutatenzeilen merken die US-Angabe und werden nach der Zuordnung über die Dichte der gewählten
+  Zutat umgerechnet (1 cup Mehl → 127 g), Schritte und Beschreibung bekommen °C.
+- **Umrechner** `/umrechner` (Profilmenü → Einheiten-Umrechner): Menge + Einheit + Zutat → g/ml; °F ↔ °C.
+- **Portionen skalieren** auf der Rezeptseite (`scaling.ts` mit Tests): ± ändert Zutaten und Gesamt-Nährwerte, nur
+  Anzeige. Rundung: g/ml ganzzahlig (ab 250 auf 5, unter 10 auf 0,5), Löffel und Stück auf ½ (unter 1 auf ¼),
+  Prise/Dash ganz; „ca.“, wenn die Rundung mehr als 5 % ausmacht („ca. ½ Ei“).
+- **Kochmodus** `/kochen/[id]` (Knopf „Kochen starten“, übernimmt die gewählten Portionen): Vollbild ohne Navigation,
+  Startseite mit Portionen und Mise-en-place-Liste zum Abhaken, ein Schritt pro Ansicht mit großer Schrift, Wischen,
+  große Pfeile und Pfeiltasten, Zutaten des Schritts (`step_position`), Zeitangaben im Text als antippbare Timer
+  (`timers.ts` mit Tests: „10 Minuten“, „1 Std. 30 Min.“, „ca. 20–25 Min.“, „eine halbe Stunde“, englisch), dazu
+  `timer_seconds` des Schritts. Mehrere Timer parallel in einer Leiste (Pause, Löschen), laufen beim Blättern weiter,
+  Ablauf mit Gong (Web Audio) und Vibration bis zur Bestätigung. Bildschirm bleibt an (Wake Lock, sonst Hinweis).
+  Am Ende „Gekocht!“: Bewertung 1–5 und Notiz → `cook_logs` (mit Rezeptversion).
+- **Editor:** pro Zutat „Gebraucht in Schritt …“ (bleibt beim Umsortieren richtig), pro Schritt ein Timer in Minuten
+  und der Hinweis, welche Zeitangaben automatisch erkannt werden.
+
+## Wie der Nutzer Phase 9 testet
+
+Über den LAN-Server (PC: <http://localhost:3000>, Handy: <http://192.168.178.47:3000>). Hinweis: Im WLAN über
+`http://192…` kann das Handy den Bildschirm nicht wach halten (geht nur über HTTPS); live klappt das.
+
+1. Ein Rezept öffnen, bei „Zutaten“ die Portionen mit + und − ändern: Mengen und „für N Portionen … kcal“ ändern sich,
+   „Original“ setzt zurück. Bei 1 Portion z. B. „ca. ½ Ei“ statt 0,37.
+2. Rezept bearbeiten: in den Schritten einen Timer eintragen (z. B. 10 Min.) und bei zwei Zutaten „Gebraucht in
+   Schritt 1/2“ wählen. Speichern.
+3. „Kochen starten“: Portionen wählen, Zutaten abhaken, „Los geht's“. Wischen bzw. Weiter/Zurück. Zeitangaben im Text
+   antippen → Timer oben; zwei Timer gleichzeitig laufen lassen, blättern, einen pausieren. Kurzen Timer (z. B.
+   „1 Minute“ in einen Schritt schreiben) ablaufen lassen: Ton, Vibration, „Fertig!“ → OK.
+4. Letzter Schritt → „Gekocht!“ → Sterne und Notiz → Speichern.
+5. Profilmenü → „Einheiten-Umrechner“: 1 cup + „Weizenmehl“ → ca. 127 g; 350 °F → 175 °C.
+6. Optional: ein englisches Rezept importieren (z. B. BBC Good Food oder Budget Bytes): cups von Mehl/Zucker landen
+   in Gramm, Ofentemperaturen in °C.
 
 ## Was in Phase 8 entstanden ist
 
@@ -419,11 +461,26 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
     (Datenschutz, geteilte Geräte). Bei Bedarf später „Rezepte offline“ als bewusste Funktion.
 39. **Phase 8 – Letzter Admin kann sich nicht selbst löschen**, sonst könnte niemand mehr einladen.
 
+19.10.2026 (Umsetzung Phase 9):
+
+40. **Phase 9 – Koch-Log schon jetzt speichern:** „Gekocht!“ legt einen Eintrag in `cook_logs` an (Tabelle gab es seit
+    Phase 1). Anzeige auf der Rezeptseite („zuletzt gekocht“, Notizen, Durchschnitt) kommt mit Phase 12.
+    „Verbrauchte Zutaten aus dem Vorrat abziehen“ kommt mit dem Vorrat in Phase 10.
+41. **Phase 9 – Timer bei Bereichen zur unteren Zeit** („20–25 Min.“ → 20 Min.), der Bereich bleibt als Beschriftung.
+42. **Phase 9 – cups über die Dichte nur bei festen Zutaten** (Dichte unter 0,95 oder über 1,1); Flüssigkeiten bleiben
+    ml. Ohne Dichte: 1 cup = 240 ml. Öl (0,92) wird damit gewogen.
+43. **Phase 9 – Kochmodus als eigene Seite** `/kochen/[id]` außerhalb der App-Navigation statt Overlay, damit Zurück
+    und Neuladen funktionieren.
+44. **Phase 9 – Neue Phasen erst nach OK live:** Ab jetzt wird erst nach dem OK des Nutzers auf `master` gepusht
+    (Push = Veröffentlichung); getestet wird vorher über den LAN-Server.
+
 ## Offene Punkte
 
 - Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
-- Portionen skalieren auf der Rezeptseite kommt mit Phase 9 (Kochmodus).
-- `step_position` (Zutat je Schritt) wird beim Speichern erhalten, aber erst in Phase 9 im Editor bearbeitbar.
+- Kochmodus: Timer überleben kein Neuladen der Seite (nur im Arbeitsspeicher). Läuft das Handy in den Ruhezustand,
+  klingelt der Timer erst beim Aufwecken (Browser-Grenze; Push-Benachrichtigungen wären ein eigenes Thema).
+- Die Konsole meldet in der Entwicklung „Encountered a script tag while rendering React component“ (kommt von
+  next-themes, harmlos).
 - Phase 14: Route `/foto/…` für geteilte Rezeptkarten ohne Login öffnen (nur mit gültigem Share-Token, per
   Security-Definer-Funktion) und Open-Graph-Bild daraus erzeugen.
 - Datenexport enthält die Fotos nur als Liste. Ein ZIP mit allen Fotos wäre eine Ergänzung für später.

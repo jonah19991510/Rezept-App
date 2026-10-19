@@ -33,3 +33,9 @@ export function formatMinutes(minutes: number | null): string | null {
   if (h === 0) return `${m} Min.`;
   return m === 0 ? `${h} Std.` : `${h} Std. ${m} Min.`;
 }
+
+/** Skalierte Menge, bei spürbarer Rundung mit „ca.“ davor. */
+export function formatScaledQuantity(amount: number | null, unit: Enums<"unit"> | null, approx: boolean): string {
+  const text = formatQuantity(amount, unit);
+  return text && approx ? `ca. ${text}` : text;
+}

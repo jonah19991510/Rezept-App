@@ -9,6 +9,7 @@ import { FormMessage } from "@/components/forms/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { refineUsLine } from "@/lib/domain/ingredient-line";
 import { draftToEditorInitial, initialChoices, type ImportDraft, type LineChoice } from "@/lib/domain/import-draft";
 import type { NutritionThresholds } from "@/lib/domain/nutrition";
 import { formatQuantity } from "@/lib/format-quantity";
@@ -196,7 +197,8 @@ function ImportReview({
                   : !changed && !line.exact
                     ? "suggested"
                     : "ok";
-              const quantity = formatQuantity(line.amount, line.unit);
+              const shown = choice.ingredient ? refineUsLine(line, choice.ingredient.density_g_per_ml) : line;
+              const quantity = formatQuantity(shown.amount, shown.unit);
               return (
                 <li key={i} className={cn("grid gap-2 px-4 py-3", choice.skip && "opacity-60")}>
                   <p className={cn("text-sm text-muted-foreground", choice.skip && "line-through")}>{line.raw}</p>

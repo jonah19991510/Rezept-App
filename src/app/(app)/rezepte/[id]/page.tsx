@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CircleCheck, Clock, ExternalLink, GitFork, TriangleAlert, Users } from "lucide-react";
+import { ArrowLeft, CircleCheck, Clock, ExternalLink, GitFork, Users } from "lucide-react";
 import { FavoriteButton } from "@/components/recipes/favorite-button";
-import { MacroSummary } from "@/components/recipes/macro-summary";
 import { PublishToggle } from "@/components/recipes/publish-toggle";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { RecipeActions } from "@/components/recipes/recipe-actions";
 import { RecipeTags } from "@/components/recipes/recipe-tags";
+import { ScaledRecipeContent } from "@/components/recipes/scaled-recipe-content";
 import { requireUser } from "@/lib/auth";
 import { authorName } from "@/lib/domain/community";
 import { autoTagsFor } from "@/lib/domain/recipe-filter";
-import { formatGrams } from "@/lib/format";
-import { formatMinutes, formatQuantity } from "@/lib/format-quantity";
+import { formatMinutes } from "@/lib/format-quantity";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import { getRecipeDetail } from "@/lib/server/recipes";
 
@@ -115,87 +114,55 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
         </div>
       </div>
 
+      <ScaledRecipeContent
+        recipeId={recipe.id}
+        servings={recipe.servings}
+        perServing={
+          nutrition && nutrition.kcal_per_serving != null
+            ? {
+                kcal: nutrition.kcal_per_serving,
+                protein: nutrition.protein_per_serving ?? 0,
+                carbs: nutrition.carbs_per_serving ?? 0,
+                fat: nutrition.fat_per_serving ?? 0,
+                fiber: nutrition.fiber_per_serving ?? 0,
+              }
+            : null
+        }
+        lines={ingredients.map((l) => ({
+          id: l.id,
+          amount: l.amount,
+          unit: l.unit,
+          grams: l.grams,
+          name: l.ingredient.name,
+          note: l.note,
+        }))}
+        missingGramsNames={missingGrams.map((l) => l.ingredient.name)}
+        steps={
+          <section aria-labelledby="zubereitung" className="space-y-3">
+            <h2 id="zubereitung" className="text-xl font-semibold">
+              Zubereitung
+            </h2>
+            {steps.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Noch keine Schritte eingetragen.</p>
+            ) : (
+              <ol className="space-y-4">
+                {steps.map((step) => (
+                  <li key={step.id} className="flex gap-3">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                      {step.position}
+                    </span>
+                    <p className="pt-1 leading-relaxed">{step.text}</p>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        }
+      />
+
       {detail.isOwner ? (
         <PublishToggle recipeId={recipe.id} isPublic={recipe.is_public} displayName={user.displayName} />
       ) : null}
-
-      {nutrition && nutrition.kcal_per_serving != null ? (
-        <section aria-labelledby="makros" className="rounded-3xl border bg-card p-4 md:p-5">
-          <h2 id="makros" className="mb-3 text-xl font-semibold">
-            Nährwerte
-          </h2>
-          <MacroSummary
-            values={{
-              kcal: nutrition.kcal_per_serving,
-              protein: nutrition.protein_per_serving ?? 0,
-              carbs: nutrition.carbs_per_serving ?? 0,
-              fat: nutrition.fat_per_serving ?? 0,
-              fiber: nutrition.fiber_per_serving ?? 0,
-            }}
-            total={{
-              kcal: nutrition.kcal_total ?? 0,
-              protein: nutrition.protein_total ?? 0,
-              carbs: nutrition.carbs_total ?? 0,
-              fat: nutrition.fat_total ?? 0,
-            }}
-          />
-        </section>
-      ) : null}
-
-      <div className="grid gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <section aria-labelledby="zutaten" className="space-y-3">
-          <h2 id="zutaten" className="text-xl font-semibold">
-            Zutaten
-          </h2>
-          {ingredients.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Noch keine Zutaten eingetragen.</p>
-          ) : (
-            <ul className="divide-y rounded-2xl border bg-card">
-              {ingredients.map((line) => (
-                <li key={line.id} className="flex gap-3 px-4 py-3">
-                  <span className="w-24 shrink-0 font-medium tabular-nums">
-                    {formatQuantity(line.amount, line.unit) || "–"}
-                  </span>
-                  <span className="min-w-0">
-                    {line.ingredient.name}
-                    {line.note ? <span className="text-muted-foreground">, {line.note}</span> : null}
-                    {line.grams != null && line.unit !== "g" ? (
-                      <span className="block text-xs text-muted-foreground">≈ {formatGrams(line.grams, 0)}</span>
-                    ) : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {missingGrams.length > 0 ? (
-            <p className="flex gap-2 text-sm text-muted-foreground">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-              Für {missingGrams.map((l) => l.ingredient.name).join(", ")} fehlt das Gewicht. Diese Zutaten zählen in den
-              Nährwerten nicht mit.
-            </p>
-          ) : null}
-        </section>
-
-        <section aria-labelledby="zubereitung" className="space-y-3">
-          <h2 id="zubereitung" className="text-xl font-semibold">
-            Zubereitung
-          </h2>
-          {steps.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Noch keine Schritte eingetragen.</p>
-          ) : (
-            <ol className="space-y-4">
-              {steps.map((step) => (
-                <li key={step.id} className="flex gap-3">
-                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-                    {step.position}
-                  </span>
-                  <p className="pt-1 leading-relaxed">{step.text}</p>
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
-      </div>
 
       {recipe.source_url ? (
         <p className="text-sm text-muted-foreground">

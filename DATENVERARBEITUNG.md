@@ -4,7 +4,7 @@
 sind. Grundlage für eine spätere Datenschutzerklärung. **Kein Rechtstext.** Wird mit jeder Phase
 aktualisiert.
 
-Letzte Aktualisierung: Phase 8 (19.10.2026)
+Letzte Aktualisierung: Phase 9 (19.10.2026)
 
 ## Grundsätze
 
@@ -48,7 +48,7 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `shopping_list_items` | Einkaufsliste | 4 | nur Nutzer selbst |
 | `pantry_items` | Vorrat (Küche/Bar), Ablaufdatum | 10 | nur Nutzer selbst |
 | `ingredient_prices` | Preise, optional Laden | 12 | nur Nutzer selbst |
-| `cook_logs` | Kochdatum, Bewertung, Notiz | 12 | nur Nutzer selbst |
+| `cook_logs` | Kochdatum, Bewertung, Notiz, Portionen, Rezeptversion | 9 (Eintrag über den Kochmodus) / 12 (Anzeige) | nur Nutzer selbst |
 | `favorites` | Lieblingsrezepte | 2 | nur Nutzer selbst |
 | `ingredients` (Spalte `created_by`) | selbst angelegte Zutaten | 2 | Zutaten sind global für alle lesbar; `created_by` wird beim Löschen auf leer gesetzt |
 | Storage-Bucket `recipe-photos/<user-id>/<rezept-id>/…` (privat) | Rezeptfotos (groß + Vorschaubild), vor dem Upload im Browser verkleinert und neu kodiert, dadurch **ohne EXIF/GPS** | 7 | wie das Rezept (Owner; bei öffentlichen Rezepten alle Eingeloggten), ausgeliefert nur über die App-Route `/foto/…` |
@@ -105,6 +105,12 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 - [ ] noindex-Regeln bewusst überprüft (robots.txt, Meta-Tag, `X-Robots-Tag`): sollen sie bleiben?
 
 ## Änderungsverlauf
+
+- **Phase 9:** Kochmodus speichert am Ende („Gekocht!“) freiwillig einen Eintrag in `cook_logs` (Datum, Bewertung,
+  Notiz, Portionen), nur für den Nutzer selbst sichtbar und im Datenexport enthalten. Timer, abgehakte Zutaten und
+  gewählte Portionen bleiben nur im Browser (Arbeitsspeicher) und werden nicht gespeichert. Die Bildschirmsperre
+  (Wake Lock) ist eine reine Browser-Funktion ohne Datenübertragung. Neue Grundbestands-Zutaten (keine
+  personenbezogenen Daten). Keine neuen Dienstleister.
 
 - **Phase 8:** App ist installierbar (Web-App-Manifest, Service Worker). Der Service Worker speichert nur
   Programmdateien und die Offline-Seite, keine Seiten mit persönlichen Daten. Einstellungen: Anzeigename/Passwort
