@@ -29,11 +29,24 @@ Die App läuft unter <http://localhost:3000>.
 
 | Befehl | Zweck |
 |---|---|
-| `npm run dev` | Entwicklungsserver |
+| `npm run dev` | Entwicklungsserver (nur auf diesem PC) |
+| `npm run dev:lan` | Entwicklungsserver, auch vom Handy im selben WLAN erreichbar |
 | `npm run build` | Produktions-Build (prüft auch TypeScript) |
 | `npm test` | Unit-Tests (Vitest) |
 | `npm run typecheck` | Nur TypeScript prüfen |
 | `npm run lint` | ESLint |
+
+### Auf dem Handy testen
+
+Bis zum Deployment (Phase 8) läuft die App nur auf deinem PC. Im selben WLAN geht es trotzdem:
+
+1. Statt `npm run dev` den Befehl `npm run dev:lan` starten.
+2. Fragt Windows nach der Firewall, Zugriff für **private Netzwerke** erlauben (nicht für öffentliche).
+3. Auf dem Handy `http://<IP-des-PCs>:3000` öffnen. Die IP steht in der Eingabeaufforderung unter
+   `ipconfig` bei „WLAN → IPv4-Adresse“ (z. B. `192.168.178.47`).
+
+Nur im Heimnetz nutzen. Mails (Einladung, Passwort) verlinken weiterhin auf `localhost` und funktionieren
+deshalb nur am PC.
 
 ## Supabase einrichten
 

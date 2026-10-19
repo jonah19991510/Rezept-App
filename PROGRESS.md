@@ -74,6 +74,13 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Zutaten-Dialog**: eigene Datenbank beim Tippen, „Bei Open Food Facts suchen“ auf Knopfdruck (deutsche
   Produkte zuerst), „Selbst anlegen“; Vorschläge aus OFF werden vor dem Speichern im Formular geprüft.
 
+**Fehler nach dem ersten Test (19.10.2026):** Rezeptseite zeigte „Seite nicht gefunden“. Ursache: PostgREST
+antwortete mit 300/PGRST201, weil `recipes` ↔ `profiles` doppelt verbunden ist (direkt über `owner_id` und
+als Many-to-Many über `favorites`). Behoben mit Fremdschlüssel-Hinweis (`profiles!recipes_owner_id_fkey`);
+Abfragefehler führen jetzt zur Fehlerseite statt zu einem falschen 404. **Regel für später:** Embeddings
+zwischen Rezepten und Profilen/anderen Tabellen immer mit `!fk_name` schreiben.
+Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x.x/10.x in `next.config.ts`.
+
 ## Wie der Nutzer Phase 2 testet
 
 1. `npm run dev`, <http://localhost:3000/rezepte>: 5 Beispielrezepte als Karten. Suche „dal“, Filter „Vegan“,
@@ -84,7 +91,7 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 4. Im Zutaten-Dialog etwas suchen, das es nicht gibt (z. B. „Erdnussmus“) → „Bei Open Food Facts suchen“ →
    Treffer wählen, Werte prüfen, speichern. Und einmal „Selbst anlegen“.
 5. Rezept bearbeiten, eine Zutat nach oben schieben, einen Schritt löschen, speichern. Duplizieren, Kopie löschen.
-6. Alles einmal auf dem Handy (bzw. 375 px schmal) ansehen.
+6. Alles einmal auf dem Handy ansehen: `npm run dev:lan`, dann `http://<PC-IP>:3000` im selben WLAN.
 
 ## Wie der Nutzer Phase 1 testet
 

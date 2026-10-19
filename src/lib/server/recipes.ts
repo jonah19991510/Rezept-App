@@ -47,11 +47,17 @@ export type RecipeDetail = {
 /** Ein Rezept mit Zutaten, Schritten und Makros. null, wenn es nicht existiert oder nicht lesbar ist (RLS). */
 export const getRecipeDetail = cache(async (recipeId: string, userId: string): Promise<RecipeDetail | null> => {
   const supabase = await createClient();
-  const { data: recipe } = await supabase
+  // Beziehungen mit Fremdschlüssel-Namen angeben: recipes ↔ profiles ist sonst mehrdeutig
+  // (direkt über owner_id und zusätzlich über die Tabelle favorites), PostgREST antwortet dann mit 300.
+  const { data: recipe, error } = await supabase
     .from("recipes")
-    .select("*, profiles(display_name), recipe_ingredients(*, ingredients(*)), recipe_steps(*)")
+    .select(
+      "*, profiles!recipes_owner_id_fkey(display_name), recipe_ingredients!recipe_ingredients_recipe_id_fkey(*, ingredients(*)), recipe_steps!recipe_steps_recipe_id_fkey(*)",
+    )
     .eq("id", recipeId)
     .maybeSingle();
+  // Ein Abfragefehler ist kein „nicht gefunden“: lieber die Fehlerseite zeigen als falsch 404
+  if (error) throw new Error(`Rezept konnte nicht geladen werden (${error.code})`);
   if (!recipe) return null;
 
   const [{ data: nutrition }, { data: favorite }] = await Promise.all([
