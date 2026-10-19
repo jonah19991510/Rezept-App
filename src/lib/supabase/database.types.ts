@@ -887,6 +887,10 @@ export type Database = {
       }
     }
     Functions: {
+      copy_plan_week: {
+        Args: { p_from_monday: string; p_replace: boolean; p_to_monday: string }
+        Returns: number
+      }
       duplicate_recipe: { Args: { p_recipe_id: string }; Returns: string }
       save_recipe: {
         Args: { p_ingredients: Json; p_recipe: Json; p_steps: Json }

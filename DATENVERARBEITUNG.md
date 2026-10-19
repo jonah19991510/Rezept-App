@@ -4,7 +4,7 @@
 sind. Grundlage für eine spätere Datenschutzerklärung. **Kein Rechtstext.** Wird mit jeder Phase
 aktualisiert.
 
-Letzte Aktualisierung: Phase 2 (19.10.2026)
+Letzte Aktualisierung: Phase 3 (19.10.2026)
 
 ## Grundsätze
 
@@ -89,6 +89,9 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 
 ## Änderungsverlauf
 
+- **Phase 3:** Wochenplan (`meal_plan_entries`) und Tagesziele (`user_goals`, Typ „default“) werden jetzt
+  genutzt, nur für den Nutzer selbst sichtbar. Beides kann Rückschlüsse auf Ernährung/Gesundheit zulassen
+  (siehe Hinweis oben). Keine neuen Tabellen, keine neuen Dienstleister.
 - **Phase 2:** Rezepte, Zutaten, Favoriten werden jetzt genutzt. Neue Zutaten speichern `created_by`
   (für Admin/Nutzer nicht sichtbar, nur technisch für „eigene Zutat korrigieren“). Open-Food-Facts-Suche
   serverseitig, nur mit Suchbegriff. Keine neuen Tabellen, keine neuen Dienstleister.

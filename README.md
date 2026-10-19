@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 2 (Rezepte anlegen und bearbeiten, Zutatensuche mit Open Food Facts, Makros, Auto-Tags). Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 3 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen). Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -164,6 +164,14 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
 - **Auto-Tags:** High Protein (≥ 30 g Protein pro Portion oder ≥ 30 % der kcal aus Protein),
   Vegetarisch, Vegan, Low Carb (≤ 20 g Kohlenhydrate pro Portion), Meal-Prep (Schalter im Rezept).
   Schwellenwerte ändern: neue Migration, die `app_config` aktualisiert.
+
+## Wochenplan
+
+- **Wochenplan** mit Frühstück, Mittag, Abend und Snack. Am Handy ein Tag pro Ansicht (wischen oder die
+  Tagesleiste antippen), am PC die ganze Woche. Portionen pro Eintrag in halben Schritten.
+- **Tagesziele** unter Einstellungen → Tagesziele. Der Plan zeigt pro Tag Soll gegen Ist; bei kcal,
+  Kohlenhydraten und Fett gilt mehr als 110 % als „über dem Ziel“, Protein darf drüber.
+- **Woche kopieren** in die nächste oder eine beliebige Woche, ergänzend oder ersetzend.
 
 ## Registrierungsmodus
 

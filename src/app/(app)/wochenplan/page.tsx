@@ -1,17 +1,71 @@
 import type { Metadata } from "next";
-import { CalendarDays } from "lucide-react";
-import { EmptyState } from "@/components/layout/empty-state";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { CopyWeekDialog } from "@/components/plan/copy-week-dialog";
+import type { PlanRecipeOption } from "@/components/plan/types";
+import { WeekPlanner } from "@/components/plan/week-planner";
+import { buttonVariants } from "@/components/ui/button";
+import { requireUser } from "@/lib/auth";
+import { addDays, mondayOf, resolveWeekParam, todayInBerlin, weekDays, weekLabel } from "@/lib/domain/week";
+import { getDefaultGoals, getWeekEntries } from "@/lib/server/plan";
+import { getOwnRecipeList } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Wochenplan" };
 
-export default function MealPlanPage() {
+export default async function MealPlanPage({ searchParams }: PageProps<"/wochenplan">) {
+  const user = await requireUser();
+  const { woche } = await searchParams;
+  const today = todayInBerlin();
+  const monday = resolveWeekParam(woche, today);
+  const days = weekDays(monday);
+
+  const [entries, goals, recipes] = await Promise.all([
+    getWeekEntries(user.id, monday),
+    getDefaultGoals(user.id),
+    getOwnRecipeList(user.id),
+  ]);
+
+  const recipeOptions: PlanRecipeOption[] = recipes.map((r) => ({
+    id: r.id,
+    title: r.title,
+    kcal: r.nutrition?.kcal_per_serving ?? null,
+    protein: r.nutrition?.protein_per_serving ?? null,
+    isFavorite: r.isFavorite,
+  }));
+
+  const isCurrentWeek = monday === mondayOf(today);
+
   return (
     <>
-      <PageHeader title="Wochenplan" description="Plane Frühstück, Mittag, Abend und Snacks für die Woche." />
-      <EmptyState icon={CalendarDays} title="Noch nichts geplant">
-        Hier planst du bald deine Woche und siehst, wie nah du deinen Tageszielen kommst.
-      </EmptyState>
+      <PageHeader title="Wochenplan" description={weekLabel(monday)} actions={<CopyWeekDialog monday={monday} hasEntries={entries.length > 0} />} />
+
+      <nav className="mb-5 flex items-center gap-2" aria-label="Wochen">
+        <Link
+          href={`/wochenplan?woche=${addDays(monday, -7)}`}
+          className={buttonVariants({ variant: "outline", size: "icon" })}
+          aria-label="Vorherige Woche"
+        >
+          <ChevronLeft aria-hidden />
+        </Link>
+        <Link
+          href="/wochenplan"
+          className={buttonVariants({ variant: isCurrentWeek ? "secondary" : "outline" })}
+          aria-current={isCurrentWeek ? "page" : undefined}
+        >
+          Diese Woche
+        </Link>
+        <Link
+          href={`/wochenplan?woche=${addDays(monday, 7)}`}
+          className={buttonVariants({ variant: "outline", size: "icon" })}
+          aria-label="Nächste Woche"
+        >
+          <ChevronRight aria-hidden />
+        </Link>
+      </nav>
+
+      {/* key: bei Wochenwechsel den gewählten Tag neu bestimmen */}
+      <WeekPlanner key={monday} days={days} today={today} entries={entries} goals={goals} recipes={recipeOptions} />
     </>
   );
 }

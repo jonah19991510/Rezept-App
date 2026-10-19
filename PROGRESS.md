@@ -5,14 +5,14 @@
 | Phase | Stand |
 |---|---|
 | 1 – Setup, Auth mit Einladung, Schema, noindex, Seed | **fertig** (18.10.2026), vom Nutzer getestet (19.10.2026) |
-| 2 – Rezepte CRUD, Zutatensuche (Open Food Facts), Makros, Kategorien, Auto-Tags | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
-| 3 – Wochenplan mit Tageszielen | offen, **nächste Phase** |
-| 4–15 | offen |
+| 2 – Rezepte CRUD, Zutatensuche (Open Food Facts), Makros, Kategorien, Auto-Tags | **fertig** (19.10.2026), vom Nutzer getestet |
+| 3 – Wochenplan mit Tageszielen | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
+| 4 – Einkaufsliste | offen, **nächste Phase** |
+| 5–15 | offen |
 
-**Nächster Schritt:** Nutzer testet Phase 2 im Browser (siehe „Wie der Nutzer Phase 2 testet“). Erst nach
-seinem OK mit Phase 3 beginnen. Hinweis: Claude konnte die eingeloggten Seiten von Phase 2 nicht selbst im
-Browser ansehen (kein eigener Account in der echten Supabase-Instanz); Build, Typen, Lint, 60 Unit-Tests und
-die Datenbankfunktionen (SQL-Test als Nutzer, zurückgerollt) sind geprüft.
+**Nächster Schritt:** Nutzer testet Phase 3 (siehe „Wie der Nutzer Phase 3 testet“). Erst nach seinem OK mit
+Phase 4 beginnen. Wie in Phase 2 konnte Claude die eingeloggten Seiten nicht selbst ansehen; geprüft sind
+Build, Typen, Lint, 74 Unit-Tests, die Abfrage-Auflösung (PostgREST) und `copy_plan_week` per SQL-Test.
 
 **Stand Supabase (19.10.2026):** Admin-Account des Nutzers angelegt (Anzeigename „Jonah“, Rolle admin per SQL),
 Secret Key in `.env.local`, Registrierung im Dashboard aus, Mail-Vorlagen unverändert (Standard).
@@ -51,6 +51,33 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 3 entstanden ist
+
+- **Migration** `…085925_copy_plan_week`: `copy_plan_week(von, nach, ersetzen)` kopiert eine Woche in einer
+  Transaktion (SECURITY INVOKER; nur Montage; ergänzen hängt hinten an, ersetzen leert die Zielwoche vorher).
+- **Domänenlogik** mit Tests: `week.ts` (Montag, Wochentage, KW nach ISO 8601, heute in deutscher Zeit, robust
+  über die Zeitumstellung), `plan.ts` (Makros je Eintrag × Portionen, Summen pro Tag/Woche, Durchschnitt pro
+  geplantem Tag, Soll/Ist mit „unter/erreicht/über“, Portionen in Vierteln).
+- **Wochenplan** `/wochenplan?woche=YYYY-MM-DD`: Navigation vorige/diese/nächste Woche.
+  Handy/Tablet: Tagesauswahl als Leiste, Wischen zwischen Tagen, Soll/Ist-Balken des Tages, Slots Frühstück,
+  Mittag, Abend, Snack mit „planen“. Ab Laptop-Breite (lg): ganze Woche als Raster mit kcal/Protein je Tag.
+  Darunter Wochenübersicht (Summen, Durchschnitt pro geplantem Tag gegen Ziele).
+- **Einplanen-Dialog**: eigene Rezepte durchsuchen (Favoriten zuerst), Tag/Mahlzeit, Portionen ±½.
+- **Eintrag-Dialog**: Portionen, Tag und Mahlzeit ändern, entfernen, zum Rezept.
+- **Woche kopieren**: nächste/übernächste oder beliebige Woche, ergänzen oder ersetzen, danach Sprung dorthin.
+- **Einstellungen → Tagesziele**: kcal, Protein, Kohlenhydrate, Fett (leer = kein Ziel), Hinweis „aus den
+  Makros ergeben sich … kcal“ mit Übernehmen-Knopf.
+
+## Wie der Nutzer Phase 3 testet
+
+1. Einstellungen → Tagesziele eintragen (z. B. 2200 kcal, 140 g Protein), speichern.
+2. Wochenplan: am Handy einen Tag wählen, „Mittag planen“ → Rezept wählen, 1½ Portionen → Einplanen.
+   Balken und „noch … kcal“ ändern sich. Nach links/rechts wischen wechselt den Tag.
+3. Eintrag antippen: Portionen ändern, auf einen anderen Tag verschieben, entfernen.
+4. Am PC (breites Fenster) die Wochenansicht ansehen; Wochenübersicht unten prüfen.
+5. „Woche kopieren“ → „Nächste Woche“ → Kopieren; danach in der nächsten Woche noch einmal mit „Ersetzen“.
+6. Vor/zurück durch die Wochen blättern, „Diese Woche“.
 
 ## Was in Phase 2 entstanden ist
 
@@ -152,6 +179,16 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 17. **Phase 2 – Filter in TypeScript statt SQL:** Die eigene Rezeptliste ist klein (Familie), daher lädt die Seite
     alle eigenen Rezepte + Makros und filtert in `recipe-filter.ts` (testbar). Bei Bedarf später in SQL verlagern.
 18. **Phase 2 – Favoriten** schon jetzt (Herz auf der Rezeptseite, Filter in der Liste), Tabelle gab es seit Phase 1.
+
+19.10.2026 (Umsetzung Phase 3):
+
+19. **Phase 3 – Umfang:** Trainingstage, Lücken-Hinweis, Meal Prep und Reste kommen laut SPEC in Phase 11,
+    Kosten pro Tag/Woche in Phase 12, öffentliche Rezepte im Plan in Phase 6. Einplanen geht vorerst nur mit
+    eigenen Rezepten (inkl. übernommener Kopien).
+20. **Phase 3 – Woche in der URL** als Datum (`?woche=2026-10-19`, wird auf den Montag normalisiert), Kalendertage
+    als ISO-Strings, gerechnet in UTC; „heute“ in Europe/Berlin.
+21. **Phase 3 – Ziel „über“** erst ab 110 % (kcal, Kohlenhydrate, Fett), bei Protein gibt es kein „zu viel“.
+    „Erreicht“ ab 95 %.
 
 ## Offene Punkte
 
