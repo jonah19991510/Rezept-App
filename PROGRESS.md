@@ -15,11 +15,12 @@
 | 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | **fertig** (19.10.2026), live, vom Nutzer abgenommen (Teilen am Handy erst über HTTPS prüfbar) |
 | 11 – Trainingstage, Lücken-Hinweis, Meal Prep, Reste-Vorschläge | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
-| 12 – Preise und Kosten, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken | **fertig** (19.10.2026), wartet auf Test und OK des Nutzers, noch nicht gepusht/live (Migration ist schon in der Datenbank) |
+| 12 – Preise und Kosten, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 13–15 | offen |
 
-**Nächster Schritt:** Der Nutzer testet Phase 12 über den LAN-Server (Anleitung unten) und gibt das OK. Danach
-`git push` (geht live) und erst dann Phase 13 (dafür eine Markdown-Beispieldatei beim Nutzer anfragen).
+**Nächster Schritt:** Pause auf Wunsch des Nutzers (19.10.2026 abends). Phase 13 (Markdown-Import und -Export)
+erst beginnen, wenn er es sagt; vorher eine Markdown-Beispieldatei bei ihm anfragen. Zu Beginn der nächsten Sitzung
+den LAN-Server starten.
 
 **Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
 (Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`
