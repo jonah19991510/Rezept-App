@@ -18,10 +18,14 @@ Geprüft wird unter anderem:
 - B sieht keine Favoriten (bzw. Wochenpläne, Einkaufslisten …) von A.
 - B kann seine eigene `role` nicht ändern (Fehler `42501`), aber seinen Anzeigenamen.
 - B kann ein privates Rezept von A nicht in seinen Wochenplan legen.
+- Community (Phase 6): B übernimmt A's öffentliches Rezept als private Kopie (Owner B, mit `forked_from_id`),
+  kann A's privates Rezept nicht übernehmen und A's Rezept nicht auf privat stellen; A sieht B's Kopie nicht;
+  `profiles` hat keine E-Mail-Spalte. Macht A das Rezept wieder privat, sieht B es nicht mehr, sein
+  Plan-Eintrag bleibt, „Woche kopieren“ überspringt ihn ohne Fehler, B's Kopie bleibt.
 - Nach dem Löschen von A sind Profil, Rezepte und Favoriten von A weg, und auch der Wochenplan-Eintrag
-  von B, der auf A's öffentliches Rezept zeigte.
+  von B, der auf A's öffentliches Rezept zeigte. B's Kopie bleibt (Verweis auf das Original leer).
 
-Letzter Lauf: 18.10.2026, alle Werte wie erwartet.
+Letzter Lauf: 19.10.2026 (Phase 6), alle Werte wie erwartet.
 
 ## 2. Prüfung in der App
 
@@ -49,6 +53,9 @@ Du brauchst zwei Accounts (dein Admin-Account und einen eingeladenen Test-Accoun
    ```
 
    Beides muss `0` sein. (Ab Phase 7 zusätzlich: Storage → `recipe-photos` → kein Ordner mit der ID.)
-6. **noindex:** <http://localhost:3000/robots.txt> zeigt `Disallow: /`. In den Entwicklertools
+6. **Veröffentlichen (Phase 6):** Admin macht ein Rezept öffentlich → Test-Account sieht es unter „Entdecken“ mit
+   dem Anzeigenamen, nirgends eine E-Mail. Admin stellt es wieder auf privat → Test-Account bekommt beim direkten
+   Aufruf der Rezept-Adresse „Seite nicht gefunden“, im Wochenplan steht „Rezept nicht mehr verfügbar“.
+7. **noindex:** <http://localhost:3000/robots.txt> zeigt `Disallow: /`. In den Entwicklertools
    (Netzwerk → Dokument → Antwort-Header) steht `X-Robots-Tag: noindex, nofollow`, im HTML
    `<meta name="robots" content="noindex, nofollow">`.

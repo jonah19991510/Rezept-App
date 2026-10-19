@@ -19,7 +19,15 @@ const SORT_LABELS = {
 } as const;
 
 /** Suche, Filter und Sortierung. Alles steht in der URL, damit Zurück-Knopf und Teilen funktionieren. */
-export function RecipeFilters({ ownTags }: { ownTags: string[] }) {
+export function RecipeFilters({
+  ownTags,
+  tagGroupLabel = "Eigene Tags",
+  searchPlaceholder = "Rezepte durchsuchen …",
+}: {
+  ownTags: string[];
+  tagGroupLabel?: string;
+  searchPlaceholder?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -59,7 +67,7 @@ export function RecipeFilters({ ownTags }: { ownTags: string[] }) {
           type="search"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Rezepte durchsuchen …"
+          placeholder={searchPlaceholder}
           aria-label="Rezepte durchsuchen"
           className="pl-9"
         />
@@ -89,7 +97,7 @@ export function RecipeFilters({ ownTags }: { ownTags: string[] }) {
             ))}
           </optgroup>
           {ownTags.length > 0 ? (
-            <optgroup label="Eigene Tags">
+            <optgroup label={tagGroupLabel}>
               {ownTags.map((tag) => (
                 <option key={tag} value={tag}>
                   {tag}

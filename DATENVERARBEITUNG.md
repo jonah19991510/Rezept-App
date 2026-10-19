@@ -4,7 +4,7 @@
 sind. Grundlage für eine spätere Datenschutzerklärung. **Kein Rechtstext.** Wird mit jeder Phase
 aktualisiert.
 
-Letzte Aktualisierung: Phase 5 (19.10.2026)
+Letzte Aktualisierung: Phase 6 (19.10.2026)
 
 ## Grundsätze
 
@@ -38,7 +38,7 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 
 | Tabelle | Inhalt | Ab Phase | Sichtbar für |
 |---|---|---|---|
-| `recipes` (+ `recipe_ingredients`, `recipe_steps`, `cocktail_details`) | Rezepte, optional Quell-URL | 2 | nur Owner; bei `is_public` alle eingeloggten Nutzer (mit Anzeigename) |
+| `recipes` (+ `recipe_ingredients`, `recipe_steps`, `cocktail_details`) | Rezepte, optional Quell-URL; `forked_from_id` = Verweis auf das Original bei übernommenen Rezepten | 2 / 6 | nur Owner; bei `is_public` (Schalter, ab Phase 6) alle eingeloggten Nutzer mit Anzeigename des Owners |
 | `recipe_versions` | frühere Fassungen eines Rezepts | 12 | nur Owner |
 | `meal_plan_entries`, `meal_prep_batches`, `plan_days` | Wochenplan, Meal Prep, Trainingstage | 3 / 11 | nur Nutzer selbst |
 | `user_goals` | Tagesziele kcal/Protein/KH/Fett | 3 / 11 | nur Nutzer selbst |
@@ -50,6 +50,15 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `favorites` | Lieblingsrezepte | 2 | nur Nutzer selbst |
 | `ingredients` (Spalte `created_by`) | selbst angelegte Zutaten | 2 | Zutaten sind global für alle lesbar; `created_by` wird beim Löschen auf leer gesetzt |
 | Storage-Bucket `recipe-photos/<user-id>/…` | Rezeptfotos, vor dem Upload ohne EXIF/GPS | 7 | wie das Rezept |
+
+**Veröffentlichte Rezepte (ab Phase 6):** Rezepte sind standardmäßig privat. Erst der Schalter „Öffentlich“ auf
+der Rezeptseite macht ein Rezept für alle eingeloggten Nutzer sichtbar (Seite „Entdecken“, Auswahl im Wochenplan),
+zusammen mit dem Anzeigenamen des Owners, nie mit der E-Mail-Adresse. Andere können es einplanen (ihr Plan-Eintrag
+verweist auf das Rezept) und eine eigene Kopie übernehmen. Diese Kopie gehört dann der anderen Person: Sie bleibt
+bestehen, wenn das Original wieder privat gemacht oder gelöscht wird oder der Account des Owners gelöscht wird
+(`forked_from_id` wird dann leer). Fremde Plan-Einträge auf ein wieder privates Rezept bleiben stehen, zeigen aber
+nur noch „Rezept nicht mehr verfügbar“; beim Löschen des Rezepts verschwinden sie per Cascade. Wer ein Rezept wann
+übernommen oder eingeplant hat, sieht der Owner nicht.
 
 **Hinweis:** Tagesziele, Trainingstage und Essenspläne können Rückschlüsse auf Gesundheit und
 Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
@@ -71,6 +80,7 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 
 - **Löschen:** Der Admin kann Accounts über die Nutzerverwaltung löschen. Dabei werden zuerst die Fotos
   im Storage gelöscht, dann der Auth-User; alle Tabellen folgen per Cascade, auch veröffentlichte Rezepte.
+  Kopien, die andere von veröffentlichten Rezepten übernommen haben, gehören diesen Personen und bleiben.
   „Account löschen“ für Nutzer selbst kommt in Phase 8.
 - **Export:** „Meine Daten herunterladen“ (JSON) kommt in Phase 8.
 
@@ -88,6 +98,11 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 - [ ] noindex-Regeln bewusst überprüft (robots.txt, Meta-Tag, `X-Robots-Tag`): sollen sie bleiben?
 
 ## Änderungsverlauf
+
+- **Phase 6:** Community. Schalter „Öffentlich“ (`recipes.is_public`), Seite „Entdecken“ mit Anzeigename des Autors
+  (nie E-Mail), „In mein Rezeptbuch übernehmen“ (private Kopie mit `forked_from_id`), öffentliche Rezepte anderer im
+  Wochenplan. Keine neuen Tabellen, keine neuen Dienstleister. Für die Datenschutzerklärung wichtig: veröffentlichte
+  Inhalte und der Anzeigename sind für alle Mitglieder sichtbar, übernommene Kopien bleiben bei den anderen.
 
 - **Phase 5:** Statistiken werten nur vorhandene eigene Daten aus (Rezepte, Wochenplan, Ziele), im Browser des
   Nutzers dargestellt. Nichts Neues gespeichert, keine neuen Dienstleister; Recharts läuft lokal ohne externe Anfragen.

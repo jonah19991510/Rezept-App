@@ -1,4 +1,5 @@
 import "server-only";
+import { authorName, UNAVAILABLE_TITLE } from "@/lib/domain/community";
 import type { DayMacros, Goals, MealSlot } from "@/lib/domain/plan";
 import { addDays } from "@/lib/domain/week";
 import { createClient } from "@/lib/supabase/server";
@@ -11,6 +12,10 @@ export type PlanEntry = {
   position: number;
   recipeId: string;
   recipeTitle: string;
+  /** false, wenn das Rezept nicht mehr lesbar ist (ein fremdes Rezept wurde wieder privat gemacht) */
+  available: boolean;
+  /** Anzeigename bei fremden öffentlichen Rezepten, sonst null */
+  authorName: string | null;
   /** Makros einer Portion; null, wenn das Rezept keine Zutaten hat */
   perServing: DayMacros | null;
 };
@@ -20,7 +25,9 @@ export async function getWeekEntries(userId: string, monday: string): Promise<Pl
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("meal_plan_entries")
-    .select("id, date, slot, servings, position, recipe_id, recipes!meal_plan_entries_recipe_id_fkey(title)")
+    .select(
+      "id, date, slot, servings, position, recipe_id, recipes!meal_plan_entries_recipe_id_fkey(title, owner_id, profiles!recipes_owner_id_fkey(display_name))",
+    )
     .eq("user_id", userId)
     .gte("date", monday)
     .lte("date", addDays(monday, 6))
@@ -48,7 +55,9 @@ export async function getWeekEntries(userId: string, monday: string): Promise<Pl
       servings: e.servings,
       position: e.position,
       recipeId: e.recipe_id,
-      recipeTitle: e.recipes?.title ?? "Rezept",
+      recipeTitle: e.recipes?.title ?? UNAVAILABLE_TITLE,
+      available: e.recipes != null,
+      authorName: e.recipes && e.recipes.owner_id !== userId ? authorName(e.recipes.profiles?.display_name) : null,
       perServing:
         n && (n.ingredient_count ?? 0) > 0
           ? {

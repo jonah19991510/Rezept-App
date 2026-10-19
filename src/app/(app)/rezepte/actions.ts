@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { resolveLineGrams } from "@/lib/domain/units";
 import { createClient } from "@/lib/supabase/server";
+import { forkRecipeSchema, setRecipePublicSchema, type SetRecipePublicInput } from "@/lib/validation/community";
 import { flattenIssues, recipeInputSchema, type RecipeInput } from "@/lib/validation/recipe";
 
 export type SaveRecipeResult = { ok: false; message?: string; fieldErrors?: Record<string, string[]> };
@@ -110,4 +111,45 @@ export async function setFavoriteAction(recipeId: string, favorite: boolean): Pr
   revalidatePath("/rezepte");
   revalidatePath(`/rezepte/${recipeId}`);
   return { ok: !error };
+}
+
+/** Veröffentlichen-Schalter: nur der Owner (RLS + Filter auf owner_id). */
+export async function setRecipePublicAction(input: SetRecipePublicInput): Promise<{ ok: boolean; message?: string }> {
+  const user = await requireUser();
+  const parsed = setRecipePublicSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Ungültige Eingabe." };
+  const { recipeId, isPublic } = parsed.data;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("recipes")
+    .update({ is_public: isPublic })
+    .eq("id", recipeId)
+    .eq("owner_id", user.id)
+    .select("id");
+  if (error || !data?.length) return { ok: false, message: "Die Einstellung konnte nicht gespeichert werden." };
+
+  revalidatePath("/rezepte");
+  revalidatePath(`/rezepte/${recipeId}`);
+  revalidatePath("/entdecken");
+  return { ok: true };
+}
+
+/** „In mein Rezeptbuch übernehmen“: private, bearbeitbare Kopie mit forked_from_id, danach zur Kopie. */
+export async function forkRecipeAction(recipeId: string): Promise<{ ok: false; message: string }> {
+  await requireUser();
+  const parsed = forkRecipeSchema.safeParse({ recipeId });
+  if (!parsed.success) return { ok: false, message: "Ungültiges Rezept." };
+
+  const supabase = await createClient();
+  // duplicate_recipe sieht per RLS nur eigene und öffentliche Rezepte und setzt bei fremden forked_from_id
+  const { data: newId, error } = await supabase.rpc("duplicate_recipe", { p_recipe_id: parsed.data.recipeId });
+  if (error || !newId) {
+    if (error?.code === "P0002") return { ok: false, message: "Das Rezept ist nicht mehr öffentlich." };
+    return { ok: false, message: "Das Rezept konnte nicht übernommen werden." };
+  }
+
+  revalidatePath("/rezepte");
+  revalidatePath("/entdecken");
+  redirect(`/rezepte/${newId}?uebernommen=1`);
 }

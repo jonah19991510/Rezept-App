@@ -3,13 +3,13 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CopyWeekDialog } from "@/components/plan/copy-week-dialog";
-import type { PlanRecipeOption } from "@/components/plan/types";
 import { WeekPlanner } from "@/components/plan/week-planner";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
+import { planRecipeOptions } from "@/lib/domain/community";
 import { addDays, mondayOf, resolveWeekParam, todayInBerlin, weekDays, weekLabel } from "@/lib/domain/week";
 import { getDefaultGoals, getWeekEntries } from "@/lib/server/plan";
-import { getOwnRecipeList } from "@/lib/server/recipes";
+import { getOwnRecipeList, getPublicRecipeList } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Wochenplan" };
 
@@ -20,19 +20,15 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
   const monday = resolveWeekParam(woche, today);
   const days = weekDays(monday);
 
-  const [entries, goals, recipes] = await Promise.all([
+  const [entries, goals, ownRecipes, publicRecipes] = await Promise.all([
     getWeekEntries(user.id, monday),
     getDefaultGoals(user.id),
     getOwnRecipeList(user.id),
+    getPublicRecipeList(user.id),
   ]);
 
-  const recipeOptions: PlanRecipeOption[] = recipes.map((r) => ({
-    id: r.id,
-    title: r.title,
-    kcal: r.nutrition?.kcal_per_serving ?? null,
-    protein: r.nutrition?.protein_per_serving ?? null,
-    isFavorite: r.isFavorite,
-  }));
+  // Eigenes Buch und öffentliche Rezepte anderer (Phase 6)
+  const recipeOptions = planRecipeOptions(ownRecipes, publicRecipes);
 
   const isCurrentWeek = monday === mondayOf(today);
 

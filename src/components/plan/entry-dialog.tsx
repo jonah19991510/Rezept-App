@@ -59,53 +59,69 @@ function EntryForm({ entry, days, onDone }: { entry: PlanEntry; days: string[]; 
         <DialogTitle className="pr-8">{entry.recipeTitle}</DialogTitle>
         <DialogDescription>
           {weekdayLong(entry.date)}, {dayMonth(entry.date)} · {SLOT_LABELS[entry.slot]}
+          {entry.authorName ? ` · von ${entry.authorName}` : ""}
         </DialogDescription>
       </DialogHeader>
-      <div className="grid gap-4">
-        {entry.perServing ? (
-          <MacroSummary values={macros} caption={`für ${servings === 1 ? "1 Portion" : `${servings.toString().replace(".", ",")} Portionen`}`} compact />
-        ) : (
-          <p className="text-sm text-muted-foreground">Für dieses Rezept gibt es noch keine Nährwerte.</p>
-        )}
-        <ServingsStepper value={servings} onChange={setServings} />
-        <div className="grid grid-cols-2 gap-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="entry-day">Tag</Label>
-            <NativeSelect id="entry-day" value={date} onChange={(e) => setDate(e.target.value)}>
-              {days.map((d) => (
-                <option key={d} value={d}>
-                  {weekdayLong(d)}, {dayMonth(d)}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="entry-slot">Mahlzeit</Label>
-            <NativeSelect id="entry-slot" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)}>
-              {MEAL_SLOTS.map((s) => (
-                <option key={s} value={s}>
-                  {SLOT_LABELS[s]}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex gap-1">
+      {!entry.available ? (
+        <div className="grid gap-4">
+          <p className="text-sm text-muted-foreground">
+            Die Person, die dieses Rezept veröffentlicht hatte, hat es wieder privat gemacht. Es zählt nicht mehr in deinen
+            Nährwerten und deiner Einkaufsliste. Entferne den Eintrag und plane etwas anderes ein.
+          </p>
+          <div>
             <Button type="button" variant="destructive" onClick={remove} disabled={pending}>
               <Trash2 aria-hidden />
               Entfernen
             </Button>
-            <Link href={`/rezepte/${entry.recipeId}`} className="inline-flex min-h-11 items-center gap-1 px-2 text-sm text-primary underline-offset-4 hover:underline">
-              Rezept
-              <ExternalLink className="size-3.5" aria-hidden />
-            </Link>
           </div>
-          <Button type="button" onClick={save} disabled={!changed || pending}>
-            {pending ? "Wird gespeichert …" : "Speichern"}
-          </Button>
         </div>
-      </div>
+      ) : (
+        <div className="grid gap-4">
+          {entry.perServing ? (
+            <MacroSummary values={macros} caption={`für ${servings === 1 ? "1 Portion" : `${servings.toString().replace(".", ",")} Portionen`}`} compact />
+          ) : (
+            <p className="text-sm text-muted-foreground">Für dieses Rezept gibt es noch keine Nährwerte.</p>
+          )}
+          <ServingsStepper value={servings} onChange={setServings} />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="entry-day">Tag</Label>
+              <NativeSelect id="entry-day" value={date} onChange={(e) => setDate(e.target.value)}>
+                {days.map((d) => (
+                  <option key={d} value={d}>
+                    {weekdayLong(d)}, {dayMonth(d)}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="entry-slot">Mahlzeit</Label>
+              <NativeSelect id="entry-slot" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)}>
+                {MEAL_SLOTS.map((s) => (
+                  <option key={s} value={s}>
+                    {SLOT_LABELS[s]}
+                  </option>
+                ))}
+              </NativeSelect>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex gap-1">
+              <Button type="button" variant="destructive" onClick={remove} disabled={pending}>
+                <Trash2 aria-hidden />
+                Entfernen
+              </Button>
+              <Link href={`/rezepte/${entry.recipeId}`} className="inline-flex min-h-11 items-center gap-1 px-2 text-sm text-primary underline-offset-4 hover:underline">
+                Rezept
+                <ExternalLink className="size-3.5" aria-hidden />
+              </Link>
+            </div>
+            <Button type="button" onClick={save} disabled={!changed || pending}>
+              {pending ? "Wird gespeichert …" : "Speichern"}
+            </Button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

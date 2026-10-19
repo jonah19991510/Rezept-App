@@ -6,12 +6,16 @@
 --
 -- Erwartet:
 --   profiles_by_trigger=2, settings_by_trigger=2, default_name_b=Neues Mitglied
---   B_sees_recipes=1 (nur das öffentliche), B_sees_priv_*=0, B_sees_favorites=0
+--   B_sees_recipes=1 + Anzahl schon vorhandener öffentlicher Rezepte (z. B. 6 mit den 5 Beispielrezepten),
+--   B_sees_priv_*=0, B_sees_favorites=0
 --   B_updates_A=0, B_deletes_A=0, B_insert_as_A=blocked, B_adds_ingredient_to_A=blocked
 --   B_role_change=blocked(42501), B_renames_self=1, B_renames_A=0
 --   B_plans_private_A=blocked, B_plans_public_A=ok, B_creates_ingredient=ok
---   A_sees_recipes=2, Makros/Tags plausibel
---   after_delete_A_*=0 (Cascade), B_plan_entries_on_deleted_public_recipe=0
+--   A_sees_recipes=2 + vorhandene öffentliche Rezepte, Makros/Tags plausibel
+--   Phase 6: B_fork=owner_B,private,forked_from_pub,ingredients=2, B_forks_private_A=blocked,
+--   B_unpublishes_A=0, A_sees_B_fork=0, profiles_mail_columns=0, A_unpublishes=1,
+--   B_sees_unpublished=0, B_plan_entry_kept=1, B_copy_week_ok=0 (übersprungen, kein Fehler), B_fork_kept=1
+--   after_delete_A_*=0 (Cascade), B_plan_entries_on_deleted_public_recipe=0, B_fork_after_delete_A=1 (forked_from=null)
 
 do $$
 declare
@@ -19,6 +23,8 @@ declare
   b uuid := gen_random_uuid();
   r_priv uuid;
   r_pub uuid;
+  r_fork uuid;
+  info text;
   out text := '';
   n int;
   t record;
@@ -90,6 +96,39 @@ begin
     out := out || ' | ' || t.title || ': kcal=' || t.kcal_per_serving || ' P=' || t.protein_per_serving || ' HP=' || t.is_high_protein || ' LC=' || t.is_low_carb || ' veg=' || t.is_vegetarian || ' vegan=' || t.is_vegan || ' groups=' || t.grams_by_food_group;
   end loop;
 
+  -- Phase 6: Community (übernehmen, veröffentlichen, wieder privat machen)
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  r_fork := public.duplicate_recipe(r_pub);
+  select case when owner_id = b then 'owner_B' else 'owner_FALSCH' end
+         || case when is_public then ',PUBLIC' else ',private' end
+         || case when forked_from_id = r_pub then ',forked_from_pub' else ',forked_from_FALSCH' end
+         || ',ingredients=' || (select count(*) from public.recipe_ingredients where recipe_id = r_fork)
+    into info from public.recipes where id = r_fork;
+  out := out || ' | B_fork=' || info;
+  begin
+    perform public.duplicate_recipe(r_priv);
+    out := out || ' | B_forks_private_A=ALLOWED';
+  exception when others then out := out || ' | B_forks_private_A=blocked';
+  end;
+  update public.recipes set is_public = false where id = r_pub; get diagnostics n = row_count; out := out || ' | B_unpublishes_A=' || n;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  select count(*) into n from public.recipes where id = r_fork; out := out || ' | A_sees_B_fork=' || n;
+  select count(*) into n from information_schema.columns
+    where table_schema = 'public' and table_name = 'profiles' and column_name ilike '%mail%';
+  out := out || ' | profiles_mail_columns=' || n;
+  update public.recipes set is_public = false where id = r_pub; get diagnostics n = row_count; out := out || ' | A_unpublishes=' || n;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  select count(*) into n from public.recipes where id = r_pub; out := out || ' | B_sees_unpublished=' || n;
+  select count(*) into n from public.meal_plan_entries where recipe_id = r_pub; out := out || ' | B_plan_entry_kept=' || n;
+  begin
+    n := public.copy_plan_week(date_trunc('week', current_date)::date, date_trunc('week', current_date)::date + 7, false);
+    out := out || ' | B_copy_week_ok=' || n;
+  exception when others then out := out || ' | B_copy_week=FAILED(' || sqlerrm || ')';
+  end;
+  select count(*) into n from public.recipes where id = r_fork; out := out || ' | B_fork_kept=' || n;
+
   -- Account-Löschung: Cascade
   execute 'reset role';
   delete from auth.users where id = a;
@@ -97,6 +136,8 @@ begin
   select count(*) into n from public.favorites where user_id = a; out := out || ' | after_delete_A_favs=' || n;
   select count(*) into n from public.meal_plan_entries where user_id = b; out := out || ' | B_plan_entries_on_deleted_public_recipe=' || n;
   select count(*) into n from public.profiles where id = a; out := out || ' | after_delete_A_profile=' || n;
+  select count(*) into n from public.recipes where id = r_fork and forked_from_id is null;
+  out := out || ' | B_fork_after_delete_A=' || n;
 
   raise exception 'TESTERGEBNIS (wird zurückgerollt): %', out;
 end;

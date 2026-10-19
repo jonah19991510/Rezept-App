@@ -8,13 +8,15 @@
 | 2 – Rezepte CRUD, Zutatensuche (Open Food Facts), Makros, Kategorien, Auto-Tags | **fertig** (19.10.2026), vom Nutzer getestet |
 | 3 – Wochenplan mit Tageszielen | **fertig** (19.10.2026), vom Nutzer getestet |
 | 4 – Einkaufsliste | **fertig** (19.10.2026), vom Nutzer getestet |
-| 5 – Statistiken | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
-| 6 – Community: veröffentlichen, Entdecken, übernehmen | offen, **nächste Phase** |
-| 7–15 | offen |
+| 5 – Statistiken | **fertig** (19.10.2026), vom Nutzer abgenommen |
+| 6 – Community: veröffentlichen, Entdecken, übernehmen | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
+| 7 – Fotos und Import per Link | offen, **nächste Phase** |
+| 8–15 | offen |
 
-**Nächster Schritt:** Nutzer testet Phase 5 (siehe „Wie der Nutzer Phase 5 testet“). Erst nach seinem OK mit
-Phase 6 beginnen. Diesmal hat Claude die Diagramme selbst angesehen: mit einer vorübergehenden Vorschauseite
-mit Beispieldaten (Desktop, 375 px, hell/dunkel, Klick-Auswahl), die vor dem Commit wieder gelöscht wurde.
+**Nächster Schritt:** Nutzer testet Phase 6 (siehe „Wie der Nutzer Phase 6 testet“). Erst nach seinem OK mit
+Phase 7 beginnen. Angesehen hat Claude die neuen Ansichten wieder über eine vorübergehende Vorschauseite mit
+Beispieldaten (Produktions-Build auf Port 3002, Handy-Breite, hell/dunkel), vor dem Commit gelöscht. Echte Abläufe mit
+Login (veröffentlichen, übernehmen, einplanen) hat der SQL-Test `rls_check.sql` gegen die Datenbank geprüft.
 
 **Entwicklungsserver:** Der Nutzer möchte, dass Claude zu Beginn jeder Sitzung den LAN-Server startet
 (`npm run dev:lan` bzw. Preview „rezept-app-lan“), damit PC (localhost:3000) und Handy (http://<PC-IP>:3000)
@@ -57,6 +59,45 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 6 entstanden ist
+
+- **Migration** `…125325_community_copy_plan_week`: `copy_plan_week` überspringt Einträge, deren Rezept der Nutzer
+  nicht mehr lesen darf (fremdes Rezept wieder privat). Sonst hätte die RLS das Kopieren der ganzen Woche abgelehnt.
+  Signatur unverändert, daher keine Änderung an `database.types.ts`. Sonst keine Schemaänderung nötig: `is_public`,
+  `forked_from_id`, Indizes, RLS für öffentliche Rezepte und `duplicate_recipe` gab es schon seit Phase 1/2.
+- **Domänenlogik** `community.ts` mit Tests: Autor („von dir“ / „von <Name>“ / „Unbekannt“), Entdecken-Liste aus
+  Datenbankzeilen (ohne Owner-ID im Ergebnis, Markierung „schon übernommen“), Auswahl für den Wochenplan
+  (eigene öffentliche Rezepte nur einmal). Die Rezeptsuche findet jetzt auch den Anzeigenamen.
+- **Veröffentlichen-Schalter** auf der eigenen Rezeptseite (wirkt sofort, Hinweistext zu Anzeigename und Kopien),
+  Globus auf der Karte im eigenen Buch. Zod auf Client und Server (`validation/community.ts`).
+- **Entdecken** `/entdecken`: alle öffentlichen Rezepte inkl. eigener („von dir“), Autor nur mit Anzeigenamen,
+  gleiche Suche/Filter/Sortierung wie im eigenen Buch, „In deinem Buch“ bei schon übernommenen, freundlicher
+  Leer-Zustand.
+- **Übernehmen:** `forkRecipeAction` (über `duplicate_recipe`) → private Kopie mit `forked_from_id`, Weiterleitung
+  zur Kopie mit Bestätigung. Auf der Kopie „Übernommen von <Name>: <Original>“ (nur solange das Original lesbar ist),
+  auf dem Original „Deine Kopie öffnen“ + „Noch einmal übernehmen“. Rezeptseite fremder Rezepte führt zurück zu
+  „Entdecken“.
+- **Wochenplan:** Einplanen-Dialog mit Umschalter „Mein Buch | Entdecken“ (Suche auch nach Namen, „von <Name>“).
+  Einträge fremder Rezepte zeigen den Autor im Dialog. Wird ein eingeplantes fremdes Rezept wieder privat:
+  „Rezept nicht mehr verfügbar“ (kursiv, zählt nicht mehr), Dialog bietet nur „Entfernen“.
+- **Tests:** `rls_check.sql` um Community-Fälle erweitert und am 19.10. gegen die echte DB laufen lassen (alles wie
+  erwartet, zurückgerollt). Prüfanleitung `docs/RLS-PRUEFUNG.md` ergänzt.
+
+## Wie der Nutzer Phase 6 testet
+
+1. Eins deiner Rezepte öffnen → Kasten „Privat“ → Schalter einschalten → „Öffentlich“, Meldung erscheint.
+   In „Rezepte“ trägt die Karte jetzt einen Globus. Wieder ausschalten geht genauso.
+2. **Entdecken** öffnen: alle öffentlichen Rezepte (deine als „von dir“). Suche „dal“, deinen Anzeigenamen,
+   Filter „Vegan“, Sortierung ausprobieren.
+3. Mit einem zweiten Account (Test-Account einladen, im privaten Fenster anmelden, siehe README):
+   Entdecken → ein Rezept von dir öffnen → „von Jonah“, keine E-Mail. „In mein Rezeptbuch übernehmen“ → die Kopie
+   öffnet sich mit „Übernommen von Jonah“, lässt sich bearbeiten. In Entdecken steht beim Original
+   „In deinem Buch“, auf seiner Seite „Deine Kopie öffnen“.
+4. Mit dem zweiten Account: Wochenplan → „planen“ → oben „Entdecken“ → Rezept von Jonah einplanen.
+5. Mit deinem Account das Rezept wieder auf privat stellen → beim zweiten Account steht im Wochenplan
+   „Rezept nicht mehr verfügbar“, der Eintrag lässt sich entfernen; die übernommene Kopie bleibt.
+6. Alles einmal am Handy ansehen. Danach den Test-Account wieder löschen (seine Kopien verschwinden mit).
 
 ## Was in Phase 5 entstanden ist
 
@@ -264,6 +305,17 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 27. **Phase 5 – Zusammensetzung in 6 Gruppen** (Gemüse & Obst, Getreide/Pasta/Reis, Fleisch & Fisch, Milch & Ei,
     Hülsenfrüchte & Nüsse, Sonstiges) statt 15 Zutatengruppen, pro Portion.
 
+19.10.2026 (Umsetzung Phase 6):
+
+28. **Phase 6 – Eigene öffentliche Rezepte erscheinen in Entdecken** (als „von dir“), damit man sieht, was andere
+    sehen. Im Einplanen-Dialog stehen sie nur unter „Mein Buch“.
+29. **Phase 6 – Einplanen ohne Kopie:** Plan-Einträge verweisen direkt auf das öffentliche Rezept (wie in SPEC).
+    Wird es wieder privat, bleibt der Eintrag beim anderen stehen (als „nicht mehr verfügbar“) statt still gelöscht
+    zu werden; beim Löschen des Rezepts verschwindet er per Cascade.
+30. **Phase 6 – Veröffentlichen-Schalter auf der Rezeptseite**, nicht im Editor (wirkt sofort, ohne Speichern).
+31. **Phase 6 – Nach dem Übernehmen** geht es zur Rezeptseite der Kopie (nicht direkt in den Editor wie bei
+    „Duplizieren“).
+
 ## Offene Punkte
 
 - Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
@@ -271,7 +323,11 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
   „Meine Daten herunterladen“ in Phase 8 erledigen. Mit dem Nutzer klären.
 - Portionen skalieren auf der Rezeptseite kommt mit Phase 9 (Kochmodus).
 - `step_position` (Zutat je Schritt) wird beim Speichern erhalten, aber erst in Phase 9 im Editor bearbeitbar.
-- Fotos (Phase 7) und Veröffentlichen-Schalter (Phase 6) fehlen im Editor noch bewusst.
+- Fotos (Phase 7) fehlen im Editor noch bewusst.
+- Phase 7: `duplicate_recipe` kopiert `image_url` mit. Liegt das Foto im Storage-Ordner des Originals, verschwindet
+  es bei der Kopie, sobald das Original gelöscht wird. Beim Übernehmen das Foto in den eigenen Ordner kopieren.
+- Statistik „Meistgeplant“: Ein Tipp auf ein fremdes (öffentliches) Rezept filtert die eigene Liste darunter auf
+  „nichts“, weil es nicht im eigenen Buch ist. Kleinigkeit, bei Gelegenheit verbessern.
 - Advisor-Hinweis „Leaked Password Protection“ (Prüfung neuer Passwörter gegen HaveIBeenPwned, per
   k-Anonymität) ist aus. Optional im Dashboard (Authentication → Policies/Passwords), evtl. nur in bezahlten Plänen.
 - Phase 8: „Account löschen“ in den Einstellungen nutzt `deleteUserCompletely` aus `src/lib/server/delete-user.ts`.
@@ -281,7 +337,8 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 ## Bekannte Probleme
 
 - **Turbopack-Cache:** Am 19.10. lieferte der Entwicklungsserver nach einer Änderung an `globals.css` selbst nach
-  Neustart die alte CSS aus. Abhilfe: Server stoppen, Ordner `.next/dev` löschen, neu starten.
+  Neustart die alte CSS aus. Abhilfe: Server stoppen, Ordner `.next/dev` löschen, neu starten. In Phase 6 nochmal
+  passiert (alte `recipe-card.tsx` trotz Änderung); gleiche Abhilfe, danach lief es.
 
 - Security-Advisor meldet `public.rls_auto_enable()` als für `anon` ausführbar. Das ist eine von Supabase
   selbst angelegte Event-Trigger-Funktion (Einstellung „RLS automatisch aktivieren“), nicht aus unseren

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AUTO_TAG_LABELS, type AutoTag } from "@/lib/labels";
+import type { RecipeAuthor } from "./community";
 import type { Enums } from "@/lib/supabase/database.types";
 import { parseDecimal } from "./decimal";
 
@@ -26,6 +27,12 @@ export type RecipeListItem = {
   updated_at: string;
   nutrition: RecipeListNutrition | null;
   isFavorite: boolean;
+  /** veröffentlicht (Entdecken) */
+  isPublic?: boolean;
+  /** nur in Entdecken gesetzt */
+  author?: RecipeAuthor;
+  /** in Entdecken: Der Nutzer hat schon eine eigene Kopie */
+  copied?: boolean;
 };
 
 export function autoTagsFor(item: Pick<RecipeListItem, "is_meal_prep" | "nutrition">): AutoTag[] {
@@ -121,7 +128,7 @@ export function filterRecipes(items: RecipeListItem[], filter: RecipeFilter): Re
       if (minutes == null || minutes > filter.zeit) return false;
     }
     if (query) {
-      const haystack = normalize([item.title, item.description ?? "", ...item.tags].join(" "));
+      const haystack = normalize([item.title, item.description ?? "", ...item.tags, item.author?.name ?? ""].join(" "));
       if (!query.split(/\s+/).every((word) => haystack.includes(word))) return false;
     }
     return true;

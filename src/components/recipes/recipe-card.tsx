@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Clock, Heart } from "lucide-react";
+import { BookCheck, Clock, Globe, Heart } from "lucide-react";
+import { authorLabel } from "@/lib/domain/community";
 import { autoTagsFor, totalMinutes, type RecipeListItem } from "@/lib/domain/recipe-filter";
 import { formatNumber } from "@/lib/format";
 import { formatMinutes } from "@/lib/format-quantity";
@@ -22,8 +23,15 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
             <p className="text-xs font-medium tracking-wide text-primary uppercase">{CATEGORY_LABELS[recipe.category]}</p>
           ) : null}
           <h2 className="text-lg leading-snug font-semibold group-hover:text-primary">{recipe.title}</h2>
+          {recipe.author ? <p className="text-sm text-muted-foreground">{authorLabel(recipe.author)}</p> : null}
         </div>
-        {recipe.isFavorite ? <Heart className="mt-1 size-5 shrink-0 fill-primary text-primary" aria-label="Favorit" /> : null}
+        <div className="mt-1 flex shrink-0 gap-1.5">
+          {/* Im eigenen Buch: Globus für veröffentlichte Rezepte (in Entdecken sind alle öffentlich) */}
+          {!recipe.author && recipe.isPublic ? (
+            <Globe className="size-5 text-muted-foreground" aria-label="Öffentlich" />
+          ) : null}
+          {recipe.isFavorite ? <Heart className="size-5 fill-primary text-primary" aria-label="Favorit" /> : null}
+        </div>
       </div>
 
       {n && n.kcal_per_serving != null ? (
@@ -61,11 +69,21 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
 
       <RecipeTags autoTags={autoTagsFor(recipe)} tags={recipe.tags.slice(0, 3)} />
 
-      {minutes ? (
-        <p className="mt-auto flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Clock className="size-4" aria-hidden />
-          {minutes}
-        </p>
+      {minutes || recipe.copied ? (
+        <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          {minutes ? (
+            <p className="flex items-center gap-1.5">
+              <Clock className="size-4" aria-hidden />
+              {minutes}
+            </p>
+          ) : null}
+          {recipe.copied ? (
+            <p className="flex items-center gap-1.5 text-sage">
+              <BookCheck className="size-4" aria-hidden />
+              <span className="text-foreground">In deinem Buch</span>
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </Link>
   );

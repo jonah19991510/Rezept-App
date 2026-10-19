@@ -21,7 +21,7 @@ import { AddEntryDialog } from "./add-entry-dialog";
 import { EntryDialog } from "./entry-dialog";
 import { GoalProgress } from "./goal-progress";
 import { MacroDot } from "@/components/recipes/macro-dot";
-import type { PlanRecipeOption, SlotTarget } from "./types";
+import type { PlanRecipeChoices, SlotTarget } from "./types";
 
 export function WeekPlanner({
   days,
@@ -34,7 +34,7 @@ export function WeekPlanner({
   today: string;
   entries: PlanEntry[];
   goals: Goals;
-  recipes: PlanRecipeOption[];
+  recipes: PlanRecipeChoices;
 }) {
   const [selectedDay, setSelectedDay] = useState(days.includes(today) ? today : days[0]);
   const [addTarget, setAddTarget] = useState<SlotTarget | null>(null);
@@ -305,7 +305,13 @@ function EntryCard({ entry, onClick, compact = false }: { entry: PlanEntry; onCl
         compact ? "p-2" : "flex min-h-14 items-center justify-between gap-3 px-3 py-2",
       )}
     >
-      <span className={cn("block font-medium", compact ? "line-clamp-3 text-xs leading-snug" : "min-w-0 truncate")}>
+      <span
+        className={cn(
+          "block font-medium",
+          compact ? "line-clamp-3 text-xs leading-snug" : "min-w-0 truncate",
+          !entry.available && "text-muted-foreground italic",
+        )}
+      >
         {entry.recipeTitle}
       </span>
       <span className={cn("block text-muted-foreground tabular-nums", compact ? "mt-1 text-[0.7rem]" : "shrink-0 text-right text-xs")}>

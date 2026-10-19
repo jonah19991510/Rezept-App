@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Copy, EllipsisVertical, Pencil, Trash2 } from "lucide-react";
+import { BookCheck, Copy, EllipsisVertical, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { deleteRecipeAction, duplicateRecipeAction } from "@/app/(app)/rezepte/actions";
+import { deleteRecipeAction, duplicateRecipeAction, forkRecipeAction } from "@/app/(app)/rezepte/actions";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,8 +24,21 @@ import {
 
 const ITEM = "min-h-11 gap-2.5 px-2.5";
 
-/** Aktionen auf der Rezeptseite. Bearbeiten/Löschen nur für den Owner. */
-export function RecipeActions({ recipeId, title, isOwner }: { recipeId: string; title: string; isOwner: boolean }) {
+/**
+ * Aktionen auf der Rezeptseite. Bearbeiten/Löschen nur für den Owner.
+ * Fremde (öffentliche) Rezepte: übernehmen bzw. die schon übernommene Kopie öffnen.
+ */
+export function RecipeActions({
+  recipeId,
+  title,
+  isOwner,
+  ownCopyId = null,
+}: {
+  recipeId: string;
+  title: string;
+  isOwner: boolean;
+  ownCopyId?: string | null;
+}) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -43,11 +56,32 @@ export function RecipeActions({ recipeId, title, isOwner }: { recipeId: string; 
     });
   }
 
+  function fork() {
+    startTransition(async () => {
+      const result = await forkRecipeAction(recipeId);
+      if (result && !result.ok) toast.error(result.message);
+    });
+  }
+
   if (!isOwner) {
+    if (ownCopyId) {
+      return (
+        <>
+          <Link href={`/rezepte/${ownCopyId}`} className={buttonVariants()}>
+            <BookCheck aria-hidden />
+            Deine Kopie öffnen
+          </Link>
+          <Button type="button" variant="outline" onClick={fork} disabled={pending}>
+            <Copy aria-hidden />
+            {pending ? "Wird übernommen …" : "Noch einmal übernehmen"}
+          </Button>
+        </>
+      );
+    }
     return (
-      <Button type="button" variant="outline" onClick={duplicate} disabled={pending}>
+      <Button type="button" onClick={fork} disabled={pending}>
         <Copy aria-hidden />
-        In mein Rezeptbuch übernehmen
+        {pending ? "Wird übernommen …" : "In mein Rezeptbuch übernehmen"}
       </Button>
     );
   }

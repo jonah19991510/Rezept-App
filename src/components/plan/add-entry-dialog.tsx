@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { Check, Heart, Search } from "lucide-react";
+import { BookOpen, Check, Compass, Heart, Search } from "lucide-react";
 import { toast } from "sonner";
 import { addPlanEntryAction } from "@/app/(app)/wochenplan/actions";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,9 @@ import { dayMonth, weekdayLong } from "@/lib/domain/week";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ServingsStepper } from "./servings-stepper";
-import type { PlanRecipeOption, SlotTarget } from "./types";
+import type { PlanRecipeChoices, SlotTarget } from "./types";
+
+type Source = "own" | "community";
 
 function normalize(s: string) {
   return s.toLocaleLowerCase("de-DE").normalize("NFKD").replace(/\p{Diacritic}/gu, "");
@@ -30,7 +32,7 @@ export function AddEntryDialog({
 }: {
   target: SlotTarget | null;
   days: string[];
-  recipes: PlanRecipeOption[];
+  recipes: PlanRecipeChoices;
   onClose: () => void;
 }) {
   return (
@@ -51,9 +53,11 @@ function AddEntryForm({
 }: {
   target: SlotTarget;
   days: string[];
-  recipes: PlanRecipeOption[];
+  recipes: PlanRecipeChoices;
   onDone: () => void;
 }) {
+  // Ohne eigene Rezepte gleich die öffentlichen zeigen
+  const [source, setSource] = useState<Source>(recipes.own.length === 0 && recipes.community.length > 0 ? "community" : "own");
   const [query, setQuery] = useState("");
   const [date, setDate] = useState(target.date);
   const [slot, setSlot] = useState<MealSlot>(target.slot);
@@ -61,12 +65,21 @@ function AddEntryForm({
   const [servings, setServings] = useState(1);
   const [pending, startTransition] = useTransition();
 
+  const options = recipes[source];
   const filtered = useMemo(() => {
     const words = normalize(query).split(/\s+/).filter(Boolean);
-    return recipes
-      .filter((r) => words.every((w) => normalize(r.title).includes(w)))
+    return options
+      .filter((r) => {
+        const haystack = normalize(`${r.title} ${r.authorName ?? ""}`);
+        return words.every((w) => haystack.includes(w));
+      })
       .sort((a, b) => Number(b.isFavorite) - Number(a.isFavorite) || a.title.localeCompare(b.title, "de"));
-  }, [query, recipes]);
+  }, [query, options]);
+
+  function switchSource(next: Source) {
+    setSource(next);
+    setSelected(null);
+  }
 
   function submit() {
     if (!selected) return;
@@ -88,91 +101,126 @@ function AddEntryForm({
         </DialogDescription>
       </DialogHeader>
 
-      {recipes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Du hast noch keine Rezepte.{" "}
-          <Link href="/rezepte/neu" className="font-medium text-primary underline-offset-4 hover:underline">
-            Leg dein erstes an
-          </Link>
-          .
-        </p>
-      ) : (
-        <div className="grid gap-4">
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rezept suchen …"
-              aria-label="Rezept suchen"
-              className="pl-9"
-            />
-          </div>
+      <div className="grid gap-4">
+        <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1" role="group" aria-label="Rezepte aus">
+          {(
+            [
+              { value: "own", label: "Mein Buch", icon: BookOpen, count: recipes.own.length },
+              { value: "community", label: "Entdecken", icon: Compass, count: recipes.community.length },
+            ] as const
+          ).map(({ value, label, icon: Icon, count }) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={source === value}
+              onClick={() => switchSource(value)}
+              className={cn(
+                "flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                source === value && "bg-card text-foreground shadow-sm",
+              )}
+            >
+              <Icon className="size-4" aria-hidden />
+              {label}
+              <span className="text-xs tabular-nums">({count})</span>
+            </button>
+          ))}
+        </div>
 
-          <ul className="max-h-72 divide-y overflow-y-auto rounded-2xl border" role="listbox" aria-label="Rezepte">
-            {filtered.map((r) => {
-              const isSelected = r.id === selected;
-              return (
-                <li key={r.id} role="option" aria-selected={isSelected}>
-                  <button
-                    type="button"
-                    onClick={() => setSelected(r.id)}
-                    className={cn(
-                      "flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
-                      isSelected && "bg-accent",
-                    )}
-                  >
-                    <span className="flex min-w-0 items-center gap-2">
-                      {isSelected ? <Check className="size-4 shrink-0 text-primary" aria-hidden /> : null}
-                      {r.isFavorite && !isSelected ? <Heart className="size-4 shrink-0 fill-primary text-primary" aria-label="Favorit" /> : null}
-                      <span className="truncate font-medium">{r.title}</span>
-                    </span>
-                    {r.kcal != null ? (
-                      <span className="shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-                        {formatNumber(Math.round(r.kcal), 0)} kcal
-                        <br />
-                        {formatNumber(r.protein ?? 0, 0)} g P
+        {options.length === 0 ? (
+          source === "own" ? (
+            <p className="text-sm text-muted-foreground">
+              Du hast noch keine Rezepte.{" "}
+              <Link href="/rezepte/neu" className="font-medium text-primary underline-offset-4 hover:underline">
+                Leg dein erstes an
+              </Link>{" "}
+              oder plane eins aus „Entdecken“ ein.
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Noch hat niemand aus der Runde ein Rezept veröffentlicht.
+            </p>
+          )
+        ) : (
+          <>
+            <div className="relative">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={source === "own" ? "Rezept suchen …" : "Rezept oder Namen suchen …"}
+                aria-label="Rezept suchen"
+                className="pl-9"
+              />
+            </div>
+
+            <ul className="max-h-72 divide-y overflow-y-auto rounded-2xl border" role="listbox" aria-label="Rezepte">
+              {filtered.map((r) => {
+                const isSelected = r.id === selected;
+                return (
+                  <li key={r.id} role="option" aria-selected={isSelected}>
+                    <button
+                      type="button"
+                      onClick={() => setSelected(r.id)}
+                      className={cn(
+                        "flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
+                        isSelected && "bg-accent",
+                      )}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        {isSelected ? <Check className="size-4 shrink-0 text-primary" aria-hidden /> : null}
+                        {r.isFavorite && !isSelected ? <Heart className="size-4 shrink-0 fill-primary text-primary" aria-label="Favorit" /> : null}
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{r.title}</span>
+                          {r.authorName ? <span className="block truncate text-xs text-muted-foreground">von {r.authorName}</span> : null}
+                        </span>
                       </span>
-                    ) : null}
-                  </button>
-                </li>
-              );
-            })}
-            {filtered.length === 0 ? <li className="px-3 py-4 text-sm text-muted-foreground">Kein Rezept gefunden.</li> : null}
-          </ul>
+                      {r.kcal != null ? (
+                        <span className="shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                          {formatNumber(Math.round(r.kcal), 0)} kcal
+                          <br />
+                          {formatNumber(r.protein ?? 0, 0)} g P
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                );
+              })}
+              {filtered.length === 0 ? <li className="px-3 py-4 text-sm text-muted-foreground">Kein Rezept gefunden.</li> : null}
+            </ul>
+          </>
+        )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="add-day">Tag</Label>
-              <NativeSelect id="add-day" value={date} onChange={(e) => setDate(e.target.value)}>
-                {days.map((d) => (
-                  <option key={d} value={d}>
-                    {weekdayLong(d)}, {dayMonth(d)}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="add-slot">Mahlzeit</Label>
-              <NativeSelect id="add-slot" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)}>
-                {MEAL_SLOTS.map((s) => (
-                  <option key={s} value={s}>
-                    {SLOT_LABELS[s]}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="grid gap-1.5">
+            <Label htmlFor="add-day">Tag</Label>
+            <NativeSelect id="add-day" value={date} onChange={(e) => setDate(e.target.value)}>
+              {days.map((d) => (
+                <option key={d} value={d}>
+                  {weekdayLong(d)}, {dayMonth(d)}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <ServingsStepper value={servings} onChange={setServings} />
-            <Button type="button" onClick={submit} disabled={!selected || pending}>
-              {pending ? "Wird eingeplant …" : "Einplanen"}
-            </Button>
+          <div className="grid gap-1.5">
+            <Label htmlFor="add-slot">Mahlzeit</Label>
+            <NativeSelect id="add-slot" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)}>
+              {MEAL_SLOTS.map((s) => (
+                <option key={s} value={s}>
+                  {SLOT_LABELS[s]}
+                </option>
+              ))}
+            </NativeSelect>
           </div>
         </div>
-      )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ServingsStepper value={servings} onChange={setServings} />
+          <Button type="button" onClick={submit} disabled={!selected || pending}>
+            {pending ? "Wird eingeplant …" : "Einplanen"}
+          </Button>
+        </div>
+      </div>
     </>
   );
 }

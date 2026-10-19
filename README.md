@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 5 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken). Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 6 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken). Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -191,6 +191,18 @@ filtert die Rezeptliste darunter. Jedes Diagramm hat eine Tabellenansicht.
 
 Die Diagrammfarben sind auf Farbsehschwäche und Kontrast geprüft (hell und dunkel). Neue Farben bitte vorher
 ebenso prüfen statt nach Gefühl wählen.
+
+## Entdecken (Community)
+
+- Rezepte sind zuerst **privat**. Auf der Rezeptseite schaltet „Öffentlich“ ein Rezept für alle aus der Runde frei,
+  sofort und jederzeit umkehrbar. Ein Globus auf der Karte im eigenen Buch zeigt veröffentlichte Rezepte.
+- **Entdecken** zeigt alle öffentlichen Rezepte (auch die eigenen, als „von dir“) mit dem Anzeigenamen des Autors,
+  nie mit der E-Mail-Adresse. Suche (auch nach Namen), Filter und Sortierung wie im eigenen Buch.
+- **In mein Rezeptbuch übernehmen** legt eine private, frei bearbeitbare Kopie an, die auf das Original verweist
+  („Übernommen von …“). Schon übernommene Rezepte tragen in Entdecken den Hinweis „In deinem Buch“.
+- **Im Wochenplan** gibt es beim Einplanen den Umschalter „Mein Buch | Entdecken“: Öffentliche Rezepte anderer lassen
+  sich direkt einplanen, ohne Kopie. Macht der Autor ein eingeplantes Rezept wieder privat, steht im Plan
+  „Rezept nicht mehr verfügbar“ (zählt nicht mehr mit, lässt sich entfernen); Woche kopieren überspringt solche Einträge.
 
 ## Registrierungsmodus
 

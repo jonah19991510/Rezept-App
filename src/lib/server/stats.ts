@@ -1,4 +1,5 @@
 import "server-only";
+import { UNAVAILABLE_TITLE } from "@/lib/domain/community";
 import type { Goals } from "@/lib/domain/plan";
 import type { StatsPlanEntry, StatsRecipe } from "@/lib/domain/stats";
 import { addDays, mondayOf, todayInBerlin } from "@/lib/domain/week";
@@ -76,7 +77,7 @@ export async function getStatsData(userId: string): Promise<StatsData> {
 
   const recipeTitles: Record<string, string> = {};
   const planEntries: StatsPlanEntry[] = plan.data.map((e) => {
-    recipeTitles[e.recipe_id] = e.recipes?.title ?? "Rezept";
+    recipeTitles[e.recipe_id] = e.recipes?.title ?? UNAVAILABLE_TITLE;
     const n = nutritionById.get(e.recipe_id);
     return {
       date: e.date,
