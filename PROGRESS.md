@@ -442,6 +442,11 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 
 ## Bekannte Probleme
 
+- **Alte Einladungsmails (19.10., Test Phase 8):** Jede Einladung trägt ihr Ziel fest im Link (lokal versendet →
+  localhost:3000, live versendet → Vercel). Nach Löschen und erneutem Einladen derselben Adresse sind alle älteren
+  Links ungültig; ein Klick darauf zeigt „Link abgelaufen“ und landet beim alten Ziel. Immer die neueste Mail nehmen.
+  Im Supabase-Auth-Log steht bei `/invite` und `/verify` im Feld `referer` das jeweilige Ziel.
+
 - **Turbopack-Cache:** Am 19.10. lieferte der Entwicklungsserver nach einer Änderung an `globals.css` selbst nach
   Neustart die alte CSS aus. Abhilfe: Server stoppen, Ordner `.next/dev` löschen, neu starten. In Phase 6 nochmal
   passiert (alte `recipe-card.tsx` trotz Änderung); gleiche Abhilfe, danach lief es.
