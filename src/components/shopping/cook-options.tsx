@@ -50,7 +50,11 @@ export function CookOptions({ options }: { options: CookOption[] }) {
       {many.length > 0 ? (
         <section className="space-y-3">
           <Button type="button" variant="ghost" onClick={() => setShowMany((v) => !v)} aria-expanded={showMany}>
-            {showMany ? "Ausblenden" : `${many.length} weitere Rezepte, bei denen mehr fehlt`}
+            {showMany
+              ? "Ausblenden"
+              : many.length === 1
+                ? "1 weiteres Rezept, bei dem mehr fehlt"
+                : `${many.length} weitere Rezepte, bei denen mehr fehlt`}
           </Button>
           {showMany ? (
             <ul className="grid gap-3">

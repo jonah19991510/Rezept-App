@@ -12,17 +12,12 @@
 | 6 – Community: veröffentlichen, Entdecken, übernehmen | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 7 – Fotos und Import per Link | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 8 – PWA, Feinschliff, Einstellungen, Deployment | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
-| 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
-| 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | **in Arbeit** |
+| 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | **fertig** (19.10.2026), vom Nutzer abgenommen, auf `master` gepusht, **aber noch nicht live** (siehe Stand Deployment) |
+| 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | **fertig** (19.10.2026), wartet auf Test und OK des Nutzers, noch nicht gepusht/live |
 | 11–15 | offen |
 
-**Nächster Schritt (Phase 10 unterbrochen, 19.10.2026):** Code für Phase 10 ist gebaut und lokal committet (nicht live):
-Vorratsschrank `/einkauf/vorrat` (Küche/Bar, Menge und Ablaufdatum freiwillig), „Was kochen?“ `/einkauf/was-kochen`
-(Alles da / 1 fehlt / 2–3 fehlen, Fehlendes auf die Liste), Einkaufsliste mit „hast du schon“/„noch …“, „In Vorrat
-übernehmen“, „Als Text kopieren“/„Teilen“, Kochmodus „Vorrat aktualisieren“. Domänenlogik `pantry.ts` mit Tests
-(178 Tests grün, Typecheck und Lint sauber). **Offen:** Build, Browser-Check (Vorschauseite mit Beispieldaten,
-375 px), Abschnitte „Was in Phase 10 entstanden ist“/„Wie der Nutzer Phase 10 testet“, README und
-DATENVERARBEITUNG (pantry_items jetzt genutzt), dann Nutzer testen lassen und erst nach OK pushen.
+**Nächster Schritt:** Der Nutzer testet Phase 10 über den LAN-Server (Anleitung unten) und gibt das OK. Danach
+`git push` (Phase 10 geht live, sobald Vercel wieder deployt, siehe unten) und erst dann Phase 11.
 
 **Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
 (Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`
@@ -31,6 +26,14 @@ DATENVERARBEITUNG (pantry_items jetzt genutzt), dann Nutzer testen lassen und er
 Meta-noindex, HSTS, Manifest/Icons/sw.js/offline.html erreichbar, keine Analytics und keine fremden Domains im HTML.
 Der Vercel-Connector von Claude hat keine Rechte auf dieses Konto (403); Logs/Deployments sieht nur der Nutzer im
 Dashboard.
+
+**Deployment hängt (19.10.2026, abends):** `origin/master` steht auf `7702dbc` (Phase 9), GitHub-Standardzweig ist
+`master`, aber die Live-Seite zeigt noch den Stand vor Phase 9 (von außen geprüft: die ausgelieferte CSS enthält keine
+Klassen, die erst mit Phase 9 dazukamen, z. B. `overscroll-contain`, `min-w-24`). Lokal baut genau dieser Stand
+fehlerfrei, keine Konfigurationsänderung seit Phase 8, keine Groß-/Kleinschreibungs-Fehler in Importen. Vercel hat
+also für die Pushes nach dem ersten Deployment entweder gar nicht, nur als Preview oder mit Fehler/„Blocked“ gebaut.
+Ursache sieht nur der Nutzer unter Vercel → Projekt → Deployments; Klick-Anleitung hat er bekommen
+(Production Branch = `master`, letztes `master`-Deployment ansehen, ggf. Redeploy/Promote, Build-Log).
 
 **Entwicklungsserver:** Der Nutzer möchte, dass Claude zu Beginn jeder Sitzung den LAN-Server startet
 (`npm run dev:lan` bzw. Preview „rezept-app-lan“), damit PC (localhost:3000) und Handy (http://<PC-IP>:3000)
@@ -73,6 +76,52 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 10 entstanden ist
+
+- **Einkauf hat drei Tabs:** Liste, Vorrat (`/einkauf/vorrat`), Was kochen? (`/einkauf/was-kochen`). Keine neue
+  Tabelle, `pantry_items` gab es seit Phase 1 (RLS, Cascade, Datenexport schon dabei).
+- **Vorratsschrank:** Bereiche Küche und Bar, Zutat über die bekannte Zutatensuche, Menge (g/ml/Stück) und
+  „Haltbar bis“ freiwillig, ohne Menge „vorhanden“. Hinweis „Bald verbrauchen“ für Abgelaufenes und alles, was in
+  höchstens 3 Tagen abläuft. Eintrag antippen → ändern oder entfernen.
+- **Einkaufsliste mit Vorrat:** Reicht der Vorrat, steht der Eintrag ausgegraut mit „hast du schon · 500 g im
+  Vorrat“ da und zählt nicht mehr als offen; reicht er nicht, steht „noch 2 Stück“ statt der ganzen Menge.
+  Vorrat ohne Menge zählt als vorhanden. Abgehakte Einkäufe mit Zutat wandern per „N Einkäufe in den Vorrat
+  übernehmen“ in den Vorrat (gleiche Einheit wird addiert, Spirituosen/Liköre/Sirupe in die Bar) und verschwinden von
+  der Liste.
+- **Text-Export:** „Als Text kopieren“ (nur, was noch gekauft werden muss, nach Abteilung, mit Datum) und „Teilen“
+  über das Teilen-Menü des Handys (Web Share API, nur wo der Browser es kann). Ohne Zwischenablage (http im WLAN)
+  erscheint der Text zum Markieren.
+- **„Was kann ich kochen?“** (`cookability` in `pantry.ts`): eigene Küchenrezepte nach Abdeckung durch den Vorrat,
+  Grundzutaten zählen nicht. Abschnitte „Alles da“, „Fehlt 1 Zutat“ (mit Name), „Fehlen 2–3 Zutaten“, der Rest
+  aufklappbar. Rezepte, die bald ablaufende Zutaten verbrauchen, stehen oben. „Fehlendes auf die Liste“ setzt die
+  fehlenden Zutaten (Mengen für die Rezeptportionen) als eigene Einträge auf die Einkaufsliste, ohne Doppelte.
+- **Kochmodus:** Nach „Gekocht!“ erscheint „Vorrat aktualisieren?“ mit den betroffenen Vorrats-Einträgen und
+  „500 g → 300 g“ bzw. „aufgebraucht“; die Mengen rechnet der Server aus Rezept und gewählten Portionen
+  (Gramm, ml über die Dichte, Stück über das Stückgewicht). Einträge ohne Menge sind nicht vorausgewählt.
+- **Domänenlogik** `src/lib/domain/pantry.ts` mit Tests (Abdeckung, Übernehmen, Verbrauch, Umrechnung, „Was kochen?“,
+  Text-Export), Server-Teil `src/lib/server/pantry.ts`, Actions `src/app/(app)/einkauf/pantry-actions.ts`,
+  Zod-Schemas `src/lib/validation/pantry.ts`. 178 Tests, Typecheck, Lint und Build grün; Browser-Check bei 375 px
+  über eine Vorschauseite mit Beispieldaten (ohne Hydration-Fehler, Vorschauseite wieder gelöscht).
+
+## Wie der Nutzer Phase 10 testet
+
+Über den LAN-Server (PC: <http://localhost:3000>, Handy: <http://192.168.178.47:3000>).
+
+1. Einkauf → Tab **Vorrat**: „Zutat hinzufügen“ → z. B. Spaghetti, 500 g. Dann Eier, 4 Stück, „Haltbar bis“ übermorgen.
+   Dann „Dosentomaten“ ohne Menge. Oben erscheint „Bald verbrauchen: Eier“. Auf **Bar** umschalten, Gin eintragen.
+2. Einen Eintrag antippen, Menge ändern, speichern; einen anderen entfernen.
+3. Tab **Liste** (vorher ggf. „Aus Wochenplan“ mit einem Rezept, das Spaghetti/Eier enthält): Spaghetti stehen
+   ausgegraut mit „hast du schon“, bei Eiern steht z. B. „noch 2 Stück“. Oben zählt „… noch zu besorgen“ die
+   ausgegrauten nicht mit.
+4. „Als Text kopieren“ → in WhatsApp/Notizen einfügen (am Handy über http im WLAN erscheint stattdessen ein Feld zum
+   Markieren; live über HTTPS geht Kopieren direkt). Am Handy zusätzlich „Teilen“.
+5. Zwei Einträge abhaken → „2 Einkäufe in den Vorrat übernehmen“ → sie sind von der Liste weg und im Vorrat (gleiche
+   Einheit addiert).
+6. Tab **Was kochen?**: Rezepte unter „Alles da“, „Fehlt 1 Zutat“ usw. Bei einem Rezept „Fehlendes auf die Liste“ →
+   die Zutaten stehen auf der Liste.
+7. Ein Rezept, dessen Zutaten im Vorrat sind, im Kochmodus bis „Gekocht!“ durchgehen → unten „Vorrat aktualisieren?“
+   → Häkchen prüfen → „Vorrat aktualisieren“ → im Vorrat sind die Mengen kleiner bzw. die Einträge weg.
 
 ## Was in Phase 9 entstanden ist
 
@@ -476,6 +525,24 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 44. **Phase 9 – Neue Phasen erst nach OK live:** Ab jetzt wird erst nach dem OK des Nutzers auf `master` gepusht
     (Push = Veröffentlichung); getestet wird vorher über den LAN-Server.
 
+19.10.2026 (Umsetzung Phase 10):
+
+45. **Phase 10 – Vorrat abziehen heißt ausgrauen, nicht löschen:** Einträge, die der Vorrat deckt, bleiben auf der
+    Liste („hast du schon“), damit man sieht, warum etwas fehlt; teilweise gedeckte zeigen nur den Rest. Vorrat ohne
+    Menge gilt als ausreichend. Verglichen wird nur in derselben Einheit (g/ml/Stück), sonst nur „im Vorrat“.
+46. **Phase 10 – Vorrat ist eine Liste von Zutaten, keine Lagerverwaltung:** Menge und Datum freiwillig, je Zutat und
+    Bereich ein Eintrag (`unique (user_id, ingredient_id, location)`); Übernehmen addiert gleiche Einheiten, sonst gilt
+    die neue Angabe.
+47. **Phase 10 – Abgelaufenes zählt weiter als vorhanden** (man entscheidet selbst, ob es noch geht) und wird bei
+    „Was kochen?“ wie „läuft bald ab“ nach vorne sortiert.
+48. **Phase 10 – „Was kochen?“ nur mit eigenen Küchenrezepten**, ohne Favoriten aus Entdecken; Cocktails kommen mit
+    „Was kann ich mixen?“ in Phase 15. Fehlende Zutaten landen als eigene Einträge („manual“) auf der Liste, damit sie
+    ein Neu-Erstellen aus dem Wochenplan überstehen.
+49. **Phase 10 – Verbrauch nach dem Kochen rechnet der Server** (Client schickt nur Rezept, Portionen und ausgewählte
+    Einträge). Lässt sich die Menge nicht umrechnen oder ist keine bekannt, kann der Eintrag nur als aufgebraucht
+    markiert werden.
+50. **Phase 10 – Tabs ohne Icons unter 400 px Breite**, damit „Was kochen?“ auf schmalen Handys ganz zu lesen ist.
+
 ## Offene Punkte
 
 - Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
@@ -488,7 +555,8 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 - Datenexport enthält die Fotos nur als Liste. Ein ZIP mit allen Fotos wäre eine Ergänzung für später.
 - Rezept-Sicherung kennt nur Küchenrezepte; Cocktail-Felder mit Phase 15 ergänzen (Format-Version 2).
 - Service-Worker-Version (`VERSION` in `public/sw.js`) bei Änderungen am Caching hochzählen.
-- GitHub-Zweig `main` (nur die automatische README) kann gelöscht werden; Produktionszweig ist `master`.
+- GitHub-Zweig `main` (nur die automatische README) kann gelöscht werden, sobald Vercel sicher von `master` baut
+  (siehe „Deployment hängt“ oben).
 - Optional: Vercel-Connector für Claude auf das Konto jonah19991510 berechtigen, dann kann Claude Deployments und
   Laufzeitfehler selbst ansehen.
 - Import: Seiten, die Bots sperren (z. B. Allrecipes, Simply Recipes: Antwort 402), lassen sich nicht laden; die App

@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 9 (Kochmodus mit Timern, Portionen skalieren, Einheiten-Umrechnung; davor: Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 10 (Vorratsschrank, „Was kann ich kochen?“, Vorrat in der Einkaufsliste, Text-Export; davor: Kochmodus mit Timern, Portionen skalieren, Einheiten-Umrechnung, Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -200,6 +200,20 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
   (im Verhältnis geplante Portionen zu Rezeptportionen) und nach Supermarkt-Abteilung sortiert.
 - Neu erstellen ersetzt die Einträge aus dem Plan; **eigene Einträge** (z. B. „Spülmittel“) bleiben.
 - **Grundzutaten** wie Salz, Pfeffer und Öl sind ausgeblendet und lassen sich mit einem Tipp einblenden.
+- **Vorrat abziehen:** Was im Vorrat reicht, steht ausgegraut mit „hast du schon“ da; reicht es nicht ganz, steht
+  nur der Rest („noch 2 Stück“).
+- **In Vorrat übernehmen:** Abgehakte Einkäufe wandern mit einem Tipp in den Vorratsschrank.
+- **Als Text kopieren** oder **Teilen** (Teilen-Menü des Handys): nur, was noch gekauft werden muss.
+
+## Vorrat und „Was kann ich kochen?“
+
+- Einkauf → **Vorrat**: Zutaten in den Bereichen Küche und Bar. Menge und „Haltbar bis“ sind freiwillig, ohne Menge
+  gilt eine Zutat als vorhanden. Was abgelaufen ist oder in höchstens 3 Tagen abläuft, steht oben als „Bald
+  verbrauchen“.
+- Einkauf → **Was kochen?**: eigene Rezepte sortiert nach „Alles da“, „Fehlt 1 Zutat“, „Fehlen 2–3 Zutaten“
+  (Grundzutaten zählen nicht). Rezepte mit bald ablaufenden Zutaten zuerst. „Fehlendes auf die Liste“ setzt die
+  fehlenden Zutaten auf die Einkaufsliste.
+- Nach „Gekocht!“ im Kochmodus bietet die App an, die verbrauchten Mengen vom Vorrat abzuziehen.
 
 ## Statistik
 

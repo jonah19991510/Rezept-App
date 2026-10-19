@@ -8,17 +8,13 @@ import { Button } from "@/components/ui/button";
 /** Nach dem Kochen: verbrauchte Zutaten aus dem Vorrat abziehen (Auswahl, Server rechnet die Mengen). */
 export function PantryConsumption({ recipeId, servings }: { recipeId: string; servings: number }) {
   const [rows, setRows] = useState<ConsumptionRow[] | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [done, setDone] = useState<string>();
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
     let active = true;
     previewConsumptionAction({ recipeId, servings }).then((result) => {
-      if (!active) return;
-      setRows(result);
-      // Vorausgewählt: Einträge mit bekannter Menge; „vorhanden“ ohne Menge nur, wenn der Nutzer es ankreuzt
-      setSelected(new Set(result.filter((r) => r.after != null).map((r) => r.pantryId)));
+      if (active) setRows(result);
     });
     return () => {
       active = false;
@@ -27,19 +23,37 @@ export function PantryConsumption({ recipeId, servings }: { recipeId: string; se
 
   if (rows == null || rows.length === 0) return null;
 
+  function apply(pantryIds: string[]) {
+    startTransition(async () => {
+      const result = await consumeAfterCookingAction({ recipeId, servings, pantryIds });
+      setDone(result.ok ? (result.message ?? "Vorrat aktualisiert.") : result.message);
+    });
+  }
+
+  // key: neue Vorschau (andere Portionen) setzt die Auswahl zurück
+  return <PantryConsumptionView key={rows.map((r) => r.pantryId).join()} rows={rows} pending={pending} done={done} onApply={apply} />;
+}
+
+/** Anzeige der Auswahl; vorausgewählt sind Einträge mit bekannter Menge, „vorhanden“ ohne Menge nur auf Wunsch. */
+export function PantryConsumptionView({
+  rows,
+  pending,
+  done,
+  onApply,
+}: {
+  rows: ConsumptionRow[];
+  pending: boolean;
+  done?: string;
+  onApply: (pantryIds: string[]) => void;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(rows.filter((r) => r.after != null).map((r) => r.pantryId)));
+
   function toggle(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
-    });
-  }
-
-  function apply() {
-    startTransition(async () => {
-      const result = await consumeAfterCookingAction({ recipeId, servings, pantryIds: [...selected] });
-      setDone(result.ok ? (result.message ?? "Vorrat aktualisiert.") : result.message);
     });
   }
 
@@ -70,7 +84,7 @@ export function PantryConsumption({ recipeId, servings }: { recipeId: string; se
           </li>
         ))}
       </ul>
-      <Button type="button" variant="outline" className="w-full" onClick={apply} disabled={pending || selected.size === 0}>
+      <Button type="button" variant="outline" className="w-full" onClick={() => onApply([...selected])} disabled={pending || selected.size === 0}>
         {pending ? "Wird aktualisiert …" : "Vorrat aktualisieren"}
       </Button>
     </section>

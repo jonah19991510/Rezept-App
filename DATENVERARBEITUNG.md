@@ -106,6 +106,13 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 
 ## Änderungsverlauf
 
+- **Phase 10:** Vorratsschrank (`pantry_items`: Zutat, freiwillig Menge und Ablaufdatum, Bereich Küche/Bar) wird
+  jetzt genutzt, nur für den Nutzer selbst sichtbar, im Datenexport enthalten, beim Löschen des Accounts per Cascade
+  entfernt. „Was kann ich kochen?“ gleicht nur eigene Rezepte mit dem eigenen Vorrat ab. Text-Export der
+  Einkaufsliste: „Als Text kopieren“ legt den Text in die Zwischenablage des Geräts, „Teilen“ öffnet das Teilen-Menü
+  des Betriebssystems (Web Share API); wohin der Text geht, entscheidet der Nutzer, die App überträgt dabei selbst
+  nichts. Keine neuen Tabellen, keine neuen Dienstleister.
+
 - **Phase 9:** Kochmodus speichert am Ende („Gekocht!“) freiwillig einen Eintrag in `cook_logs` (Datum, Bewertung,
   Notiz, Portionen), nur für den Nutzer selbst sichtbar und im Datenexport enthalten. Timer, abgehakte Zutaten und
   gewählte Portionen bleiben nur im Browser (Arbeitsspeicher) und werden nicht gespeichert. Die Bildschirmsperre

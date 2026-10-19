@@ -22,7 +22,8 @@ export function ShoppingTabs({ active }: { active: (typeof TABS)[number]["href"]
             href === active && "bg-card text-foreground shadow-sm",
           )}
         >
-          <Icon className="size-4 shrink-0" aria-hidden />
+          {/* Auf schmalen Handys ohne Icon, damit „Was kochen?“ ganz hineinpasst */}
+          <Icon className="size-4 shrink-0 max-[400px]:hidden" aria-hidden />
           <span className="truncate">{label}</span>
         </Link>
       ))}
