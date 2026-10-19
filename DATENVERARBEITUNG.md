@@ -4,7 +4,7 @@
 sind. Grundlage für eine spätere Datenschutzerklärung. **Kein Rechtstext.** Wird mit jeder Phase
 aktualisiert.
 
-Letzte Aktualisierung: Phase 7 (19.10.2026)
+Letzte Aktualisierung: Phase 8 (19.10.2026)
 
 ## Grundsätze
 
@@ -30,6 +30,8 @@ Letzte Aktualisierung: Phase 7 (19.10.2026)
 | Session-Cookies `sb-<projekt>-auth-token` | Browser (Cookie) | Angemeldet bleiben | – (technisch notwendig) |
 | Auth-Protokolle (u. a. IP-Adresse, Zeitpunkt, User-Agent) | Supabase (Logs) | Betrieb, Missbrauchsschutz | Projekt-Admin im Supabase-Dashboard |
 | Darstellung Hell/Dunkel | Browser (`localStorage`, Schlüssel `theme`) | Nutzerwunsch merken | nur das Gerät |
+| Programmdateien der App (JavaScript/CSS), Offline-Seite, App-Icon | Browser (Cache Storage des Service Workers, `rezeptbuch-static-*`, `rezeptbuch-shell-*`) | schnellerer Start, Hinweis „Du bist offline“ | nur das Gerät; **keine** persönlichen Daten, Seiten werden nicht gespeichert |
+| Rezeptfotos | Browser-Cache (HTTP, `private`) | Fotos nicht jedes Mal neu laden | nur das Gerät |
 
 ### Inhalte der Nutzer (angelegt in Phase 1, genutzt ab den genannten Phasen)
 
@@ -78,11 +80,16 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 
 ## Rechte der Nutzer
 
-- **Löschen:** Der Admin kann Accounts über die Nutzerverwaltung löschen. Dabei werden zuerst die Fotos
-  im Storage gelöscht, dann der Auth-User; alle Tabellen folgen per Cascade, auch veröffentlichte Rezepte.
-  Kopien, die andere von veröffentlichten Rezepten übernommen haben, gehören diesen Personen und bleiben.
-  „Account löschen“ für Nutzer selbst kommt in Phase 8.
-- **Export:** „Meine Daten herunterladen“ (JSON) kommt in Phase 8.
+- **Löschen:** „Account löschen“ in den Einstellungen (Bestätigung durch Eintippen des Anzeigenamens) bzw. der Admin
+  über die Nutzerverwaltung. Zuerst werden alle Fotos im Storage gelöscht, dann der Auth-User; alle Tabellen folgen
+  per Cascade, auch veröffentlichte Rezepte. Kopien, die andere von veröffentlichten Rezepten übernommen haben,
+  gehören diesen Personen und bleiben. Supabase-Auth-Protokolle und Backups von Supabase verfallen nach deren Fristen.
+- **Auskunft/Export:** „Meine Daten herunterladen“ in den Einstellungen liefert alle gespeicherten Daten als JSON
+  (Profil inkl. E-Mail, Rezepte mit Zutaten, Schritten und Versionen, Wochenpläne, Meal Prep, Ziele, Einstellungen,
+  Einkaufsliste, Vorrat, Preise, Koch-Log, Favoriten, selbst angelegte Zutaten, Liste der Fotos). Die Fotos selbst
+  sieht man in der App; ein Download aller Fotos als Datei fehlt noch.
+- **Berichtigung:** Anzeigename und Passwort in den Einstellungen, Inhalte direkt in der App.
+- Zusätzlich gibt es die **Rezept-Sicherung** (eigene Rezepte als wieder importierbare JSON-Datei).
 
 ## Checkliste „Vor dem Öffnen der Registrierung“
 
@@ -98,6 +105,12 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 - [ ] noindex-Regeln bewusst überprüft (robots.txt, Meta-Tag, `X-Robots-Tag`): sollen sie bleiben?
 
 ## Änderungsverlauf
+
+- **Phase 8:** App ist installierbar (Web-App-Manifest, Service Worker). Der Service Worker speichert nur
+  Programmdateien und die Offline-Seite, keine Seiten mit persönlichen Daten. Einstellungen: Anzeigename/Passwort
+  ändern, „Meine Daten herunterladen“, Rezept-Sicherung (Export/Import), „Account löschen“. Hosting auf **Vercel**
+  (Functions in Frankfurt `fra1`, keine Analytics, keine Speed Insights); Code in einem privaten GitHub-Repository
+  (enthält keine Nutzerdaten und keine Schlüssel). Keine neuen Tabellen.
 
 - **Phase 7:** Rezeptfotos im privaten Storage-Bucket (Ordner pro Nutzer und Rezept), vor dem Upload im Browser ohne
   Metadaten neu kodiert; beim Löschen eines Rezepts wird der Ordner geleert, beim Löschen des Accounts der ganze

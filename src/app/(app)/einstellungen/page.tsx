@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { Settings } from "lucide-react";
-import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/lib/auth";
 import { getDefaultGoals } from "@/lib/server/plan";
+import { DataSection, DeleteAccount, DisplayNameForm, PasswordForm } from "./account-forms";
 import { GoalsForm } from "./goals-form";
 
 export const metadata: Metadata = { title: "Einstellungen" };
@@ -19,13 +18,21 @@ export default async function SettingsPage() {
         <h2 id="sec-profil" className="mb-3 text-lg font-semibold">
           Profil
         </h2>
-        <dl className="grid gap-3 text-sm sm:grid-cols-[10rem_1fr]">
-          <dt className="text-muted-foreground">Anzeigename</dt>
-          <dd className="font-medium">{user.displayName}</dd>
-          <dt className="text-muted-foreground">E-Mail</dt>
-          <dd className="font-medium break-all">{user.email ?? "–"}</dd>
-        </dl>
-        <p className="mt-4 text-sm text-muted-foreground">Deine E-Mail-Adresse siehst nur du.</p>
+        <div className="grid gap-5">
+          <DisplayNameForm current={user.displayName} />
+          <p className="text-sm">
+            <span className="text-muted-foreground">E-Mail:</span>{" "}
+            <span className="font-medium break-all">{user.email ?? "–"}</span>
+            <span className="block text-muted-foreground">Deine E-Mail-Adresse siehst nur du.</span>
+          </p>
+        </div>
+      </section>
+
+      <section className="mb-6 rounded-3xl border bg-card p-5" aria-labelledby="sec-passwort">
+        <h2 id="sec-passwort" className="mb-3 text-lg font-semibold">
+          Passwort ändern
+        </h2>
+        <PasswordForm />
       </section>
 
       <section id="ziele" className="mb-6 scroll-mt-20 rounded-3xl border bg-card p-5" aria-labelledby="sec-ziele">
@@ -39,9 +46,25 @@ export default async function SettingsPage() {
         <GoalsForm initial={goals} />
       </section>
 
-      <EmptyState icon={Settings} title="Weitere Einstellungen folgen">
-        Anzeigename und Passwort ändern, Trainingstage, Daten herunterladen und Account löschen kommen hier hin.
-      </EmptyState>
+      <section className="mb-6 rounded-3xl border bg-card p-5" aria-labelledby="sec-daten">
+        <h2 id="sec-daten" className="mb-1 text-lg font-semibold">
+          Deine Daten
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">Als JSON-Datei herunterladen oder eine Rezept-Sicherung einspielen.</p>
+        <DataSection />
+      </section>
+
+      <section className="mb-6 rounded-3xl border border-destructive/30 bg-card p-5" aria-labelledby="sec-loeschen">
+        <h2 id="sec-loeschen" className="mb-1 text-lg font-semibold">
+          Account löschen
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Löscht deinen Zugang und alle deine Daten endgültig. Das lässt sich nicht rückgängig machen.
+        </p>
+        <DeleteAccount displayName={user.displayName} />
+      </section>
+
+      <p className="text-sm text-muted-foreground">Trainingstage und weitere Einstellungen kommen in späteren Phasen dazu.</p>
     </>
   );
 }

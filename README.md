@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 7 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link). Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 8 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -83,8 +83,8 @@ Einladungen über die Admin-Seite funktionieren trotzdem, weil sie mit dem Secre
 
 **Authentication → URL Configuration**
 
-- **Site URL:** `http://localhost:3000` (nach dem Deployment auf deine Vercel-Adresse ändern)
-- **Redirect URLs:** `http://localhost:3000/**` hinzufügen (später zusätzlich `https://DEINE-APP.vercel.app/**`)
+- **Site URL:** `https://unser-rezeptbuch.vercel.app` (vor dem Deployment: `http://localhost:3000`)
+- **Redirect URLs:** `https://unser-rezeptbuch.vercel.app/**` und `http://localhost:3000/**` (zum Entwickeln)
 
 ### 4. E-Mail-Vorlagen (nichts zu tun)
 
@@ -251,6 +251,9 @@ src/app/(auth)/        Login, Passwort vergessen/setzen, Registrieren (nur bei S
 src/app/(app)/         Rezepte, Wochenplan, Einkauf, Statistik, Entdecken, Einstellungen, Admin
 src/app/(legal)/       Impressum, Datenschutz (Platzhalter)
 src/app/auth/confirm/  Ziel der Links aus Einladungs- und Passwort-Mails
+src/app/foto/          Auslieferung der Rezeptfotos (mit den Rechten des Nutzers)
+src/app/icons/, icon.tsx, apple-icon.tsx, manifest.ts   App-Icons und Web-App-Manifest (PWA)
+public/sw.js, public/offline.html                        Service Worker und Offline-Seite
 src/proxy.ts           Session-Erneuerung und Login-Pflicht (früher „Middleware“)
 src/components/        ui/ (shadcn), layout/ (Navigation, Seitenleiste), forms/
 src/lib/supabase/      Clients: server.ts, client.ts, admin.ts (nur Server, Secret Key)
@@ -260,6 +263,49 @@ supabase/scripts/      Einmalige Skripte (Beispielrezepte)
 supabase/tests/        SQL-Prüfungen (RLS)
 ```
 
-## Deployment
+## Einstellungen
 
-Kommt in Phase 8 (Vercel, Region `fra1` ist in `vercel.json` schon gesetzt).
+- **Profil:** Anzeigename ändern (so sehen dich andere), Passwort ändern.
+- **Tagesziele** für den Wochenplan.
+- **Meine Daten herunterladen:** alles, was die App über dich speichert, als JSON-Datei (Profil, Rezepte mit
+  Zutaten/Schritten/Versionen, Wochenpläne, Ziele, Einkaufsliste, Vorrat, Preise, Koch-Log, Favoriten,
+  selbst angelegte Zutaten, Liste der Fotos).
+- **Rezepte sichern / Sicherung importieren:** alle eigenen Rezepte als JSON, die sich hier wieder einspielen lässt
+  (legt die Rezepte zusätzlich und privat an; fehlende Zutaten werden mit ihren Nährwerten neu angelegt; ohne Fotos).
+- **Account löschen:** mit Bestätigung (Anzeigename eintippen). Löscht Fotos, Zugang und per Cascade alle Daten.
+  Der letzte Admin kann sich nicht selbst löschen (vorher eine andere Person zum Admin machen, Schritt 6).
+
+## Als App installieren
+
+- **iPhone/iPad (Safari):** Seite öffnen → Teilen-Symbol → „Zum Home-Bildschirm“.
+- **Android (Chrome):** Seite öffnen → Menü ⋮ → „App installieren“ bzw. „Zum Startbildschirm hinzufügen“.
+- Die App startet dann ohne Browserleiste. Ohne Internet erscheint ein Hinweis „Du bist offline“; Seiten mit
+  persönlichen Daten werden bewusst nicht auf dem Gerät zwischengespeichert, nur die Programmdateien.
+- Installieren geht nur über HTTPS (also mit der Vercel-Adresse, nicht mit `http://192.168…` im WLAN).
+
+## Deployment (Vercel)
+
+Die App läuft auf Vercel, der Code liegt in einem privaten GitHub-Repository. **Jeder Push auf `master`
+wird automatisch veröffentlicht** (Vercel baut neu, dauert ca. 1–2 Minuten).
+
+Einmalige Einrichtung (so wurde es gemacht):
+
+1. **GitHub:** privates, leeres Repository anlegen, Code hochladen:
+   `git remote add origin https://github.com/<name>/unser-rezeptbuch.git` und `git push -u origin master`.
+2. **Vercel:** auf <https://vercel.com/new> mit GitHub anmelden, das Repository importieren, Projektname
+   `unser-rezeptbuch`. Framework „Next.js“ wird erkannt, sonst nichts ändern.
+3. **Umgebungsvariablen** (Vercel → Project → Settings → Environment Variables, für „Production“ und „Preview“):
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (wie in `.env.local`)
+   - `SUPABASE_SECRET_KEY` (wie in `.env.local`, als **Sensitive** markieren)
+   - `SIGNUP_MODE` = `invite`
+   - `SITE_URL` = `https://unser-rezeptbuch.vercel.app`
+   Nach dem Ändern von Variablen: Deployments → letztes Deployment → „Redeploy“.
+4. **Supabase:** Authentication → URL Configuration wie in Schritt 3 oben (Site URL und Redirect URL auf die
+   Vercel-Adresse), sonst führen Einladungs- und Passwort-Links auf localhost.
+5. **Region prüfen:** Vercel → Project → Settings → Functions → „Function Region“ muss **Frankfurt (fra1)** sein
+   (kommt aus `vercel.json`). Nach einem Deployment steht die Region auch bei Deployments → Details → Functions.
+6. **Keine Analytics:** Vercel → Project → Analytics und Speed Insights **nicht** aktivieren (sind standardmäßig aus;
+   die App bindet auch kein Analytics-Skript ein). Deployment Protection kann auf dem Standard bleiben
+   (schützt nur Vorschau-Deployments).
+
+Lokal weiterentwickeln wie bisher (`npm run dev`); Änderungen gehen erst nach `git push` online.

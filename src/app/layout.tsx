@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
 import { AuthHashHandler } from "@/components/auth-hash-handler";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -25,6 +26,10 @@ export const metadata: Metadata = {
     template: "%s · Rezeptbuch",
   },
   description: "Rezepte, Makros und Wochenplan für Freunde und Familie.",
+  applicationName: "Rezeptbuch",
+  // Als App auf dem iPhone-Homebildschirm: eigener Titel, ohne Browserleiste
+  appleWebApp: { capable: true, title: "Rezeptbuch", statusBarStyle: "default" },
+  formatDetection: { telephone: false },
   // Keine Indexierung durch Suchmaschinen (zusätzlich X-Robots-Tag-Header und robots.txt)
   robots: {
     index: false,
@@ -47,6 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider>
           {children}
           <AuthHashHandler />
+          <ServiceWorkerRegister />
           <Toaster position="top-center" />
         </ThemeProvider>
       </body>

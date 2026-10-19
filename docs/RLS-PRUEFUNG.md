@@ -62,6 +62,10 @@ Du brauchst zwei Accounts (dein Admin-Account und einen eingeladenen Test-Accoun
 7. **Fotos (Phase 7):** Admin lädt ein Foto zu einem privaten Rezept hoch und kopiert die Bildadresse (Rechtsklick →
    „Bildadresse kopieren“, `/foto/…`). Im privaten Fenster mit dem Test-Account geöffnet → „Nicht gefunden“;
    abgemeldet → Login-Seite. Nach dem Veröffentlichen sieht der Test-Account das Foto.
-8. **noindex:** <http://localhost:3000/robots.txt> zeigt `Disallow: /`. In den Entwicklertools
+8. **Account löschen selbst (Phase 8):** Mit dem Test-Account in den Einstellungen „Meine Daten herunterladen“
+   (Datei enthält nur eigene Daten), dann „Account löschen“ → Anzeigenamen eintippen → Login-Seite mit Hinweis.
+   Danach im SQL-Editor wie in Punkt 5 prüfen, zusätzlich Storage → `recipe-photos` → kein Ordner mit der ID.
+   Der einzige Admin bekommt beim Löschen einen Hinweis statt einer Löschung.
+9. **noindex:** <http://localhost:3000/robots.txt> zeigt `Disallow: /`. In den Entwicklertools
    (Netzwerk → Dokument → Antwort-Header) steht `X-Robots-Tag: noindex, nofollow`, im HTML
    `<meta name="robots" content="noindex, nofollow">`.

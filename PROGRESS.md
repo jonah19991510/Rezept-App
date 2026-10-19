@@ -10,15 +10,15 @@
 | 4 – Einkaufsliste | **fertig** (19.10.2026), vom Nutzer getestet |
 | 5 – Statistiken | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 6 – Community: veröffentlichen, Entdecken, übernehmen | **fertig** (19.10.2026), vom Nutzer abgenommen |
-| 7 – Fotos und Import per Link | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
-| 8 – PWA, Feinschliff, Einstellungen, Deployment | offen, **nächste Phase** |
+| 7 – Fotos und Import per Link | **fertig** (19.10.2026), vom Nutzer abgenommen |
+| 8 – PWA, Feinschliff, Einstellungen, Deployment | **in Arbeit** |
 | 9–15 | offen |
 
-**Nächster Schritt:** Nutzer testet Phase 7 (siehe „Wie der Nutzer Phase 7 testet“). Erst nach seinem OK mit
-Phase 8 beginnen. Geprüft hat Claude: Verkleinern und EXIF-Entfernung im echten Browser (Test-JPEG mit GPS-Daten
-und Drehung: Ausgabe ohne EXIF/GPS, richtig gedreht, 1600/800 px), Import-Zerleger gegen echte Seiten (Chefkoch,
-BBC Good Food, Budget Bytes), Laden der Seite inkl. Weiterleitung und Sperre lokaler Adressen, Storage-Regeln per
-SQL-Test. Upload und Import mit Login hat Claude nicht selbst durchgeklickt.
+**Nächster Schritt:** Deployment abschließen (GitHub-Repo des Nutzers → Push → Vercel-Import mit Umgebungsvariablen →
+Supabase-URLs), danach testet der Nutzer Phase 8 (siehe „Wie der Nutzer Phase 8 testet“). Erst nach seinem OK mit
+Phase 9 beginnen. Geprüft hat Claude: Produktions-Build lokal (Manifest, Icons, Service Worker registriert, Offline-Seite
+bei gestopptem Server), Einstellungen und öffentliche Seiten bei 375 px (Vorschauseite, wieder gelöscht),
+Client-Prüfung der Formulare. Export, Import und Löschen mit Login hat Claude nicht selbst ausgeführt.
 
 **Entwicklungsserver:** Der Nutzer möchte, dass Claude zu Beginn jeder Sitzung den LAN-Server startet
 (`npm run dev:lan` bzw. Preview „rezept-app-lan“), damit PC (localhost:3000) und Handy (http://<PC-IP>:3000)
@@ -61,6 +61,37 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 8 entstanden ist
+
+- **Einstellungen:** Anzeigename ändern, Passwort ändern (Supabase `updateUser`), Tagesziele, „Deine Daten“ und
+  „Account löschen“. Zod auf Client und Server (`validation/account.ts`).
+- **Meine Daten herunterladen** `/einstellungen/meine-daten` (`data-export.ts`): alle Tabellen des Nutzers als JSON,
+  inkl. Liste der Fotos, mit dem Client des Nutzers (RLS).
+- **Rezept-Sicherung** `/einstellungen/rezepte-sichern` + „Sicherung importieren“ (`recipe-backup.ts` mit Tests):
+  Format `rezeptbuch-rezepte` v1, Zutaten mit ID und Nährwerten; beim Import erst ID, dann Name, sonst neue eigene
+  Zutat; Gramm werden neu berechnet; Rezepte werden zusätzlich und privat angelegt (über `save_recipe`), ohne Fotos.
+- **Account löschen:** Dialog, Anzeigename eintippen, `deleteUserCompletely` (Fotos, Auth-User, Cascade), lokale
+  Abmeldung, Login-Seite mit Hinweis. Der letzte Admin kann sich nicht selbst löschen.
+- **PWA:** `manifest.ts` (Start in /rezepte, standalone, Terrakotta), Icons per `ImageResponse` beim Build erzeugt
+  (Favicon, Apple-Touch-Icon, 192/512, maskable; der Standard-Favicon von create-next-app ist ersetzt),
+  `public/sw.js` (nur `/_next/static` und Offline-Seite im Cache, Seiten nie), `public/offline.html`, Anmeldung nur im
+  Produktions-Build, Header für `sw.js`, Proxy lässt PWA-Dateien ohne Login durch, `appleWebApp`-Metadaten.
+- **Deployment:** `vercel.json` (fra1), README-Anleitung (GitHub, Vercel-Import, Variablen, Supabase-URLs, Region,
+  keine Analytics). Geheimnis-Scan vor dem ersten Push: keine Schlüssel in Dateien oder Historie.
+
+## Wie der Nutzer Phase 8 testet
+
+1. Live-Adresse <https://unser-rezeptbuch.vercel.app> am PC öffnen, anmelden, ein paar Seiten durchklicken.
+2. Am Handy: Adresse öffnen, „Zum Home-Bildschirm“ (iPhone: Teilen-Symbol; Android: Menü → App installieren).
+   Die App startet mit Topf-Icon ohne Browserleiste.
+3. Einstellungen → Anzeigenamen ändern (z. B. kurz „Jonah K.“ und zurück), Passwort ändern und neu anmelden.
+4. „Meine Daten herunterladen“ und „Rezepte sichern“: Dateien öffnen sich bzw. werden gespeichert.
+5. „Sicherung importieren“ mit der eben gespeicherten Datei: Rezepte erscheinen doppelt (privat). Die Kopien danach
+   wieder löschen.
+6. Einen Test-Account einladen (Einladungsmail muss jetzt auf die Vercel-Adresse zeigen), mit ihm anmelden und unter
+   Einstellungen „Account löschen“ ausprobieren. Beim eigenen Admin-Account kommt ein Hinweis statt der Löschung.
+7. Flugmodus an, App öffnen bzw. neu laden: „Du bist offline“.
 
 ## Was in Phase 7 entstanden ist
 
@@ -370,23 +401,32 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
     113 g), weil SPEC das für den Import verlangt. Zutatenabhängige Cup-Dichten, °F im Schritttext und der Umrechner
     kommen mit Phase 9.
 
+19.10.2026 (Umsetzung Phase 8):
+
+36. **Phase 8 – Deployment über GitHub (privat) + Vercel-Git-Integration** (Wunsch des Nutzers): Push auf `master`
+    veröffentlicht automatisch. Adresse `unser-rezeptbuch.vercel.app`. Die Umgebungsvariablen trägt der Nutzer selbst
+    in Vercel ein (Claude gibt keine Schlüssel in fremde Dienste ein).
+37. **Phase 8 – Rezept-Sicherung (JSON-Export/-Import)** mit in Phase 8 (Wunsch des Nutzers), ohne Fotos.
+38. **Phase 8 – Service Worker ohne Seiten-Cache:** Offline gibt es nur einen Hinweis, keine gespeicherten Rezepte
+    (Datenschutz, geteilte Geräte). Bei Bedarf später „Rezepte offline“ als bewusste Funktion.
+39. **Phase 8 – Letzter Admin kann sich nicht selbst löschen**, sonst könnte niemand mehr einladen.
+
 ## Offene Punkte
 
 - Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
-- JSON-Export/-Import aller eigenen Rezepte (SPEC Abschnitt 2) ist keiner Phase zugeordnet. Vorschlag: mit
-  „Meine Daten herunterladen“ in Phase 8 erledigen. Mit dem Nutzer klären.
 - Portionen skalieren auf der Rezeptseite kommt mit Phase 9 (Kochmodus).
 - `step_position` (Zutat je Schritt) wird beim Speichern erhalten, aber erst in Phase 9 im Editor bearbeitbar.
 - Phase 14: Route `/foto/…` für geteilte Rezeptkarten ohne Login öffnen (nur mit gültigem Share-Token, per
   Security-Definer-Funktion) und Open-Graph-Bild daraus erzeugen.
-- Phase 8: Datenexport „Meine Daten herunterladen“ sollte die Fotos mindestens als Liste (oder als Dateien) enthalten.
+- Datenexport enthält die Fotos nur als Liste. Ein ZIP mit allen Fotos wäre eine Ergänzung für später.
+- Rezept-Sicherung kennt nur Küchenrezepte; Cocktail-Felder mit Phase 15 ergänzen (Format-Version 2).
+- Service-Worker-Version (`VERSION` in `public/sw.js`) bei Änderungen am Caching hochzählen.
 - Import: Seiten, die Bots sperren (z. B. Allrecipes, Simply Recipes: Antwort 402), lassen sich nicht laden; die App
   sagt das und verweist auf „von Hand anlegen“.
 - Statistik „Meistgeplant“: Ein Tipp auf ein fremdes (öffentliches) Rezept filtert die eigene Liste darunter auf
   „nichts“, weil es nicht im eigenen Buch ist. Kleinigkeit, bei Gelegenheit verbessern.
 - Advisor-Hinweis „Leaked Password Protection“ (Prüfung neuer Passwörter gegen HaveIBeenPwned, per
   k-Anonymität) ist aus. Optional im Dashboard (Authentication → Policies/Passwords), evtl. nur in bezahlten Plänen.
-- Phase 8: „Account löschen“ in den Einstellungen nutzt `deleteUserCompletely` aus `src/lib/server/delete-user.ts`.
 - Phase 14: Security-Definer-Funktion `get_shared_recipe(token)` für `/r/[token]` (Proxy lässt `/r/` schon durch).
 
 ## Bekannte Probleme

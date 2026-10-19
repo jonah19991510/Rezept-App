@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FormMessage } from "@/components/forms/form-message";
 import { AuthCard } from "@/components/layout/auth-card";
 import { getSignupMode } from "@/lib/env";
 import { LoginForm } from "./login-form";
@@ -7,7 +8,7 @@ import { LoginForm } from "./login-form";
 export const metadata: Metadata = { title: "Anmelden" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { weiter } = await searchParams;
+  const { weiter, konto } = await searchParams;
   const signupOpen = getSignupMode() === "open";
 
   return (
@@ -27,6 +28,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         )
       }
     >
+      {konto === "geloescht" ? (
+        <div className="mb-4">
+          <FormMessage ok message="Dein Account und alle deine Daten wurden gelöscht. Danke, dass du dabei warst!" />
+        </div>
+      ) : null}
       <LoginForm weiter={typeof weiter === "string" ? weiter : undefined} />
     </AuthCard>
   );
