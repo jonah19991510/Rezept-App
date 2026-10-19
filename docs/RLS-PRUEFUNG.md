@@ -28,6 +28,11 @@ Letzter Lauf: 18.10.2026, alle Werte wie erwartet.
 Du brauchst zwei Accounts (dein Admin-Account und einen eingeladenen Test-Account) und zwei Browser
 (oder ein normales und ein privates Fenster).
 
+> **Achtung beim Einladungslink:** Ein Browser kann pro Seite nur mit einem Account angemeldet sein. Klickst
+> du den Link in einer Mail, die im selben Browser offen ist wie dein Admin-Account, öffnet er sich dort und
+> meldet dich als Test-Account an. Dein Admin-Tab zeigt danach auch „Seite nicht gefunden“. Besser: Rechtsklick
+> auf den Link → „Link-Adresse kopieren“ und im privaten Fenster einfügen.
+
 1. **Admin-Seite gesperrt:** Mit dem Test-Account <http://localhost:3000/admin> öffnen → „Seite nicht
    gefunden“. Im Profilmenü gibt es keinen Punkt „Nutzerverwaltung“.
 2. **Login-Pflicht:** Abgemeldet <http://localhost:3000/wochenplan> öffnen → Weiterleitung zum Login.

@@ -4,13 +4,21 @@
 
 | Phase | Stand |
 |---|---|
-| 1 – Setup, Auth mit Einladung, Schema, noindex, Seed | **fertig (18.10.2026)**, wartet auf Test und OK des Nutzers |
+| 1 – Setup, Auth mit Einladung, Schema, noindex, Seed | **fertig (18.10.2026)**, vom Nutzer getestet (19.10.2026), wartet auf OK für Phase 2 |
 | 2 – Rezepte CRUD, Zutatensuche (Open Food Facts), Makros, Kategorien, Auto-Tags | offen, **nächste Phase** |
 | 3–15 | offen |
 
-**Nächster Schritt:** Nutzer erledigt die Supabase-Schritte aus der README (Secret Key, Registrierung aus,
-URLs, eigenen Account anlegen, Admin per SQL, optional Beispielrezepte) und testet
-Phase 1. Erst nach seinem OK mit Phase 2 beginnen.
+**Nächster Schritt:** Auf das OK des Nutzers für Phase 2 warten. Beispielrezepte sind noch nicht eingespielt
+(Skript `supabase/scripts/beispielrezepte.sql`, Nutzer wollte sich noch entscheiden).
+
+**Stand Supabase (19.10.2026):** Admin-Account des Nutzers angelegt (Anzeigename „Jonah“, Rolle admin per SQL),
+Secret Key in `.env.local`, Registrierung im Dashboard aus, Mail-Vorlagen unverändert (Standard).
+
+**Test durch den Nutzer (19.10.2026):** Login, Navigation, Dark Mode, Nutzerverwaltung, Einladung eines
+Test-Accounts inkl. Passwort/Anzeigename setzen, `/admin` mit Test-Account → 404, Test-Account gelöscht: alles ok.
+Der Admin sah danach kurz ebenfalls 404: Laut Supabase-Auth-Log hatte der Einladungslink im selben Browser
+die Admin-Session durch die Test-Session ersetzt (der Logout um 08:11 war der des Test-Accounts). Kein Fehler
+in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 
 ## Was in Phase 1 entstanden ist
 
@@ -89,8 +97,6 @@ Phase 1. Erst nach seinem OK mit Phase 2 beginnen.
 ## Offene Punkte
 
 - Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
-- Der eingeloggte App-Rahmen (Navigation, Profilmenü, Admin-Seite) ist gebaut und typgeprüft, aber noch
-  nicht im Browser angesehen (es gab noch keinen Account). Beim ersten Login des Nutzers prüfen.
 - Phase 8: „Account löschen“ in den Einstellungen nutzt `deleteUserCompletely` aus `src/lib/server/delete-user.ts`.
 - Phase 7: Storage-Bucket `recipe-photos` anlegen (Name steht in `src/lib/storage.ts`).
 - Phase 14: Security-Definer-Funktion `get_shared_recipe(token)` für `/r/[token]` (Proxy lässt `/r/` schon durch).
