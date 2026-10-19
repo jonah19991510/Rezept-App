@@ -11,14 +11,22 @@
 | 5 – Statistiken | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 6 – Community: veröffentlichen, Entdecken, übernehmen | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 7 – Fotos und Import per Link | **fertig** (19.10.2026), vom Nutzer abgenommen |
-| 8 – PWA, Feinschliff, Einstellungen, Deployment | **in Arbeit** |
-| 9–15 | offen |
+| 8 – PWA, Feinschliff, Einstellungen, Deployment | **fertig (19.10.2026)**, live, wartet auf Test und OK des Nutzers |
+| 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | offen, **nächste Phase** |
+| 10–15 | offen |
 
-**Nächster Schritt:** Deployment abschließen (GitHub-Repo des Nutzers → Push → Vercel-Import mit Umgebungsvariablen →
-Supabase-URLs), danach testet der Nutzer Phase 8 (siehe „Wie der Nutzer Phase 8 testet“). Erst nach seinem OK mit
-Phase 9 beginnen. Geprüft hat Claude: Produktions-Build lokal (Manifest, Icons, Service Worker registriert, Offline-Seite
-bei gestopptem Server), Einstellungen und öffentliche Seiten bei 375 px (Vorschauseite, wieder gelöscht),
-Client-Prüfung der Formulare. Export, Import und Löschen mit Login hat Claude nicht selbst ausgeführt.
+**Nächster Schritt:** Nutzer testet Phase 8 live (siehe „Wie der Nutzer Phase 8 testet“). Erst nach seinem OK mit
+Phase 9 beginnen. Geprüft hat Claude: Produktions-Build lokal (Manifest, Icons, Service Worker, Offline-Seite bei
+gestopptem Server), Einstellungen und öffentliche Seiten bei 375 px, Client-Prüfung der Formulare und die Live-Seite
+von außen (siehe „Stand Deployment“). Export, Import und Löschen mit Login hat Claude nicht selbst ausgeführt.
+
+**Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
+(Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`
+(Push = Deployment). Variablen hat der Nutzer in Vercel eingetragen, Supabase-URLs umgestellt. Von außen geprüft:
+`X-Vercel-Id: fra1::fra1` (Functions in Frankfurt), Login-Pflicht (307 → /login), `X-Robots-Tag`, robots.txt,
+Meta-noindex, HSTS, Manifest/Icons/sw.js/offline.html erreichbar, keine Analytics und keine fremden Domains im HTML.
+Der Vercel-Connector von Claude hat keine Rechte auf dieses Konto (403); Logs/Deployments sieht nur der Nutzer im
+Dashboard.
 
 **Entwicklungsserver:** Der Nutzer möchte, dass Claude zu Beginn jeder Sitzung den LAN-Server startet
 (`npm run dev:lan` bzw. Preview „rezept-app-lan“), damit PC (localhost:3000) und Handy (http://<PC-IP>:3000)
@@ -421,6 +429,9 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 - Datenexport enthält die Fotos nur als Liste. Ein ZIP mit allen Fotos wäre eine Ergänzung für später.
 - Rezept-Sicherung kennt nur Küchenrezepte; Cocktail-Felder mit Phase 15 ergänzen (Format-Version 2).
 - Service-Worker-Version (`VERSION` in `public/sw.js`) bei Änderungen am Caching hochzählen.
+- GitHub-Zweig `main` (nur die automatische README) kann gelöscht werden; Produktionszweig ist `master`.
+- Optional: Vercel-Connector für Claude auf das Konto jonah19991510 berechtigen, dann kann Claude Deployments und
+  Laufzeitfehler selbst ansehen.
 - Import: Seiten, die Bots sperren (z. B. Allrecipes, Simply Recipes: Antwort 402), lassen sich nicht laden; die App
   sagt das und verweist auf „von Hand anlegen“.
 - Statistik „Meistgeplant“: Ein Tipp auf ein fremdes (öffentliches) Rezept filtert die eigene Liste darunter auf

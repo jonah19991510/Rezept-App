@@ -290,8 +290,10 @@ wird automatisch veröffentlicht** (Vercel baut neu, dauert ca. 1–2 Minuten).
 
 Einmalige Einrichtung (so wurde es gemacht):
 
-1. **GitHub:** privates, leeres Repository anlegen, Code hochladen:
-   `git remote add origin https://github.com/<name>/unser-rezeptbuch.git` und `git push -u origin master`.
+1. **GitHub:** privates Repository <https://github.com/jonah19991510/Rezept-App>, Code hochladen mit
+   `git remote add origin https://github.com/jonah19991510/Rezept-App.git` und `git push -u origin master`.
+   Unter Settings → General → **Default branch** steht `master` (GitHub hatte beim Anlegen einen Zweig `main` mit
+   einer README erzeugt; der ist bedeutungslos und kann gelöscht werden).
 2. **Vercel:** auf <https://vercel.com/new> mit GitHub anmelden, das Repository importieren, Projektname
    `unser-rezeptbuch`. Framework „Next.js“ wird erkannt, sonst nichts ändern.
 3. **Umgebungsvariablen** (Vercel → Project → Settings → Environment Variables, für „Production“ und „Preview“):
