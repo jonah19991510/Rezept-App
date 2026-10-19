@@ -12,8 +12,8 @@
 | 6 – Community: veröffentlichen, Entdecken, übernehmen | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 7 – Fotos und Import per Link | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 8 – PWA, Feinschliff, Einstellungen, Deployment | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
-| 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers (noch nicht live) |
-| 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | offen, **nächste Phase** |
+| 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
+| 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | **in Arbeit** |
 | 11–15 | offen |
 
 **Nächster Schritt:** Nutzer testet Phase 9 (siehe „Wie der Nutzer Phase 9 testet“), zunächst über den
