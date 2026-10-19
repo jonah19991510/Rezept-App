@@ -12,12 +12,12 @@
 | 6 – Community: veröffentlichen, Entdecken, übernehmen | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 7 – Fotos und Import per Link | **fertig** (19.10.2026), vom Nutzer abgenommen |
 | 8 – PWA, Feinschliff, Einstellungen, Deployment | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
-| 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | **fertig** (19.10.2026), vom Nutzer abgenommen, auf `master` gepusht, **aber noch nicht live** (siehe Stand Deployment) |
-| 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | **fertig** (19.10.2026), wartet auf Test und OK des Nutzers, noch nicht gepusht/live |
-| 11–15 | offen |
+| 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
+| 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | **fertig** (19.10.2026), live, vom Nutzer abgenommen (Teilen am Handy erst über HTTPS prüfbar) |
+| 11 – Trainingstage, Lücken-Hinweis, Meal Prep, Reste-Vorschläge | **in Arbeit** |
+| 12–15 | offen |
 
-**Nächster Schritt:** Der Nutzer testet Phase 10 über den LAN-Server (Anleitung unten) und gibt das OK. Danach
-`git push` (Phase 10 geht live, sobald Vercel wieder deployt, siehe unten) und erst dann Phase 11.
+**Nächster Schritt:** Phase 11 bauen, prüfen, committen (nicht pushen), Nutzer testen lassen, nach OK pushen.
 
 **Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
 (Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`
@@ -27,13 +27,10 @@ Meta-noindex, HSTS, Manifest/Icons/sw.js/offline.html erreichbar, keine Analytic
 Der Vercel-Connector von Claude hat keine Rechte auf dieses Konto (403); Logs/Deployments sieht nur der Nutzer im
 Dashboard.
 
-**Deployment hängt (19.10.2026, abends):** `origin/master` steht auf `7702dbc` (Phase 9), GitHub-Standardzweig ist
-`master`, aber die Live-Seite zeigt noch den Stand vor Phase 9 (von außen geprüft: die ausgelieferte CSS enthält keine
-Klassen, die erst mit Phase 9 dazukamen, z. B. `overscroll-contain`, `min-w-24`). Lokal baut genau dieser Stand
-fehlerfrei, keine Konfigurationsänderung seit Phase 8, keine Groß-/Kleinschreibungs-Fehler in Importen. Vercel hat
-also für die Pushes nach dem ersten Deployment entweder gar nicht, nur als Preview oder mit Fehler/„Blocked“ gebaut.
-Ursache sieht nur der Nutzer unter Vercel → Projekt → Deployments; Klick-Anleitung hat er bekommen
-(Production Branch = `master`, letztes `master`-Deployment ansehen, ggf. Redeploy/Promote, Build-Log).
+**Deployment hing (19.10.2026, abends, behoben):** Nach dem ersten Deployment kamen spätere Pushes nicht live
+(Phase 9 fehlte, von außen an der ausgelieferten CSS erkennbar). Der Nutzer hat es in Vercel behoben; danach waren
+Phase 9 und der Push von Phase 10 (`4ce7102`) innerhalb weniger Minuten live. Prüfen von außen: die CSS-Datei aus
+`/login` laden und nach einer Klasse suchen, die erst mit der neuen Phase dazukam.
 
 **Entwicklungsserver:** Der Nutzer möchte, dass Claude zu Beginn jeder Sitzung den LAN-Server startet
 (`npm run dev:lan` bzw. Preview „rezept-app-lan“), damit PC (localhost:3000) und Handy (http://<PC-IP>:3000)
