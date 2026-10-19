@@ -7,13 +7,18 @@
 | 1 – Setup, Auth mit Einladung, Schema, noindex, Seed | **fertig** (18.10.2026), vom Nutzer getestet (19.10.2026) |
 | 2 – Rezepte CRUD, Zutatensuche (Open Food Facts), Makros, Kategorien, Auto-Tags | **fertig** (19.10.2026), vom Nutzer getestet |
 | 3 – Wochenplan mit Tageszielen | **fertig** (19.10.2026), vom Nutzer getestet |
-| 4 – Einkaufsliste | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
-| 5 – Statistiken | offen, **nächste Phase** |
-| 6–15 | offen |
+| 4 – Einkaufsliste | **fertig** (19.10.2026), vom Nutzer getestet |
+| 5 – Statistiken | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
+| 6 – Community: veröffentlichen, Entdecken, übernehmen | offen, **nächste Phase** |
+| 7–15 | offen |
 
-**Nächster Schritt:** Nutzer testet Phase 4 (siehe „Wie der Nutzer Phase 4 testet“). Erst nach seinem OK mit
-Phase 5 beginnen. Geprüft: Build, Typen, Lint, 86 Unit-Tests, Abfrage-Auflösung, `replace_plan_shopping_items`
-per SQL-Test. Eingeloggte Seiten nicht selbst angesehen.
+**Nächster Schritt:** Nutzer testet Phase 5 (siehe „Wie der Nutzer Phase 5 testet“). Erst nach seinem OK mit
+Phase 6 beginnen. Diesmal hat Claude die Diagramme selbst angesehen: mit einer vorübergehenden Vorschauseite
+mit Beispieldaten (Desktop, 375 px, hell/dunkel, Klick-Auswahl), die vor dem Commit wieder gelöscht wurde.
+
+**Entwicklungsserver:** Der Nutzer möchte, dass Claude zu Beginn jeder Sitzung den LAN-Server startet
+(`npm run dev:lan` bzw. Preview „rezept-app-lan“), damit PC (localhost:3000) und Handy (http://<PC-IP>:3000)
+gehen. PC-IP zuletzt 192.168.178.47.
 
 **Stand Supabase (19.10.2026):** Admin-Account des Nutzers angelegt (Anzeigename „Jonah“, Rolle admin per SQL),
 Secret Key in `.env.local`, Registrierung im Dashboard aus, Mail-Vorlagen unverändert (Standard).
@@ -52,6 +57,32 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 5 entstanden ist
+
+- **Recharts 3**; Diagramme nach dem Dataviz-Leitfaden: Farben mit dem Palette-Validator geprüft (Farbsehschwäche,
+  Kontrast, hell und dunkel), eine y-Achse pro Diagramm, Tooltips, Legende, Tabellenansicht je Diagramm.
+- **Farben angepasst:** Makro-Farben (Protein, KH, Fett) kräftiger bzw. im Dunkelmodus besser getrennt, weil die
+  alten Werte im Test durchfielen. Kategorie-Palette `--chart-1…6` (feste Reihenfolge) + `--chart-other` (Grau),
+  `--chart-grid`, `--chart-axis`. Zahlen stehen jetzt überall in Schriftfarbe mit farbigem Punkt
+  (`MacroDot`) statt in Datenfarbe (gelbe Zahlen waren auf Creme schlecht lesbar).
+- **Domänenlogik** `stats.ts` mit Tests: Kategorien (max. 5 Segmente, Rest „Weitere“), Auto-Tag-Anteile,
+  Zusammensetzung pro Portion in 6 Gruppen, Ø Makroverteilung, Wochenplan-Verlauf (Ø pro geplantem Tag, 8 Wochen),
+  meistgeplante Rezepte, Auswahl-Filter.
+- **Statistik** `/statistik`: Kennzahlen (Rezepte, Ø kcal, Ø Protein, geplante Mahlzeiten), Donut nach Kategorie
+  (+ Legende als Bedienweg), Auto-Tags als Balken, Protein gegen kcal (Streudiagramm, High Protein betont),
+  Ø Makroverteilung, Zusammensetzung nach Zutatengruppe (gestapelt, sortierbar, 10 + „alle anzeigen“),
+  Wochenplan kcal und Protein gegen Ziel (zwei Liniendiagramme statt zweiter Achse), meistgeplant.
+  Klick auf Segment/Balken/Punkt/Tag filtert die Rezeptliste unten; zweiter Klick hebt die Auswahl auf.
+
+## Wie der Nutzer Phase 5 testet
+
+1. Statistik öffnen (PC und Handy). Kennzahlen und Donut prüfen.
+2. Im Donut oder in der Legende „Pasta“ antippen → unten erscheinen nur die Pasta-Rezepte; nochmal antippen hebt auf.
+3. „High Protein“ bei den Auto-Tags antippen, einen Punkt im Streudiagramm, einen Balken in der Zusammensetzung.
+4. Über die Diagramme fahren/tippen: Tooltips. „Als Tabelle anzeigen“ aufklappen.
+5. Wochenplan-Diagramme: Linien mit Ziellinie (wenn Tagesziele gesetzt sind).
+6. Dunkelmodus kurz ansehen.
 
 ## Was in Phase 4 entstanden ist
 
@@ -223,6 +254,16 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
     Der Dialog weist darauf hin.
 24. **Phase 4 – Zusammenfassen in TypeScript** (testbar), Speichern atomar per Datenbankfunktion.
 
+19.10.2026 (Umsetzung Phase 5):
+
+25. **Phase 5 – Umfang:** Meistgekocht, Durchschnittsbewertung, Kochaktivität und alle Kosten-Diagramme kommen mit
+    Phase 12 (Koch-Log, Preise), Trainingstage-Markierung mit Phase 11, Bar-Statistiken mit Phase 15.
+26. **Phase 5 – Donut mit höchstens 5 Segmenten**, der Rest als graues „Weitere“ (12 Kategorien wären farblich
+    nicht unterscheidbar). Die Legende daneben listet die Segmente, die Tabelle alle Kategorien. Farben folgen
+    der Größe der Kategorie, das ist hier stabil, weil die Auswahl den Donut selbst nicht verändert.
+27. **Phase 5 – Zusammensetzung in 6 Gruppen** (Gemüse & Obst, Getreide/Pasta/Reis, Fleisch & Fisch, Milch & Ei,
+    Hülsenfrüchte & Nüsse, Sonstiges) statt 15 Zutatengruppen, pro Portion.
+
 ## Offene Punkte
 
 - Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
@@ -238,6 +279,9 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 - Phase 14: Security-Definer-Funktion `get_shared_recipe(token)` für `/r/[token]` (Proxy lässt `/r/` schon durch).
 
 ## Bekannte Probleme
+
+- **Turbopack-Cache:** Am 19.10. lieferte der Entwicklungsserver nach einer Änderung an `globals.css` selbst nach
+  Neustart die alte CSS aus. Abhilfe: Server stoppen, Ordner `.next/dev` löschen, neu starten.
 
 - Security-Advisor meldet `public.rls_auto_enable()` als für `anon` ausführbar. Das ist eine von Supabase
   selbst angelegte Event-Trigger-Funktion (Einstellung „RLS automatisch aktivieren“), nicht aus unseren

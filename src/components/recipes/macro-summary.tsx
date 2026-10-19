@@ -1,4 +1,5 @@
 import { formatNumber } from "@/lib/format";
+import { MacroDot } from "./macro-dot";
 import { cn } from "@/lib/utils";
 
 export type MacroValues = {
@@ -10,9 +11,9 @@ export type MacroValues = {
 };
 
 const MACROS = [
-  { key: "protein", label: "Protein", color: "bg-macro-protein", text: "text-macro-protein", kcalPerGram: 4 },
-  { key: "carbs", label: "Kohlenhydrate", color: "bg-macro-carbs", text: "text-macro-carbs", kcalPerGram: 4 },
-  { key: "fat", label: "Fett", color: "bg-macro-fat", text: "text-macro-fat", kcalPerGram: 9 },
+  { key: "protein", label: "Protein", color: "bg-macro-protein", kcalPerGram: 4 },
+  { key: "carbs", label: "Kohlenhydrate", color: "bg-macro-carbs", kcalPerGram: 4 },
+  { key: "fat", label: "Fett", color: "bg-macro-fat", kcalPerGram: 9 },
 ] as const;
 
 /** Makros als Kacheln plus Balken mit der kcal-Verteilung. Farben sind in der ganzen App gleich. */
@@ -34,13 +35,13 @@ export function MacroSummary({
   return (
     <div className={cn("space-y-3", className)}>
       <div className={cn("grid grid-cols-4 gap-2", compact && "gap-1.5")}>
-        <Tile label="kcal" value={formatNumber(Math.round(values.kcal), 0)} className="text-macro-kcal" compact={compact} />
+        <Tile label="kcal" macro="kcal" value={formatNumber(Math.round(values.kcal), 0)} compact={compact} />
         {MACROS.map((m) => (
           <Tile
             key={m.key}
             label={compact ? m.label.replace("Kohlenhydrate", "KH") : m.label}
             value={`${formatNumber(values[m.key], values[m.key] < 10 ? 1 : 0)} g`}
-            className={m.text}
+            macro={m.key}
             compact={compact}
           />
         ))}
@@ -69,11 +70,24 @@ export function MacroSummary({
   );
 }
 
-function Tile({ label, value, className, compact }: { label: string; value: string; className?: string; compact: boolean }) {
+function Tile({
+  label,
+  value,
+  macro,
+  compact,
+}: {
+  label: string;
+  value: string;
+  macro: "kcal" | "protein" | "carbs" | "fat";
+  compact: boolean;
+}) {
   return (
     <div className={cn("rounded-2xl bg-muted/60 px-2 text-center", compact ? "py-1.5" : "py-3")}>
-      <div className={cn("font-heading font-semibold tabular-nums", compact ? "text-base" : "text-xl", className)}>{value}</div>
-      <div className="truncate text-[0.7rem] text-muted-foreground">{label}</div>
+      <div className={cn("font-heading font-semibold", compact ? "text-base" : "text-xl")}>{value}</div>
+      <div className="flex items-center justify-center gap-1 text-[0.7rem] text-muted-foreground">
+        <MacroDot macro={macro} />
+        <span className="truncate">{label}</span>
+      </div>
     </div>
   );
 }

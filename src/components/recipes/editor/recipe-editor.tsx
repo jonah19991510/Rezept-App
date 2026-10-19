@@ -479,9 +479,9 @@ export function RecipeEditor({
       {/* Speicherleiste: bleibt sichtbar, auf dem Handy über der Navigation */}
       <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-3 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur md:bottom-4">
         <p className="text-sm tabular-nums">
-          <span className="font-semibold text-macro-kcal">{formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal</span>
+          <span className="font-semibold">{formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal</span>
           <span className="text-muted-foreground"> · </span>
-          <span className="font-medium text-macro-protein">{formatNumber(nutrition.perServing.protein, 0)} g P</span>
+          <span className="font-medium">{formatNumber(nutrition.perServing.protein, 0)} g P</span>
           <span className="block text-xs text-muted-foreground">pro Portion</span>
         </p>
         <div className="flex gap-2">

@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 4 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste). Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 5 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken). Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -44,6 +44,9 @@ Bis zum Deployment (Phase 8) läuft die App nur auf deinem PC. Im selben WLAN ge
 2. Fragt Windows nach der Firewall, Zugriff für **private Netzwerke** erlauben (nicht für öffentliche).
 3. Auf dem Handy `http://<IP-des-PCs>:3000` öffnen. Die IP steht in der Eingabeaufforderung unter
    `ipconfig` bei „WLAN → IPv4-Adresse“ (z. B. `192.168.178.47`).
+
+Wenn eine Änderung (z. B. an Farben) nicht ankommt, obwohl der Server neu gestartet wurde: Server stoppen,
+den Ordner `.next/dev` löschen und neu starten.
 
 Nur im Heimnetz nutzen. Mails (Einladung, Passwort) verlinken weiterhin auf `localhost` und funktionieren
 deshalb nur am PC.
@@ -179,6 +182,15 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
   (im Verhältnis geplante Portionen zu Rezeptportionen) und nach Supermarkt-Abteilung sortiert.
 - Neu erstellen ersetzt die Einträge aus dem Plan; **eigene Einträge** (z. B. „Spülmittel“) bleiben.
 - **Grundzutaten** wie Salz, Pfeffer und Öl sind ausgeblendet und lassen sich mit einem Tipp einblenden.
+
+## Statistik
+
+Diagramme zum eigenen Rezeptbuch und Wochenplan (Kategorien, Auto-Tags, Protein gegen kcal, Zusammensetzung,
+Makroverteilung, Verlauf gegen Tagesziele, meistgeplant). Ein Tipp auf ein Segment, einen Balken oder Punkt
+filtert die Rezeptliste darunter. Jedes Diagramm hat eine Tabellenansicht.
+
+Die Diagrammfarben sind auf Farbsehschwäche und Kontrast geprüft (hell und dunkel). Neue Farben bitte vorher
+ebenso prüfen statt nach Gefühl wählen.
 
 ## Registrierungsmodus
 

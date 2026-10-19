@@ -4,7 +4,7 @@
 sind. Grundlage für eine spätere Datenschutzerklärung. **Kein Rechtstext.** Wird mit jeder Phase
 aktualisiert.
 
-Letzte Aktualisierung: Phase 4 (19.10.2026)
+Letzte Aktualisierung: Phase 5 (19.10.2026)
 
 ## Grundsätze
 
@@ -89,6 +89,8 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 
 ## Änderungsverlauf
 
+- **Phase 5:** Statistiken werten nur vorhandene eigene Daten aus (Rezepte, Wochenplan, Ziele), im Browser des
+  Nutzers dargestellt. Nichts Neues gespeichert, keine neuen Dienstleister; Recharts läuft lokal ohne externe Anfragen.
 - **Phase 4:** Einkaufsliste (`shopping_list_items`) und die Einstellung „Grundzutaten ausblenden“
   (`user_settings.hide_staples`) werden genutzt, nur für den Nutzer selbst sichtbar. Keine neuen Tabellen,
   keine neuen Dienstleister.

@@ -4,6 +4,7 @@ import { autoTagsFor, totalMinutes, type RecipeListItem } from "@/lib/domain/rec
 import { formatNumber } from "@/lib/format";
 import { formatMinutes } from "@/lib/format-quantity";
 import { CATEGORY_LABELS } from "@/lib/labels";
+import { MacroDot } from "./macro-dot";
 import { RecipeTags } from "./recipe-tags";
 
 export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
@@ -27,21 +28,33 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
 
       {n && n.kcal_per_serving != null ? (
         <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
             <dt className="sr-only">Kalorien pro Portion</dt>
-            <dd className="font-semibold text-macro-kcal tabular-nums">{formatNumber(Math.round(n.kcal_per_serving), 0)} kcal</dd>
+            <dd className="flex items-center gap-1 font-semibold">
+              <MacroDot macro="kcal" />
+              {formatNumber(Math.round(n.kcal_per_serving), 0)} kcal
+            </dd>
           </div>
-          <div className="flex gap-1">
-            <dt className="text-muted-foreground">P</dt>
-            <dd className="font-medium text-macro-protein tabular-nums">{formatNumber(n.protein_per_serving ?? 0, 0)} g</dd>
+          <div className="flex items-center gap-1">
+            <dt className="flex items-center gap-1 text-muted-foreground">
+              <MacroDot macro="protein" />
+              P
+            </dt>
+            <dd className="font-medium">{formatNumber(n.protein_per_serving ?? 0, 0)} g</dd>
           </div>
-          <div className="flex gap-1">
-            <dt className="text-muted-foreground">KH</dt>
-            <dd className="font-medium text-macro-carbs tabular-nums">{formatNumber(n.carbs_per_serving ?? 0, 0)} g</dd>
+          <div className="flex items-center gap-1">
+            <dt className="flex items-center gap-1 text-muted-foreground">
+              <MacroDot macro="carbs" />
+              KH
+            </dt>
+            <dd className="font-medium">{formatNumber(n.carbs_per_serving ?? 0, 0)} g</dd>
           </div>
-          <div className="flex gap-1">
-            <dt className="text-muted-foreground">F</dt>
-            <dd className="font-medium text-macro-fat tabular-nums">{formatNumber(n.fat_per_serving ?? 0, 0)} g</dd>
+          <div className="flex items-center gap-1">
+            <dt className="flex items-center gap-1 text-muted-foreground">
+              <MacroDot macro="fat" />
+              F
+            </dt>
+            <dd className="font-medium">{formatNumber(n.fat_per_serving ?? 0, 0)} g</dd>
           </div>
         </dl>
       ) : null}

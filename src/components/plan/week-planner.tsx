@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { AddEntryDialog } from "./add-entry-dialog";
 import { EntryDialog } from "./entry-dialog";
 import { GoalProgress } from "./goal-progress";
+import { MacroDot } from "@/components/recipes/macro-dot";
 import type { PlanRecipeOption, SlotTarget } from "./types";
 
 export function WeekPlanner({
@@ -170,10 +171,13 @@ export function WeekPlanner({
                 <div className="text-sm font-semibold">{weekdayShort(day)}</div>
                 <div className="text-xs text-muted-foreground">{dayMonth(day)}</div>
                 <div className="mt-1 text-xs tabular-nums">
-                  <span className="font-semibold text-macro-kcal">{formatNumber(Math.round(total.kcal), 0)}</span>
+                  <span className="font-semibold">{formatNumber(Math.round(total.kcal), 0)}</span>
                   {goals.kcal ? <span className="text-muted-foreground"> / {formatNumber(goals.kcal, 0)}</span> : null}
                 </div>
-                <div className="text-xs text-macro-protein tabular-nums">{formatNumber(total.protein, 0)} g P</div>
+                <div className="flex items-center justify-center gap-1 text-xs tabular-nums">
+                  <MacroDot macro="protein" />
+                  {formatNumber(total.protein, 0)} g P
+                </div>
                 {p.state !== "none" ? (
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
                     <div
@@ -209,26 +213,38 @@ export function WeekPlanner({
             </div>
             <dl className="grid grid-cols-2 content-start gap-3 text-sm">
               <div className="rounded-2xl bg-muted/60 p-3">
-                <dt className="text-muted-foreground">kcal gesamt</dt>
-                <dd className="font-heading text-xl font-semibold text-macro-kcal tabular-nums">
+                <dt className="flex items-center gap-1.5 text-muted-foreground">
+                  <MacroDot macro="kcal" />
+                  kcal gesamt
+                </dt>
+                <dd className="font-heading text-xl font-semibold">
                   {formatNumber(Math.round(summary.total.kcal), 0)}
                 </dd>
               </div>
               <div className="rounded-2xl bg-muted/60 p-3">
-                <dt className="text-muted-foreground">Protein gesamt</dt>
-                <dd className="font-heading text-xl font-semibold text-macro-protein tabular-nums">
+                <dt className="flex items-center gap-1.5 text-muted-foreground">
+                  <MacroDot macro="protein" />
+                  Protein gesamt
+                </dt>
+                <dd className="font-heading text-xl font-semibold">
                   {formatNumber(summary.total.protein, 0)} g
                 </dd>
               </div>
               <div className="rounded-2xl bg-muted/60 p-3">
-                <dt className="text-muted-foreground">Kohlenhydrate</dt>
-                <dd className="font-heading text-xl font-semibold text-macro-carbs tabular-nums">
+                <dt className="flex items-center gap-1.5 text-muted-foreground">
+                  <MacroDot macro="carbs" />
+                  Kohlenhydrate
+                </dt>
+                <dd className="font-heading text-xl font-semibold">
                   {formatNumber(summary.total.carbs, 0)} g
                 </dd>
               </div>
               <div className="rounded-2xl bg-muted/60 p-3">
-                <dt className="text-muted-foreground">Fett</dt>
-                <dd className="font-heading text-xl font-semibold text-macro-fat tabular-nums">
+                <dt className="flex items-center gap-1.5 text-muted-foreground">
+                  <MacroDot macro="fat" />
+                  Fett
+                </dt>
+                <dd className="font-heading text-xl font-semibold">
                   {formatNumber(summary.total.fat, 0)} g
                 </dd>
               </div>
