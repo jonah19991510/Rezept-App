@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 3 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen). Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 4 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste). Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -172,6 +172,13 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
 - **Tagesziele** unter Einstellungen → Tagesziele. Der Plan zeigt pro Tag Soll gegen Ist; bei kcal,
   Kohlenhydraten und Fett gilt mehr als 110 % als „über dem Ziel“, Protein darf drüber.
 - **Woche kopieren** in die nächste oder eine beliebige Woche, ergänzend oder ersetzend.
+
+## Einkaufsliste
+
+- **Aus dem Wochenplan** für einen wählbaren Zeitraum erstellen. Gleiche Zutaten werden zusammengerechnet
+  (im Verhältnis geplante Portionen zu Rezeptportionen) und nach Supermarkt-Abteilung sortiert.
+- Neu erstellen ersetzt die Einträge aus dem Plan; **eigene Einträge** (z. B. „Spülmittel“) bleiben.
+- **Grundzutaten** wie Salz, Pfeffer und Öl sind ausgeblendet und lassen sich mit einem Tipp einblenden.
 
 ## Registrierungsmodus
 

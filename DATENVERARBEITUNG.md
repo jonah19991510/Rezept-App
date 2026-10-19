@@ -4,7 +4,7 @@
 sind. Grundlage für eine spätere Datenschutzerklärung. **Kein Rechtstext.** Wird mit jeder Phase
 aktualisiert.
 
-Letzte Aktualisierung: Phase 3 (19.10.2026)
+Letzte Aktualisierung: Phase 4 (19.10.2026)
 
 ## Grundsätze
 
@@ -89,6 +89,9 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 
 ## Änderungsverlauf
 
+- **Phase 4:** Einkaufsliste (`shopping_list_items`) und die Einstellung „Grundzutaten ausblenden“
+  (`user_settings.hide_staples`) werden genutzt, nur für den Nutzer selbst sichtbar. Keine neuen Tabellen,
+  keine neuen Dienstleister.
 - **Phase 3:** Wochenplan (`meal_plan_entries`) und Tagesziele (`user_goals`, Typ „default“) werden jetzt
   genutzt, nur für den Nutzer selbst sichtbar. Beides kann Rückschlüsse auf Ernährung/Gesundheit zulassen
   (siehe Hinweis oben). Keine neuen Tabellen, keine neuen Dienstleister.

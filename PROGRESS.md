@@ -6,13 +6,14 @@
 |---|---|
 | 1 – Setup, Auth mit Einladung, Schema, noindex, Seed | **fertig** (18.10.2026), vom Nutzer getestet (19.10.2026) |
 | 2 – Rezepte CRUD, Zutatensuche (Open Food Facts), Makros, Kategorien, Auto-Tags | **fertig** (19.10.2026), vom Nutzer getestet |
-| 3 – Wochenplan mit Tageszielen | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
-| 4 – Einkaufsliste | offen, **nächste Phase** |
-| 5–15 | offen |
+| 3 – Wochenplan mit Tageszielen | **fertig** (19.10.2026), vom Nutzer getestet |
+| 4 – Einkaufsliste | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
+| 5 – Statistiken | offen, **nächste Phase** |
+| 6–15 | offen |
 
-**Nächster Schritt:** Nutzer testet Phase 3 (siehe „Wie der Nutzer Phase 3 testet“). Erst nach seinem OK mit
-Phase 4 beginnen. Wie in Phase 2 konnte Claude die eingeloggten Seiten nicht selbst ansehen; geprüft sind
-Build, Typen, Lint, 74 Unit-Tests, die Abfrage-Auflösung (PostgREST) und `copy_plan_week` per SQL-Test.
+**Nächster Schritt:** Nutzer testet Phase 4 (siehe „Wie der Nutzer Phase 4 testet“). Erst nach seinem OK mit
+Phase 5 beginnen. Geprüft: Build, Typen, Lint, 86 Unit-Tests, Abfrage-Auflösung, `replace_plan_shopping_items`
+per SQL-Test. Eingeloggte Seiten nicht selbst angesehen.
 
 **Stand Supabase (19.10.2026):** Admin-Account des Nutzers angelegt (Anzeigename „Jonah“, Rolle admin per SQL),
 Secret Key in `.env.local`, Registrierung im Dashboard aus, Mail-Vorlagen unverändert (Standard).
@@ -51,6 +52,29 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 4 entstanden ist
+
+- **Migration** `…091842_replace_plan_shopping_items`: ersetzt alle Plan-Einträge der Liste in einer
+  Transaktion, eigene Einträge (source = manual) bleiben.
+- **Domänenlogik** `shopping.ts` mit Tests: gleiche Zutaten zusammenfassen (gleiche Einheitenfamilie → Summe in
+  g/ml/Stück, gemischt → Summe der Gramm), Faktor geplante Portionen / Rezeptportionen, Rundung (Stück auf
+  halbe nach oben, ab 100 g/ml auf 5), Anzeige kg/l ab 1000, Abteilungs-Reihenfolge wie im Supermarkt.
+- **Einkauf** `/einkauf`: „Aus Wochenplan“ mit Zeitraum (Rest dieser Woche, ganze Woche, nächste Woche, nächste
+  7 Tage oder frei), Liste nach Abteilung (Obst & Gemüse zusammen, eigene Einträge am Ende), große Abhak-Zeilen
+  mit sofortiger Reaktion (optimistisch), „Im Wagen“ eingeklappt, Erledigte/alles löschen, eigene Einträge mit
+  freier Menge („2 Packungen“), Grundzutaten (is_staple) standardmäßig ausgeblendet, per Klick einblendbar
+  (gemerkt in `user_settings.hide_staples`).
+
+## Wie der Nutzer Phase 4 testet
+
+1. Im Wochenplan ein paar Mahlzeiten planen (z. B. Bolognese 2 Portionen, Dal 1 Portion).
+2. Einkauf → „Aus Wochenplan“ → „Ganze Woche“ → Liste erstellen. Mengen prüfen (Bolognese für 4 Portionen
+   geplant mit 2 → halbe Mengen), Sortierung nach Abteilung.
+3. Salz/Öl/Pfeffer sind ausgeblendet → „anzeigen“ antippen, wieder ausblenden.
+4. Am Handy abhaken, „Im Wagen“ aufklappen, Haken wieder entfernen, „Erledigte löschen“.
+5. Eigenen Eintrag „Spülmittel“ mit Menge „1 Flasche“ hinzufügen, danach Liste erneut aus dem Plan erstellen:
+   Spülmittel bleibt.
 
 ## Was in Phase 3 entstanden ist
 
@@ -189,6 +213,15 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
     als ISO-Strings, gerechnet in UTC; „heute“ in Europe/Berlin.
 21. **Phase 3 – Ziel „über“** erst ab 110 % (kcal, Kohlenhydrate, Fett), bei Protein gibt es kein „zu viel“.
     „Erreicht“ ab 95 %.
+
+19.10.2026 (Umsetzung Phase 4):
+
+22. **Phase 4 – Umfang:** Vorrat abziehen, „In Vorrat übernehmen“ und Text-Export/Teilen kommen mit Phase 10,
+    Kosten und Preis beim Abhaken mit Phase 12, Meal-Prep-Batches nur einmal zählen mit Phase 11.
+    Grundzutaten ausblenden ist schon drin (braucht keinen Vorrat).
+23. **Phase 4 – Neu erstellen ersetzt** die bisherigen Plan-Einträge (auch abgehakte); eigene Einträge bleiben.
+    Der Dialog weist darauf hin.
+24. **Phase 4 – Zusammenfassen in TypeScript** (testbar), Speichern atomar per Datenbankfunktion.
 
 ## Offene Punkte
 
