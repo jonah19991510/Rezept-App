@@ -1,0 +1,79 @@
+import { formatNumber } from "@/lib/format";
+import { cn } from "@/lib/utils";
+
+export type MacroValues = {
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber?: number;
+};
+
+const MACROS = [
+  { key: "protein", label: "Protein", color: "bg-macro-protein", text: "text-macro-protein", kcalPerGram: 4 },
+  { key: "carbs", label: "Kohlenhydrate", color: "bg-macro-carbs", text: "text-macro-carbs", kcalPerGram: 4 },
+  { key: "fat", label: "Fett", color: "bg-macro-fat", text: "text-macro-fat", kcalPerGram: 9 },
+] as const;
+
+/** Makros als Kacheln plus Balken mit der kcal-Verteilung. Farben sind in der ganzen App gleich. */
+export function MacroSummary({
+  values,
+  total,
+  caption = "pro Portion",
+  compact = false,
+  className,
+}: {
+  values: MacroValues;
+  total?: MacroValues;
+  caption?: string;
+  compact?: boolean;
+  className?: string;
+}) {
+  const energyFromMacros = MACROS.reduce((sum, m) => sum + values[m.key] * m.kcalPerGram, 0);
+
+  return (
+    <div className={cn("space-y-3", className)}>
+      <div className={cn("grid grid-cols-4 gap-2", compact && "gap-1.5")}>
+        <Tile label="kcal" value={formatNumber(Math.round(values.kcal), 0)} className="text-macro-kcal" compact={compact} />
+        {MACROS.map((m) => (
+          <Tile
+            key={m.key}
+            label={compact ? m.label.replace("Kohlenhydrate", "KH") : m.label}
+            value={`${formatNumber(values[m.key], values[m.key] < 10 ? 1 : 0)} g`}
+            className={m.text}
+            compact={compact}
+          />
+        ))}
+      </div>
+
+      {energyFromMacros > 0 ? (
+        <div
+          className="flex h-2 overflow-hidden rounded-full bg-muted"
+          role="img"
+          aria-label={`Energieverteilung: ${MACROS.map(
+            (m) => `${m.label} ${Math.round(((values[m.key] * m.kcalPerGram) / energyFromMacros) * 100)} %`,
+          ).join(", ")}`}
+        >
+          {MACROS.map((m) => (
+            <div key={m.key} className={m.color} style={{ width: `${((values[m.key] * m.kcalPerGram) / energyFromMacros) * 100}%` }} />
+          ))}
+        </div>
+      ) : null}
+
+      <p className="text-xs text-muted-foreground">
+        {caption}
+        {values.fiber != null ? ` · Ballaststoffe ${formatNumber(values.fiber)} g` : ""}
+        {total ? ` · gesamt ${formatNumber(Math.round(total.kcal), 0)} kcal, ${formatNumber(total.protein, 0)} g Protein` : ""}
+      </p>
+    </div>
+  );
+}
+
+function Tile({ label, value, className, compact }: { label: string; value: string; className?: string; compact: boolean }) {
+  return (
+    <div className={cn("rounded-2xl bg-muted/60 px-2 text-center", compact ? "py-1.5" : "py-3")}>
+      <div className={cn("font-heading font-semibold tabular-nums", compact ? "text-base" : "text-xl", className)}>{value}</div>
+      <div className="truncate text-[0.7rem] text-muted-foreground">{label}</div>
+    </div>
+  );
+}

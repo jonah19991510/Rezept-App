@@ -4,12 +4,15 @@
 
 | Phase | Stand |
 |---|---|
-| 1 – Setup, Auth mit Einladung, Schema, noindex, Seed | **fertig (18.10.2026)**, vom Nutzer getestet (19.10.2026), wartet auf OK für Phase 2 |
-| 2 – Rezepte CRUD, Zutatensuche (Open Food Facts), Makros, Kategorien, Auto-Tags | offen, **nächste Phase** |
-| 3–15 | offen |
+| 1 – Setup, Auth mit Einladung, Schema, noindex, Seed | **fertig** (18.10.2026), vom Nutzer getestet (19.10.2026) |
+| 2 – Rezepte CRUD, Zutatensuche (Open Food Facts), Makros, Kategorien, Auto-Tags | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
+| 3 – Wochenplan mit Tageszielen | offen, **nächste Phase** |
+| 4–15 | offen |
 
-**Nächster Schritt:** Auf das OK des Nutzers für Phase 2 warten. Beispielrezepte sind noch nicht eingespielt
-(Skript `supabase/scripts/beispielrezepte.sql`, Nutzer wollte sich noch entscheiden).
+**Nächster Schritt:** Nutzer testet Phase 2 im Browser (siehe „Wie der Nutzer Phase 2 testet“). Erst nach
+seinem OK mit Phase 3 beginnen. Hinweis: Claude konnte die eingeloggten Seiten von Phase 2 nicht selbst im
+Browser ansehen (kein eigener Account in der echten Supabase-Instanz); Build, Typen, Lint, 60 Unit-Tests und
+die Datenbankfunktionen (SQL-Test als Nutzer, zurückgerollt) sind geprüft.
 
 **Stand Supabase (19.10.2026):** Admin-Account des Nutzers angelegt (Anzeigename „Jonah“, Rolle admin per SQL),
 Secret Key in `.env.local`, Registrierung im Dashboard aus, Mail-Vorlagen unverändert (Standard).
@@ -48,6 +51,40 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 2 entstanden ist
+
+- **Beispielrezepte** (19.10.) für den Admin eingespielt: 5 öffentliche Rezepte.
+- **Migration** `…081927_recipe_functions`: `save_recipe(recipe, ingredients, steps)` speichert alles in einer
+  Transaktion (SECURITY INVOKER, RLS gilt), `duplicate_recipe(id)` (eigene Kopie „(Kopie)“, fremde öffentliche
+  mit `forked_from_id`), `search_ingredients(query)` (exakt → Wortanfang → Grundbestand → Ähnlichkeit).
+- **Domänenlogik** in `src/lib/domain/` mit Tests: `units.ts` (Umrechnung in Gramm), `nutrition.ts`
+  (Makros + Auto-Tags, gleiche Formel wie die View), `decimal.ts` (deutsche Zahleneingabe),
+  `recipe-filter.ts` (Suche, Filter, Sortierung aus der URL), `openfoodfacts.ts` (Treffer → Zutat,
+  Zutatengruppe und vegan/vegetarisch aus den OFF-Tags).
+- **Rezeptliste** `/rezepte`: Karten mit kcal/Makros pro Portion, Auto-Tags, Zeit; Suche, Kategorie, Tag
+  (automatisch + eigene), Favoriten, „Mehr“ (Protein ab, Minuten bis), Sortierung.
+- **Rezeptseite** `/rezepte/[id]`: Nährwerte pro Portion und gesamt (Makro-Farben, kcal-Verteilung), Zutaten
+  mit Mengen und ≈ Gramm, Hinweis bei fehlendem Gewicht, Schritte, Quelle, Favorit, Bearbeiten, Duplizieren,
+  Löschen (mit Bestätigung). Fremde öffentliche Rezepte: Autor + „In mein Rezeptbuch übernehmen“.
+- **Editor** `/rezepte/neu` und `/rezepte/[id]/bearbeiten`: Grunddaten, Kategorie, Meal-Prep-Schalter, eigene
+  Tags (Chips mit Vorschlägen), Quelle, Zutaten (suchen/austauschen/sortieren/löschen, Menge + Einheit + Notiz,
+  bei Stück ohne Stückgewicht Gewichtsabfrage), Live-Makros und Auto-Tags, Schritte (sortierbar), feste
+  Speicherleiste, Warnung beim Verlassen mit ungespeicherten Änderungen, Zod-Prüfung auf Client und Server.
+- **Zutaten-Dialog**: eigene Datenbank beim Tippen, „Bei Open Food Facts suchen“ auf Knopfdruck (deutsche
+  Produkte zuerst), „Selbst anlegen“; Vorschläge aus OFF werden vor dem Speichern im Formular geprüft.
+
+## Wie der Nutzer Phase 2 testet
+
+1. `npm run dev`, <http://localhost:3000/rezepte>: 5 Beispielrezepte als Karten. Suche „dal“, Filter „Vegan“,
+   „High Protein“, Sortierung „Meiste Protein“ ausprobieren.
+2. Ein Rezept öffnen: Nährwerte, Zutaten, Schritte. Herz antippen, in der Liste „Favoriten“ filtern.
+3. „Neues Rezept“: Titel, 2 Portionen, Zutaten „Ei“ (Stück), „Haferflocken“ (g), „Olivenöl“ (EL) hinzufügen,
+   Makros ändern sich live. Speichern → Rezeptseite.
+4. Im Zutaten-Dialog etwas suchen, das es nicht gibt (z. B. „Erdnussmus“) → „Bei Open Food Facts suchen“ →
+   Treffer wählen, Werte prüfen, speichern. Und einmal „Selbst anlegen“.
+5. Rezept bearbeiten, eine Zutat nach oben schieben, einen Schritt löschen, speichern. Duplizieren, Kopie löschen.
+6. Alles einmal auf dem Handy (bzw. 375 px schmal) ansehen.
 
 ## Wie der Nutzer Phase 1 testet
 
@@ -94,9 +131,31 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
     Registrierungsformular bei `SIGNUP_MODE=open` darauf verlinkt.
 13. **Supabase-Keys:** neue Key-Typen (`sb_publishable_…`, `sb_secret_…`); Variable `SUPABASE_SECRET_KEY`.
 
+19.10.2026 (Umsetzung Phase 2):
+
+14. **Phase 2 – Einheiten:** EL 15 ml, TL 5 ml, Prise 0,5 g, Dash 0,6 ml, Barlöffel 5 ml, cl 10 ml; ml über die
+    Dichte der Zutat, sonst 1 g/ml (zentral in `src/lib/domain/units.ts`). Stück ohne Stückgewicht: Editor
+    fragt nach dem Gesamtgewicht und speichert es in `grams`.
+15. **Phase 2 – Gramm rechnet der Server:** Die Action lädt Dichte/Stückgewicht und berechnet `grams` selbst,
+    der Browser schickt nur Menge, Einheit und ggf. das manuelle Gewicht.
+16. **Phase 2 – Open Food Facts:** neue Such-API `search.openfoodfacts.org` (die alte `cgi/search.pl` war beim
+    Test nicht erreichbar, 503). Nur auf Knopfdruck (OFF begrenzt Suchanfragen stark), deutsche Produkte zuerst.
+    Gespeichert als `source = openfoodfacts`, `external_id` = Barcode; gibt es den Barcode schon, wird die
+    vorhandene Zutat genommen. Name = Produktname + Marke.
+17. **Phase 2 – Filter in TypeScript statt SQL:** Die eigene Rezeptliste ist klein (Familie), daher lädt die Seite
+    alle eigenen Rezepte + Makros und filtert in `recipe-filter.ts` (testbar). Bei Bedarf später in SQL verlagern.
+18. **Phase 2 – Favoriten** schon jetzt (Herz auf der Rezeptseite, Filter in der Liste), Tabelle gab es seit Phase 1.
+
 ## Offene Punkte
 
 - Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
+- JSON-Export/-Import aller eigenen Rezepte (SPEC Abschnitt 2) ist keiner Phase zugeordnet. Vorschlag: mit
+  „Meine Daten herunterladen“ in Phase 8 erledigen. Mit dem Nutzer klären.
+- Portionen skalieren auf der Rezeptseite kommt mit Phase 9 (Kochmodus).
+- `step_position` (Zutat je Schritt) wird beim Speichern erhalten, aber erst in Phase 9 im Editor bearbeitbar.
+- Fotos (Phase 7) und Veröffentlichen-Schalter (Phase 6) fehlen im Editor noch bewusst.
+- Advisor-Hinweis „Leaked Password Protection“ (Prüfung neuer Passwörter gegen HaveIBeenPwned, per
+  k-Anonymität) ist aus. Optional im Dashboard (Authentication → Policies/Passwords), evtl. nur in bezahlten Plänen.
 - Phase 8: „Account löschen“ in den Einstellungen nutzt `deleteUserCompletely` aus `src/lib/server/delete-user.ts`.
 - Phase 7: Storage-Bucket `recipe-photos` anlegen (Name steht in `src/lib/storage.ts`).
 - Phase 14: Security-Definer-Funktion `get_shared_recipe(token)` für `/r/[token]` (Proxy lässt `/r/` schon durch).

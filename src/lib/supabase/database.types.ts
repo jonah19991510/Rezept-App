@@ -887,7 +887,40 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      duplicate_recipe: { Args: { p_recipe_id: string }; Returns: string }
+      save_recipe: {
+        Args: { p_ingredients: Json; p_recipe: Json; p_steps: Json }
+        Returns: string
+      }
+      search_ingredients: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: {
+          abv: number | null
+          carbs: number
+          created_at: string
+          created_by: string | null
+          density_g_per_ml: number | null
+          diet: Database["public"]["Enums"]["ingredient_diet"]
+          external_id: string | null
+          fat: number
+          fiber: number
+          food_group: Database["public"]["Enums"]["food_group"]
+          id: string
+          is_staple: boolean
+          kcal: number
+          name: string
+          piece_weight_g: number | null
+          protein: number
+          source: Database["public"]["Enums"]["ingredient_source"]
+          sugar: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ingredients"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
       cocktail_method: "shaken" | "stirred" | "built" | "blended"

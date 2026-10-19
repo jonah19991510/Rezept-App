@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 1 (Setup, Auth mit Einladung, Datenbankschema). Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 2 (Rezepte anlegen und bearbeiten, Zutatensuche mit Open Food Facts, Makros, Auto-Tags). Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -135,6 +135,22 @@ ihre berechneten Makros. Das Skript kann gefahrlos mehrfach laufen.
 Profilmenü → **Nutzerverwaltung** → E-Mail-Adresse eingeben → **Einladung senden**. Die Person bekommt
 eine Mail, setzt über den Link Anzeigenamen und Passwort und ist drin. In der Liste siehst du alle
 Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts löschen (inklusive aller Daten).
+
+## Rezepte und Zutaten
+
+- **Rezepte** unter „Rezepte“ anlegen, bearbeiten, duplizieren, löschen und als Favorit markieren.
+  Suche und Filter (Kategorie, Tags, Protein ab, Zeit bis) stehen in der Adresszeile, Zurück funktioniert.
+- **Zutaten** sucht der Editor zuerst in der eigenen Zutatentabelle. Findet sich nichts, gibt es
+  „Bei Open Food Facts suchen“ (deutsche Produkte zuerst) oder „Selbst anlegen“. Übernommene Zutaten
+  stehen danach allen zur Verfügung. Open-Food-Facts-Daten stehen unter der Open Database License (ODbL).
+- **Mengen** in g, ml, cl, Stück, EL (15 ml), TL (5 ml), Prise (0,5 g), Dash (0,6 ml) und Barlöffel (5 ml)
+  werden in Gramm umgerechnet: ml über die Dichte der Zutat (sonst wie Wasser), Stück über das
+  Stückgewicht. Ist kein Stückgewicht bekannt, fragt der Editor nach dem Gewicht.
+- **Makros** rechnet der Editor live mit; gespeichert und überall angezeigt werden sie aus der
+  Datenbank-View `recipe_nutrition` (gleiche Formel, gleiche Schwellenwerte).
+- **Auto-Tags:** High Protein (≥ 30 g Protein pro Portion oder ≥ 30 % der kcal aus Protein),
+  Vegetarisch, Vegan, Low Carb (≤ 20 g Kohlenhydrate pro Portion), Meal-Prep (Schalter im Rezept).
+  Schwellenwerte ändern: neue Migration, die `app_config` aktualisiert.
 
 ## Registrierungsmodus
 

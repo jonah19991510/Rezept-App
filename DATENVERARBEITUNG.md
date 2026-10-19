@@ -4,7 +4,7 @@
 sind. Grundlage für eine spätere Datenschutzerklärung. **Kein Rechtstext.** Wird mit jeder Phase
 aktualisiert.
 
-Letzte Aktualisierung: Phase 1 (18.10.2026)
+Letzte Aktualisierung: Phase 2 (19.10.2026)
 
 ## Grundsätze
 
@@ -64,7 +64,7 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 |---|---|---|---|
 | **Supabase** (Supabase Inc.) | Datenbank, Auth, Storage, Standard-Mailversand | Projekt in Frankfurt (AWS `eu-central-1`) | alle oben genannten Daten, Auth-Logs, Einladungs-/Passwort-Mails |
 | **Vercel** (Vercel Inc.) | Hosting der App ab Phase 8 | Functions in Frankfurt (`fra1`), statische Dateien über weltweites CDN | Request-Logs (u. a. IP-Adresse, URL), keine Analytics |
-| **Open Food Facts** (gemeinnützig) | Nährwert-Datenbank ab Phase 2 | – | nur Suchbegriffe, serverseitig abgefragt, **keine** Nutzerdaten |
+| **Open Food Facts** (gemeinnützige Organisation) | Nährwert-Datenbank (aktiv seit Phase 2) | Server `search.openfoodfacts.org` | nur der Suchbegriff, nur auf Knopfdruck, abgefragt vom Server der App (also mit dessen IP, nicht der des Nutzers), User-Agent nur „Rezeptbuch/0.1“. **Keine** Nutzerdaten |
 | Webseiten beim Link-Import (Phase 7) | Rezept-Quellen | – | serverseitiger Abruf der URL, **keine** Nutzerdaten |
 
 ## Rechte der Nutzer
@@ -88,6 +88,10 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 - [ ] noindex-Regeln bewusst überprüft (robots.txt, Meta-Tag, `X-Robots-Tag`): sollen sie bleiben?
 
 ## Änderungsverlauf
+
+- **Phase 2:** Rezepte, Zutaten, Favoriten werden jetzt genutzt. Neue Zutaten speichern `created_by`
+  (für Admin/Nutzer nicht sichtbar, nur technisch für „eigene Zutat korrigieren“). Open-Food-Facts-Suche
+  serverseitig, nur mit Suchbegriff. Keine neuen Tabellen, keine neuen Dienstleister.
 
 - **Phase 1:** Schema für alle Tabellen mit RLS und Cascade, Supabase Auth mit Einladung, Admin-Nutzerliste
   (E-Mail nur für Admin), Theme-Wahl im `localStorage`, noindex.
