@@ -4,10 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { resolveLineGrams } from "@/lib/domain/units";
+import { resolveLineGrams, type Unit } from "@/lib/domain/units";
+import { Constants } from "@/lib/supabase/database.types";
 import { copyPhotoToRecipe, removeRecipePhotoFolder } from "@/lib/server/photos";
 import { createClient } from "@/lib/supabase/server";
+import { parseSnapshot } from "@/lib/domain/versions";
 import { forkRecipeSchema, setRecipePublicSchema, type SetRecipePublicInput } from "@/lib/validation/community";
+import { restoreVersionSchema } from "@/lib/validation/kitchen-log";
 import { flattenIssues, recipeInputSchema, type RecipeInput } from "@/lib/validation/recipe";
 
 export type SaveRecipeResult = { ok: false; message?: string; fieldErrors?: Record<string, string[]> };
@@ -57,6 +60,7 @@ export async function saveRecipeAction(input: RecipeInput): Promise<SaveRecipeRe
     },
     p_ingredients: ingredients,
     p_steps: recipe.steps,
+    p_change_note: recipe.change_note,
   });
 
   if (error || !recipeId) {
@@ -70,6 +74,68 @@ export async function saveRecipeAction(input: RecipeInput): Promise<SaveRecipeRe
 }
 
 const idSchema = z.uuid();
+const UNITS = new Set<string>(Constants.public.Enums.unit);
+
+/**
+ * Alte Version wiederherstellen (Phase 12): Titel, Portionen, Zutaten und Schritte der Version werden zum
+ * aktuellen Stand; dabei entsteht eine neue Version, die alte bleibt im Verlauf. Gramm rechnet der Server neu.
+ */
+export async function restoreVersionAction(input: { recipeId: string; version: number }): Promise<{ ok: false; message: string } | { ok: true; message: string }> {
+  await requireUser();
+  const parsed = restoreVersionSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Ungültige Version." };
+  const { recipeId, version } = parsed.data;
+
+  const supabase = await createClient();
+  const [{ data: recipe }, { data: row }] = await Promise.all([
+    supabase
+      .from("recipes")
+      .select("id, description, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url")
+      .eq("id", recipeId)
+      .maybeSingle(),
+    supabase.from("recipe_versions").select("snapshot").eq("recipe_id", recipeId).eq("version", version).maybeSingle(),
+  ]);
+  if (!recipe || !row) return { ok: false, message: "Diese Version gibt es nicht (mehr)." };
+  const snapshot = parseSnapshot(row.snapshot);
+
+  // Zutaten, die inzwischen gelöscht wurden, fallen weg
+  const ids = [...new Set(snapshot.ingredients.map((i) => i.ingredient_id))];
+  const { data: infos } = ids.length
+    ? await supabase.from("ingredients").select("id, density_g_per_ml, piece_weight_g").in("id", ids)
+    : { data: [] };
+  const infoById = new Map((infos ?? []).map((i) => [i.id, i]));
+  const ingredients = snapshot.ingredients
+    .filter((i) => infoById.has(i.ingredient_id))
+    .map((i) => {
+      const unit = i.unit && UNITS.has(i.unit) ? (i.unit as Unit) : null;
+      return {
+        ingredient_id: i.ingredient_id,
+        amount: i.amount,
+        unit: i.amount == null ? null : unit,
+        grams: resolveLineGrams(i.amount, unit, infoById.get(i.ingredient_id) ?? {}, i.grams),
+        note: i.note,
+        step_position: i.step_position,
+      };
+    });
+  const dropped = snapshot.ingredients.length - ingredients.length;
+
+  const { error } = await supabase.rpc("save_recipe", {
+    p_recipe: { ...recipe, title: snapshot.title || "Rezept", servings: Math.max(1, Math.round(snapshot.servings)) },
+    p_ingredients: ingredients,
+    p_steps: snapshot.steps,
+    p_change_note: `Version ${version} wiederhergestellt`,
+  });
+  if (error) return { ok: false, message: "Die Version konnte nicht wiederhergestellt werden." };
+
+  revalidatePath("/rezepte");
+  revalidatePath(`/rezepte/${recipeId}`);
+  return {
+    ok: true,
+    message: dropped
+      ? `Version ${version} wiederhergestellt. ${dropped} ${dropped === 1 ? "Zutat gibt" : "Zutaten gibt"} es nicht mehr.`
+      : `Version ${version} wiederhergestellt.`,
+  };
+}
 
 export async function deleteRecipeAction(recipeId: string): Promise<{ ok: false; message: string }> {
   const user = await requireUser();

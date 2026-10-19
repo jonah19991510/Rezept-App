@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { ChevronLeft, PartyPopper, Star } from "lucide-react";
+import { ChevronLeft, PartyPopper } from "lucide-react";
 import { saveCookLogAction } from "@/app/kochen/actions";
 import { FormMessage } from "@/components/forms/form-message";
+import { StarRatingInput } from "@/components/recipes/star-rating";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { cookLogSchema } from "@/lib/validation/cooking";
 
 /** Abschluss: Bewertung und Notiz fürs Koch-Log (beides freiwillig). */
@@ -55,20 +55,7 @@ export function CookDone({ recipeId, servings, onBack }: { recipeId: string; ser
 
       <fieldset className="space-y-2">
         <legend className="mb-2 font-medium">Bewertung</legend>
-        <div className="flex justify-center gap-1">
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => setRating(rating === n ? null : n)}
-              aria-pressed={rating != null && n <= rating}
-              aria-label={`${n} von 5 Sternen`}
-              className="grid size-14 place-items-center rounded-2xl hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-            >
-              <Star className={cn("size-9", rating != null && n <= rating ? "fill-primary text-primary" : "text-muted-foreground")} aria-hidden />
-            </button>
-          ))}
-        </div>
+        <StarRatingInput value={rating} onChange={setRating} size="lg" />
       </fieldset>
 
       <div className="grid gap-1.5">

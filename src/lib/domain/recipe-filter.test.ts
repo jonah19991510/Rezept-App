@@ -45,6 +45,9 @@ describe("parseRecipeFilter", () => {
       zeit: undefined,
       favoriten: true,
       sortierung: "name",
+      kosten: undefined,
+      bewertung: undefined,
+      lange: false,
     });
     const bad = parseRecipeFilter({ kategorie: "pizza", protein: "viel", sortierung: "x" });
     expect(bad.kategorie).toBeUndefined();
@@ -98,5 +101,21 @@ describe("autoTagsFor / collectTags", () => {
   it("sammelt eigene Tags ohne Doppelte", () => {
     const withDup = [...items, recipe({ id: "4", title: "X", tags: ["klassiker", "Abendessen"] })];
     expect(collectTags(withDup)).toEqual(["Abendessen", "Brunch", "Klassiker", "Wohlfühlessen"]);
+  });
+});
+
+describe("filterRecipes mit Koch-Log und Kosten (Phase 12)", () => {
+  const base = items[0];
+  const list: RecipeListItem[] = [
+    { ...base, id: "billig", costPerServing: 1.2, avgRating: 4.5, lastCooked: "2026-08-01" },
+    { ...base, id: "teuer", costPerServing: 4.8, avgRating: 5, lastCooked: "2026-10-15" },
+    { ...base, id: "ohne", costPerServing: null, avgRating: null, lastCooked: null },
+  ];
+  const context = { today: "2026-10-19", longNotCookedWeeks: 6 };
+
+  it("filtert nach Kosten pro Portion, Bewertung und „lange nicht gekocht“", () => {
+    expect(ids(filterRecipes(list, parseRecipeFilter({ kosten: "2,50" }), context))).toEqual(["billig"]);
+    expect(ids(filterRecipes(list, parseRecipeFilter({ bewertung: "5" }), context))).toEqual(["teuer"]);
+    expect(ids(filterRecipes(list, parseRecipeFilter({ lange: "1" }), context))).toEqual(["billig"]);
   });
 });

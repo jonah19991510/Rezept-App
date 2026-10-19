@@ -2,25 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  AlarmClock,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  ListChecks,
-  Pause,
-  Play,
-  Sun,
-  SunDim,
-  Timer,
-  X,
-} from "lucide-react";
+import { AlarmClock, Check, ChevronLeft, ChevronRight, ListChecks, Pause, Play, StickyNote, Sun, SunDim, Timer, X } from "lucide-react";
 import { PortionStepper } from "@/components/recipes/portion-stepper";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { scaleAmount, scaleFactor } from "@/lib/domain/scaling";
 import { formatCountdown, formatDuration, splitStepText } from "@/lib/domain/timers";
 import type { Unit } from "@/lib/domain/units";
+import { dayMonth } from "@/lib/domain/week";
 import { formatScaledQuantity } from "@/lib/format-quantity";
 import { cn } from "@/lib/utils";
 import { CookDone } from "./cook-done";
@@ -49,6 +38,7 @@ export function CookingMode({
   initialServings,
   lines,
   steps,
+  lastNote = null,
 }: {
   recipeId: string;
   title: string;
@@ -56,6 +46,8 @@ export function CookingMode({
   initialServings: number;
   lines: CookLine[];
   steps: CookStep[];
+  /** Phase 12: letzte Notiz aus dem Koch-Log, prominent vor dem Start */
+  lastNote?: { text: string; date: string } | null;
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("start");
@@ -155,6 +147,15 @@ export function CookingMode({
         {phase === "start" ? (
           <div className="mx-auto max-w-2xl space-y-6 p-4 md:p-8">
             <h1 className="text-3xl font-semibold text-balance md:text-4xl">{title}</h1>
+            {lastNote ? (
+              <aside className="flex gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-4" aria-label="Deine letzte Notiz">
+                <StickyNote className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
+                <div>
+                  <p className="text-sm font-medium">Letztes Mal ({dayMonth(lastNote.date)}) notiert:</p>
+                  <p className="text-lg whitespace-pre-line">{lastNote.text}</p>
+                </div>
+              </aside>
+            ) : null}
             <section className="space-y-2" aria-labelledby="kochen-portionen">
               <h2 id="kochen-portionen" className="text-lg font-medium">
                 Für wie viele Portionen kochst du?

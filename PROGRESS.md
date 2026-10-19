@@ -14,11 +14,12 @@
 | 8 – PWA, Feinschliff, Einstellungen, Deployment | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 9 – Kochmodus, Portionen skalieren, Einheiten-Umrechnung | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | **fertig** (19.10.2026), live, vom Nutzer abgenommen (Teilen am Handy erst über HTTPS prüfbar) |
-| 11 – Trainingstage, Lücken-Hinweis, Meal Prep, Reste-Vorschläge | **fertig** (19.10.2026), wartet auf Test und OK des Nutzers, noch nicht gepusht/live |
-| 12–15 | offen |
+| 11 – Trainingstage, Lücken-Hinweis, Meal Prep, Reste-Vorschläge | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
+| 12 – Preise und Kosten, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken | **fertig** (19.10.2026), wartet auf Test und OK des Nutzers, noch nicht gepusht/live (Migration ist schon in der Datenbank) |
+| 13–15 | offen |
 
-**Nächster Schritt:** Der Nutzer testet Phase 11 über den LAN-Server (Anleitung unten) und gibt das OK. Danach
-`git push` (geht live) und erst dann Phase 12.
+**Nächster Schritt:** Der Nutzer testet Phase 12 über den LAN-Server (Anleitung unten) und gibt das OK. Danach
+`git push` (geht live) und erst dann Phase 13 (dafür eine Markdown-Beispieldatei beim Nutzer anfragen).
 
 **Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
 (Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`
@@ -74,6 +75,55 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 12 entstanden ist
+
+- **Migration** `…190513_recipe_versions_and_costs` (schon in der Datenbank, die Live-Version läuft damit weiter):
+  `save_recipe` legt Versionen an (neue optionale Änderungsnotiz `p_change_note`; alte Aufrufe mit drei Argumenten
+  funktionieren weiter), Hilfsfunktionen `private.recipe_snapshot`/`private.recipe_content`, View `recipe_costs`
+  (Kosten gesamt/pro Portion nach den Preisen des Aufrufers, Anzahl Zutaten mit Preis). In einer zurückgerollten
+  Transaktion als Nutzer geprüft: nur Titel geändert → keine neue Version, Portionen geändert → Version 2.
+- **Preise** `/preise` (Profilmenü → Preise): Preis für eine Packung in g, ml oder Stück, optional Laden; Anzeige
+  pro 100 g/ml. **Schnelleingabe** in der Einkaufsliste: nach dem Abhaken erscheint „Preis eintragen“, bei
+  abgehakten Einträgen mit Menge gibt es ein €-Symbol („Was hast du für 500 g Spaghetti bezahlt?“).
+- **Kosten** (`costs.ts` mit Tests): Rezeptseite „ca. 2,10 € pro Portion · 8,40 € gesamt“ bzw. „mindestens …“ mit
+  „3 von 9 Zutaten ohne Preis“; Wochenplan Kosten pro Tag (Tageskopf am PC, Tageskarte am Handy) und Woche;
+  Einkaufsliste „Geschätzt ca. 23,40 €“ für das, was noch gekauft werden muss; Rezeptkarten „ab 2,10 €“.
+- **Koch-Log** (`cooklog.ts` mit Tests): Rezeptseite „Gekocht“ mit „Zuletzt gekocht vor 3 Tagen · 2-mal · Ø ★ 4,5“,
+  allen Einträgen (Datum, Sterne, Portionen, Version, Notiz) und „Gekocht eintragen“ (Datum frei, nicht in der
+  Zukunft); Einträge löschbar. Die letzte Notiz steht im Kochmodus groß vor dem Start. Sterne-Auswahl als eigene
+  Komponente (`star-rating.tsx`), auch im Kochmodus-Abschluss.
+- **„Lange nicht gekocht“:** gut bewertete Rezepte (Ø ab 4 Sternen), seit X Wochen nicht gekocht (Einstellungen,
+  Standard 6) als Liste mit „Einplanen“ unter dem Wochenplan; Filter in der Rezeptliste.
+- **Rezeptliste:** unter „Mehr“ zusätzlich „Höchstens (€/Portion)“, „Bewertung ab“ und „Lange nicht gekocht“;
+  Karten zeigen Ø-Bewertung und Kosten pro Portion.
+- **Versionen** (`versions.ts` mit Tests): Editor-Feld „Was hast du geändert?“ (nur beim Bearbeiten). Rezeptseite
+  (nur Owner) mit Versionsverlauf, Kurzfassung je Version („1 Zutat geändert, 1 neu, Portionen 4 → 6“),
+  Vergleich zweier Versionen (Zutaten neu/entfernt/geändert farbig, geänderte Schritte, Makros pro Portion mit
+  Differenz) und „Wiederherstellen“ (legt eine neue Version an, Gramm werden neu berechnet).
+- **Statistik:** Meistgekocht mit Ø-Bewertung, Kochaktivität (gekochte Gerichte pro Woche), Lange nicht gekocht,
+  Essenskosten pro Woche (Linie), Kosten pro Portion je Rezept, Protein pro Euro (Scatter, nur Rezepte mit allen
+  Preisen); alle mit Tabellenansicht.
+- 216 Tests, Typecheck, Lint und Build grün; Browser-Check über eine Vorschauseite mit Beispieldaten (wieder gelöscht).
+
+## Wie der Nutzer Phase 12 testet
+
+Über den LAN-Server (PC: <http://localhost:3000>, Handy: <http://192.168.178.47:3000>).
+
+1. Profilmenü → **Preise** → „Preis eintragen“: z. B. Spaghetti 1,29 € für 500 g, Eier 2,99 € für 10 Stück.
+2. Ein Rezept mit diesen Zutaten öffnen: Abschnitt **Kosten** (pro Portion, gesamt, „x von y Zutaten ohne Preis“).
+3. Auf der Rezeptseite **„Gekocht eintragen“**: Datum, Sterne, Notiz → erscheint unter „Gekocht“. Danach
+   „Kochen starten“: die Notiz steht oben („Letztes Mal notiert“).
+4. Rezept **bearbeiten**, eine Menge ändern, unten „Was hast du geändert?“ ausfüllen, speichern → auf der Rezeptseite
+   unter **Versionen** steht Version 2 (beim ersten Bearbeiten wird die alte Fassung als Version 1 gesichert).
+   „Vergleichen“ und „Wiederherstellen“ ausprobieren. Nur den Titel ändern → keine neue Version.
+5. **Einkaufsliste:** einen Eintrag mit Menge abhaken → unten „Preis eintragen“ → Preis eingeben. Oben steht die
+   geschätzte Summe, sobald Preise da sind.
+6. **Wochenplan:** Kosten pro Tag und Woche. Ein gut bewertetes Rezept (mit Datum vor mehr als 6 Wochen eingetragen)
+   erscheint unter „Lange nicht gekocht“.
+7. **Rezepte** → „Mehr“: nach Kosten, Bewertung und „Lange nicht gekocht“ filtern.
+8. Einstellungen → „Lange nicht gekocht“: Wochenzahl ändern.
+9. **Statistik:** Meistgekocht, Kochaktivität, Kosten-Diagramme.
 
 ## Was in Phase 11 entstanden ist
 
@@ -612,6 +662,28 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 57. **Phase 11 – Statistik „Trainingstage markiert“ mit umgesetzt** (stand in der SPEC bei den Statistiken):
     Ø-Ziel je Woche statt fester Ziellinie, Ring um Wochen mit Trainingstagen.
 
+19.10.2026 (Umsetzung Phase 12):
+
+58. **Phase 12 – Versionen in der Datenbank:** `save_recipe` vergleicht den neuen Inhalt mit der letzten Version
+    (Portionen, Zutaten mit Menge/Einheit/Notiz/Schritt, Schritte mit Timer) und legt nur bei Unterschieden eine an,
+    in derselben Transaktion. Titel/Beschreibung/Tags allein sind keine inhaltliche Änderung. Rezepte von vor
+    Phase 12 und Kopien bekommen beim ersten Bearbeiten ihre alte Fassung als Ausgangsversion („Ursprüngliche
+    Fassung“), damit es etwas zum Vergleichen gibt.
+59. **Phase 12 – Wiederherstellen überschreibt nicht die Geschichte:** Es entsteht eine neue Version mit der Notiz
+    „Version X wiederhergestellt“; inzwischen gelöschte Zutaten fallen weg (die App sagt, wie viele).
+60. **Phase 12 – Makro-Differenz im Vergleich mit den heutigen Nährwerten** der Zutaten und den gespeicherten Gramm
+    der Version (die Nährwerte selbst werden nicht versioniert).
+61. **Phase 12 – Kosten pro Gramm:** Preise gelten pro Zutat und Nutzer (eine Packungsangabe je Zutat, neue ersetzt
+    alte). ml über die Dichte, Stück über das Stückgewicht; ohne Stückgewicht lässt sich ein Stückpreis nicht
+    umrechnen (Hinweis im Dialog). Fehlen Preise, heißt es „mindestens“ bzw. „ab“, nie ein falsches „ca.“.
+62. **Phase 12 – Kosten in der View, Schätzungen in TypeScript:** Rezeptkosten rechnet `recipe_costs` (SPEC), die
+    Einkaufslisten-Schätzung (g/ml/Stück der Liste) und die Wochenkosten rechnet `costs.ts`/`stats.ts` mit derselben
+    Formel; Tests decken beide TypeScript-Teile ab.
+63. **Phase 12 – Koch-Log von Hand mit Datum:** Vergangene Tage bekommen 12 Uhr UTC (gleicher Kalendertag in
+    Deutschland). Gespeichert wird immer die aktuelle Rezeptversion.
+64. **Phase 12 – „Gut bewertet“ = Ø ab 4 Sternen;** nie bewertete Rezepte erscheinen nicht unter „Lange nicht
+    gekocht“. Im Wochenplan höchstens 5 Vorschläge, ohne Rezepte, die in der Woche schon geplant sind.
+
 ## Offene Punkte
 
 - Meal Prep: „Woche kopieren“ übernimmt Kochtag und Reste als normale Einträge (ohne Batch), d. h. in der Zielwoche
@@ -620,6 +692,9 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
   batch-fähig machen und verwaiste Batches aufräumen.
 
 - Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
+- Preise: Es gibt eine Packungsangabe je Zutat (keine Preise je Laden nebeneinander). Reicht für den Anfang.
+- Statistik „Meistgekocht“: Gekochte öffentliche Rezepte anderer erscheinen mit Titel „Rezept“, ein Tipp darauf
+  filtert die eigene Liste auf „nichts“ (wie bei „Meistgeplant“).
 - Kochmodus: Timer überleben kein Neuladen der Seite (nur im Arbeitsspeicher). Läuft das Handy in den Ruhezustand,
   klingelt der Timer erst beim Aufwecken (Browser-Grenze; Push-Benachrichtigungen wären ein eigenes Thema).
 - Die Konsole meldet in der Entwicklung „Encountered a script tag while rendering React component“ (kommt von

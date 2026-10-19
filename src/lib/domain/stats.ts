@@ -243,6 +243,44 @@ export function weeklyPlanSeries(
   });
 }
 
+export type WeekCost = { monday: string; total: number | null; complete: boolean };
+
+/**
+ * Essenskosten pro Woche (Phase 12): geplante Portionen × Kosten pro Portion nach eigenen Preisen.
+ * Wochen ohne Kosten bekommen null; complete = alle Einträge hatten vollständige Preise.
+ */
+export function weeklyFoodCosts(
+  entries: StatsPlanEntry[],
+  mondays: string[],
+  mondayOf: (iso: string) => string,
+  costs: Record<string, { perServing: number; complete: boolean }>,
+): WeekCost[] {
+  return mondays.map((monday) => {
+    const week = entries.filter((e) => mondayOf(e.date) === monday);
+    let total = 0;
+    let complete = week.length > 0;
+    for (const e of week) {
+      const c = costs[e.recipeId];
+      if (!c) {
+        complete = false;
+        continue;
+      }
+      total += c.perServing * e.servings;
+      if (!c.complete) complete = false;
+    }
+    return { monday, total: total > 0 ? total : null, complete };
+  });
+}
+
+/** Protein pro Euro je Rezept (nur Rezepte mit vollständigen Preisen und Kosten > 0). */
+export function proteinPerEuro(recipes: StatsRecipe[], costs: Record<string, { perServing: number; complete: boolean }>) {
+  return withNutrition(recipes).flatMap((r) => {
+    const c = costs[r.id];
+    if (!c || !c.complete || c.perServing <= 0) return [];
+    return [{ id: r.id, title: r.title, cost: c.perServing, protein: r.protein, proteinPerEuro: r.protein / c.perServing }];
+  });
+}
+
 /** Wie oft welches Rezept eingeplant wurde (Anzahl Einträge), die häufigsten zuerst. */
 export function mostPlanned(entries: StatsPlanEntry[], titles: Map<string, string>, top = 5) {
   const counts = new Map<string, number>();

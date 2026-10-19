@@ -1,7 +1,7 @@
 "use client";
 
 import { useOptimistic, useRef, useState, useSyncExternalStore, useTransition, type FormEvent } from "react";
-import { Check, ClipboardCopy, Eye, EyeOff, PackageCheck, Plus, Share2, Trash2, X } from "lucide-react";
+import { Check, ClipboardCopy, Euro, Eye, EyeOff, PackageCheck, Plus, Share2, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   addManualItemAction,
@@ -13,6 +13,7 @@ import {
 import { moveCheckedToPantryAction } from "@/app/(app)/einkauf/pantry-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { canPricePaid, PaidPriceDialog } from "./paid-price-dialog";
 import { coverShoppingItem, shoppingListText, type Coverage, type PantryAmount } from "@/lib/domain/pantry";
 import { departmentLabel, departmentOrder, formatShoppingAmount } from "@/lib/domain/shopping";
 import { dayMonth, weekdayShort } from "@/lib/domain/week";
@@ -43,6 +44,8 @@ export function ShoppingList({
   const [, startTransition] = useTransition();
   const [adding, startAdding] = useTransition();
   const [showChecked, setShowChecked] = useState(false);
+  // Phase 12: bezahlten Preis beim Abhaken eintragen
+  const [pricing, setPricing] = useState<ShoppingItem | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
   function toggle(item: ShoppingItem) {
@@ -50,6 +53,9 @@ export function ShoppingList({
       applyOptimistic({ type: "check", id: item.id, checked: !item.checked });
       const result = await setItemCheckedAction(item.id, !item.checked);
       if (!result.ok) toast.error(result.message);
+      else if (!item.checked && canPricePaid(item)) {
+        toast(`${item.name} im Wagen`, { action: { label: "Preis eintragen", onClick: () => setPricing(item) }, duration: 5000 });
+      }
     });
   }
 
@@ -252,12 +258,21 @@ export function ShoppingList({
           {showChecked ? (
             <ul className="divide-y overflow-hidden rounded-2xl border bg-card/60">
               {checked.map((item) => (
-                <ItemRow key={item.id} item={item} coverage={null} onToggle={() => toggle(item)} onDelete={() => remove(item)} />
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  coverage={null}
+                  onToggle={() => toggle(item)}
+                  onDelete={() => remove(item)}
+                  onPrice={canPricePaid(item) ? () => setPricing(item) : undefined}
+                />
               ))}
             </ul>
           ) : null}
         </section>
       ) : null}
+
+      <PaidPriceDialog item={pricing} onClose={() => setPricing(null)} />
 
       {optimisticItems.length > 0 ? (
         <div className="pt-2">
@@ -275,11 +290,14 @@ function ItemRow({
   coverage,
   onToggle,
   onDelete,
+  onPrice,
 }: {
   item: ShoppingItem;
   coverage: Coverage | null;
   onToggle: () => void;
   onDelete: () => void;
+  /** Phase 12: bezahlten Preis eintragen (nur abgehakte Einträge mit Zutat und Menge) */
+  onPrice?: () => void;
 }) {
   const have = !item.checked && coverage?.status === "have";
   const partial = !item.checked && coverage?.status === "partial";
@@ -317,6 +335,16 @@ function ItemRow({
           </span>
         ) : null}
       </button>
+      {onPrice ? (
+        <button
+          type="button"
+          onClick={onPrice}
+          className="grid w-11 shrink-0 place-items-center text-muted-foreground hover:text-primary"
+          aria-label={`Preis für ${item.name} eintragen`}
+        >
+          <Euro className="size-4" aria-hidden />
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={onDelete}

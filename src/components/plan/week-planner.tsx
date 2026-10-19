@@ -16,11 +16,12 @@ import {
 import type { LeftoverIdea } from "@/lib/domain/leftovers";
 import { goalsForDay } from "@/lib/domain/training";
 import { dayMonth, weekdayLong, weekdayShort } from "@/lib/domain/week";
-import { formatNumber } from "@/lib/format";
+import { formatEuro, formatNumber } from "@/lib/format";
 import type { PlanBatch, PlanEntry } from "@/lib/server/plan";
 import { cn } from "@/lib/utils";
 import { AddEntryDialog } from "./add-entry-dialog";
-import { DayExtras, TrainingToggle } from "./day-extras";
+import { DayExtras, suggestSlot, TrainingToggle } from "./day-extras";
+import { LongNotCooked, type LongNotCookedItem } from "./long-not-cooked";
 import { EntryDialog } from "./entry-dialog";
 import { GoalProgress } from "./goal-progress";
 import { MacroDot } from "@/components/recipes/macro-dot";
@@ -35,6 +36,8 @@ export function WeekPlanner({
   batches,
   leftoverIdeas,
   recipes,
+  costs = {},
+  longNotCooked = { items: [], weeks: 6 },
 }: {
   days: string[];
   today: string;
@@ -45,6 +48,9 @@ export function WeekPlanner({
   batches: PlanBatch[];
   leftoverIdeas: Record<string, LeftoverIdea[]>;
   recipes: PlanRecipeChoices;
+  /** Phase 12: Kosten pro Portion je Rezept (nur Rezepte mit mindestens einem Preis) */
+  costs?: Record<string, { perServing: number; complete: boolean }>;
+  longNotCooked?: { items: LongNotCookedItem[]; weeks: number };
 }) {
   const [selectedDay, setSelectedDay] = useState(days.includes(today) ? today : days[0]);
   const [addTarget, setAddTarget] = useState<SlotTarget | null>(null);
@@ -56,6 +62,24 @@ export function WeekPlanner({
   const goalsFor = (day: string) => goalsForDay(trainingDays[day] ?? false, goals.default, goals.training);
   // Wochenschnitt gegen den Schnitt der Tagesziele (Trainingstage haben andere Ziele)
   const averageGoals = averageOf([...plannedDates].filter((d) => days.includes(d)).map(goalsFor));
+  // Kosten: Summe der Einträge mit Preis; „mindestens“, wenn Einträgen oder Zutaten ein Preis fehlt
+  const costOf = (list: PlanEntry[]) => {
+    let total = 0;
+    let complete = list.length > 0;
+    for (const e of list) {
+      const c = costs[e.recipeId];
+      if (!c) complete = false;
+      else {
+        total += c.perServing * e.servings;
+        if (!c.complete) complete = false;
+      }
+    }
+    return total > 0 ? { total, complete } : null;
+  };
+  const dayCost = (day: string) => costOf(entries.filter((e) => e.date === day));
+  const weekCost = costOf(entries);
+  const planFromList = (recipeId: string) =>
+    setAddTarget({ date: selectedDay, slot: suggestSlot(entries.filter((e) => e.date === selectedDay), null), recipeId });
 
   const entriesFor = (date: string, slot: MealSlot) => entries.filter((e) => e.date === date && e.slot === slot);
   const selectedIndex = days.indexOf(selectedDay);
@@ -154,6 +178,7 @@ export function WeekPlanner({
               <TrainingToggle key={selectedDay} date={selectedDay} training={trainingDays[selectedDay] ?? false} />
             </div>
             <GoalProgress actual={byDay[selectedDay]} goals={goalsFor(selectedDay)} />
+            <CostLine cost={dayCost(selectedDay)} label="Kosten an diesem Tag" />
           </div>
 
           <DayExtras
@@ -224,6 +249,12 @@ export function WeekPlanner({
                   <MacroDot macro="protein" />
                   {formatNumber(total.protein, 0)} g P
                 </div>
+                {dayCost(day) ? (
+                  <div className="text-xs text-muted-foreground tabular-nums">
+                    {dayCost(day)!.complete ? "" : "≥ "}
+                    {formatEuro(dayCost(day)!.total)}
+                  </div>
+                ) : null}
                 {p.state !== "none" ? (
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
                     <div
@@ -249,6 +280,7 @@ export function WeekPlanner({
               {trainingDays[selectedDay] ? <span className="ml-2 text-sm font-normal text-primary">Trainingstag</span> : null}
             </h2>
             <GoalProgress actual={byDay[selectedDay]} goals={goalsFor(selectedDay)} />
+            <CostLine cost={dayCost(selectedDay)} label="Kosten an diesem Tag" />
           </div>
           <DayExtras
             date={selectedDay}
@@ -277,6 +309,7 @@ export function WeekPlanner({
                 Durchschnitt pro geplantem Tag ({summary.plannedDays} {summary.plannedDays === 1 ? "Tag" : "Tage"})
               </p>
               <GoalProgress actual={summary.averagePerPlannedDay} goals={averageGoals} compact />
+              <CostLine cost={weekCost} label="Kosten diese Woche" />
             </div>
             <dl className="grid grid-cols-2 content-start gap-3 text-sm">
               <div className="rounded-2xl bg-muted/60 p-3">
@@ -319,6 +352,8 @@ export function WeekPlanner({
           </div>
         )}
       </section>
+
+      <LongNotCooked items={longNotCooked.items} weeks={longNotCooked.weeks} onPlan={planFromList} />
 
       <AddEntryDialog target={addTarget} days={days} recipes={recipes} onClose={() => setAddTarget(null)} />
       <EntryDialog entry={editEntry} days={days} batches={batches} onClose={() => setEditEntry(null)} />
@@ -409,4 +444,14 @@ function averageOf(list: Goals[]): Goals {
     return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
   };
   return { kcal: avg("kcal"), protein: avg("protein"), carbs: avg("carbs"), fat: avg("fat") };
+}
+
+/** „Kosten an diesem Tag: ca. 6,40 €“ (oder „mindestens“, wenn Preise fehlen); ohne Preise nichts. */
+function CostLine({ cost, label }: { cost: { total: number; complete: boolean } | null; label: string }) {
+  if (!cost) return null;
+  return (
+    <p className="mt-3 border-t pt-3 text-sm">
+      {label}: {cost.complete ? "ca." : "mindestens"} <span className="font-semibold tabular-nums">{formatEuro(cost.total)}</span>
+    </p>
+  );
 }

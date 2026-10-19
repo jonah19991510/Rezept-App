@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { longNotCookedSchema } from "@/lib/validation/kitchen-log";
 import { goalsSchema, goalTypeSchema, trainingWeekdaysSchema, type GoalsInput } from "@/lib/validation/plan";
 import { flattenIssues } from "@/lib/validation/recipe";
 
@@ -52,5 +53,22 @@ export async function saveTrainingWeekdaysAction(input: { weekdays: number[] }):
 
   revalidatePath("/einstellungen");
   revalidatePath("/wochenplan");
+  return { ok: true };
+}
+
+/** Ab wie vielen Wochen ein gut bewertetes Rezept als „lange nicht gekocht“ gilt. */
+export async function saveLongNotCookedWeeksAction(input: { weeks: number }): Promise<GoalsResult> {
+  const user = await requireUser();
+  const parsed = longNotCookedSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("user_settings")
+    .upsert({ user_id: user.id, long_not_cooked_weeks: parsed.data.weeks }, { onConflict: "user_id" });
+  if (error) return { ok: false, message: "Die Einstellung konnte nicht gespeichert werden." };
+  revalidatePath("/einstellungen");
+  revalidatePath("/wochenplan");
+  revalidatePath("/rezepte");
+  revalidatePath("/statistik");
   return { ok: true };
 }

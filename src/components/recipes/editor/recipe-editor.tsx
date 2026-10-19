@@ -104,6 +104,8 @@ export function RecipeEditor({
   const [tags, setTags] = useState(initial.tags);
   const [isMealPrep, setIsMealPrep] = useState(initial.is_meal_prep);
   const [sourceUrl, setSourceUrl] = useState(initial.source_url);
+  // Phase 12: Notiz zur neuen Version (nur beim Bearbeiten)
+  const [changeNote, setChangeNote] = useState("");
   const [initialState] = useState(() => {
     const stepsWithKeys: Step[] = initial.steps.map((s) => ({
       key: nextKey(),
@@ -225,6 +227,7 @@ export function RecipeEditor({
         step_position: stepNumber(l.stepKey),
       })),
       steps: steps.map((s) => ({ text: s.text, timer_seconds: timerSeconds(s.timerMinutes) })),
+      change_note: changeNote,
     };
   }
 
@@ -541,6 +544,24 @@ export function RecipeEditor({
           Schritt hinzufügen
         </Button>
       </section>
+
+      {initial.id ? (
+        <section className="space-y-1.5">
+          <Label htmlFor="change-note">Was hast du geändert? (optional)</Label>
+          <Input
+            id="change-note"
+            value={changeNote}
+            maxLength={200}
+            onChange={(e) => setChangeNote(e.target.value)}
+            placeholder="z. B. weniger Béchamel"
+          />
+          <p className="text-xs text-muted-foreground">
+            Ändern sich Zutaten, Mengen, Schritte oder Portionen, entsteht eine neue Version mit dieser Notiz. Ältere Versionen
+            findest du auf der Rezeptseite.
+          </p>
+          {err("change_note") ? <p className="text-xs text-destructive">{err("change_note")?.[0]}</p> : null}
+        </section>
+      ) : null}
 
       {/* Speicherleiste: bleibt sichtbar, auf dem Handy über der Navigation */}
       <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-3 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur md:bottom-4">

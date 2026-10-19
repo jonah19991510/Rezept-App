@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Heart, Search, SlidersHorizontal, X } from "lucide-react";
+import { Clock, Heart, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,22 +18,27 @@ const SORT_LABELS = {
   zeit: "Schnellste zuerst",
 } as const;
 
+const MORE_KEYS = ["protein", "zeit", "kosten", "bewertung", "lange"];
+
 /** Suche, Filter und Sortierung. Alles steht in der URL, damit Zurück-Knopf und Teilen funktionieren. */
 export function RecipeFilters({
   ownTags,
   tagGroupLabel = "Eigene Tags",
   searchPlaceholder = "Rezepte durchsuchen …",
+  ownBook = false,
 }: {
   ownTags: string[];
   tagGroupLabel?: string;
   searchPlaceholder?: string;
+  /** Phase 12: im eigenen Buch zusätzlich Kosten, Bewertung und „lange nicht gekocht“ */
+  ownBook?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [query, setQuery] = useState(params.get("q") ?? "");
-  const [showMore, setShowMore] = useState(Boolean(params.get("protein") || params.get("zeit")));
+  const [showMore, setShowMore] = useState(MORE_KEYS.some((k) => params.get(k)));
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function update(changes: Record<string, string | null>) {
@@ -57,7 +62,8 @@ export function RecipeFilters({
   }
 
   const favorites = params.get("favoriten") === "1";
-  const hasFilters = ["q", "kategorie", "tag", "protein", "zeit", "favoriten"].some((k) => params.get(k));
+  const hasFilters = ["q", "kategorie", "tag", "favoriten", ...MORE_KEYS].some((k) => params.get(k));
+  const longAgo = params.get("lange") === "1";
 
   return (
     <div className={cn("mb-6 space-y-3", pending && "opacity-80")} role="search">
@@ -136,7 +142,7 @@ export function RecipeFilters({
       </div>
 
       {showMore ? (
-        <div className="grid grid-cols-2 gap-3 rounded-2xl border bg-card p-3 sm:max-w-md">
+        <div className="grid grid-cols-2 gap-3 rounded-2xl border bg-card p-3 sm:max-w-xl sm:grid-cols-4">
           <div className="grid gap-1.5">
             <Label htmlFor="filter-protein">Protein ab (g/Portion)</Label>
             <Input
@@ -159,6 +165,46 @@ export function RecipeFilters({
               onKeyDown={(e) => e.key === "Enter" && update({ zeit: e.currentTarget.value.trim() || null })}
             />
           </div>
+          {ownBook ? (
+            <>
+              <div className="grid gap-1.5">
+                <Label htmlFor="filter-kosten">Höchstens (€/Portion)</Label>
+                <Input
+                  id="filter-kosten"
+                  inputMode="decimal"
+                  defaultValue={params.get("kosten") ?? ""}
+                  placeholder="z. B. 2,50"
+                  onBlur={(e) => update({ kosten: e.target.value.trim() || null })}
+                  onKeyDown={(e) => e.key === "Enter" && update({ kosten: e.currentTarget.value.trim() || null })}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="filter-bewertung">Bewertung ab</Label>
+                <NativeSelect
+                  id="filter-bewertung"
+                  value={params.get("bewertung") ?? ""}
+                  onChange={(e) => update({ bewertung: e.target.value || null })}
+                >
+                  <option value="">egal</option>
+                  {[3, 4, 4.5].map((n) => (
+                    <option key={n} value={String(n)}>
+                      {String(n).replace(".", ",")} Sterne
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+              <Button
+                type="button"
+                variant={longAgo ? "default" : "outline"}
+                aria-pressed={longAgo}
+                className="col-span-2 sm:col-span-4 sm:justify-self-start"
+                onClick={() => update({ lange: longAgo ? null : "1" })}
+              >
+                <Clock aria-hidden />
+                Lange nicht gekocht
+              </Button>
+            </>
+          ) : null}
         </div>
       ) : null}
 

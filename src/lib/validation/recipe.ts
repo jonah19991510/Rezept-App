@@ -62,6 +62,8 @@ export const recipeInputSchema = z.object({
     .default(""),
   ingredients: z.array(recipeIngredientInputSchema).max(100, "Höchstens 100 Zutaten."),
   steps: z.array(recipeStepInputSchema).max(60, "Höchstens 60 Schritte."),
+  /** Phase 12: optionale Notiz zur neuen Version (nur bei inhaltlichen Änderungen gespeichert) */
+  change_note: z.string().trim().max(200, "Höchstens 200 Zeichen.").default(""),
 });
 
 export type RecipeInput = z.input<typeof recipeInputSchema>;

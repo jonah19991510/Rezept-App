@@ -7,10 +7,12 @@ import { WeekPlanner } from "@/components/plan/week-planner";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { planRecipeOptions } from "@/lib/domain/community";
+import { longNotCooked } from "@/lib/domain/cooklog";
 import { leftoverIdeas, type LeftoverIdea } from "@/lib/domain/leftovers";
 import { isTrainingDay } from "@/lib/domain/training";
 import { addDays, mondayOf, resolveWeekParam, todayInBerlin, weekDays, weekLabel } from "@/lib/domain/week";
 import { getAllGoals, getPlannedBefore, getRecipeBases, getTrainingDays, getWeekBatches, getWeekEntries } from "@/lib/server/plan";
+import { getCookLogs, getLongNotCookedWeeks, getRecipeCosts } from "@/lib/server/kitchen-log";
 import { getOwnRecipeList, getPublicRecipeList } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Wochenplan" };
@@ -22,7 +24,7 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
   const monday = resolveWeekParam(woche, today);
   const days = weekDays(monday);
 
-  const [entries, goals, training, batches, before, ownRecipes, publicRecipes] = await Promise.all([
+  const [entries, goals, training, batches, before, ownRecipes, publicRecipes, logs, weeks] = await Promise.all([
     getWeekEntries(user.id, monday),
     getAllGoals(user.id),
     getTrainingDays(user.id, monday, addDays(monday, 6)),
@@ -30,6 +32,8 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
     getPlannedBefore(user.id, monday),
     getOwnRecipeList(user.id),
     getPublicRecipeList(user.id),
+    getCookLogs(user.id),
+    getLongNotCookedWeeks(user.id),
   ]);
 
   // Eigenes Buch und öffentliche Rezepte anderer (Phase 6)
@@ -42,6 +46,15 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
   const ideas: Record<string, LeftoverIdea[]> = Object.fromEntries(
     days.map((d) => [d, leftoverIdeas(d, plannedByDate, bases, ownRecipes)]),
   );
+
+  // Phase 12: Kosten pro Portion (eigene Preise) und „Lange nicht gekocht“ (nur eigene Rezepte)
+  const costs = await getRecipeCosts([...new Set(entries.map((e) => e.recipeId))]);
+  const costPerServing = Object.fromEntries([...costs].map(([id, c]) => [id, { perServing: c.perServing, complete: c.priced === c.count }]));
+  const titles = new Map(ownRecipes.map((r) => [r.id, r.title]));
+  const longAgo = longNotCooked(logs, today, weeks)
+    .filter((l) => titles.has(l.recipeId) && !entries.some((e) => e.recipeId === l.recipeId))
+    .slice(0, 5)
+    .map((l) => ({ id: l.recipeId, title: titles.get(l.recipeId)!, weeksAgo: l.weeksAgo, avgRating: l.avgRating }));
 
   const trainingDays = Object.fromEntries(days.map((d) => [d, isTrainingDay(d, training.weekdays, training.overrides)]));
   const isCurrentWeek = monday === mondayOf(today);
@@ -85,6 +98,8 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
         batches={batches}
         leftoverIdeas={ideas}
         recipes={recipeOptions}
+        costs={costPerServing}
+        longNotCooked={{ items: longAgo, weeks }}
       />
     </>
   );

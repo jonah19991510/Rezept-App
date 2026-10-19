@@ -4,15 +4,17 @@ import { BookCheck, Clock, Globe, Heart } from "lucide-react";
 import { authorLabel } from "@/lib/domain/community";
 import { photoUrl } from "@/lib/domain/photo";
 import { autoTagsFor, totalMinutes, type RecipeListItem } from "@/lib/domain/recipe-filter";
-import { formatNumber } from "@/lib/format";
+import { formatEuro, formatNumber } from "@/lib/format";
 import { formatMinutes } from "@/lib/format-quantity";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import { MacroDot } from "./macro-dot";
 import { RecipeTags } from "./recipe-tags";
+import { StarValue } from "./star-rating";
 
 export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
   const minutes = formatMinutes(totalMinutes(recipe));
   const n = recipe.nutrition;
+  const hasFooter = minutes || recipe.copied || recipe.avgRating != null || recipe.costPerServing != null;
 
   return (
     <Link
@@ -83,12 +85,20 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
 
       <RecipeTags autoTags={autoTagsFor(recipe)} tags={recipe.tags.slice(0, 3)} />
 
-      {minutes || recipe.copied ? (
+      {hasFooter ? (
         <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           {minutes ? (
             <p className="flex items-center gap-1.5">
               <Clock className="size-4" aria-hidden />
               {minutes}
+            </p>
+          ) : null}
+          {recipe.avgRating != null ? <StarValue value={recipe.avgRating} /> : null}
+          {recipe.costPerServing != null ? (
+            <p className="tabular-nums">
+              {recipe.costComplete === false ? "ab " : ""}
+              {formatEuro(recipe.costPerServing)}
+              <span className="sr-only"> pro Portion</span>
             </p>
           ) : null}
           {recipe.copied ? (

@@ -16,6 +16,8 @@ import {
   compositionRows,
   COMPOSITION_BUCKETS,
   mostPlanned,
+  proteinPerEuro,
+  weeklyFoodCosts,
   weeklyPlanSeries,
   withNutrition,
   type StatsPlanEntry,
@@ -23,14 +25,18 @@ import {
   type StatsSelection,
 } from "@/lib/domain/stats";
 import { isoWeekNumber, mondayOf } from "@/lib/domain/week";
-import { formatNumber } from "@/lib/format";
+import { cookedPerWeek, longNotCooked, mostCooked, type CookLog } from "@/lib/domain/cooklog";
+import { formatEuro, formatNumber } from "@/lib/format";
 import { AUTO_TAG_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { CategoryDonut } from "./category-donut";
 import { ChartCard, DataTable } from "./chart-card";
 import { CompositionChart } from "./composition-chart";
+import { CostScatter } from "./cost-scatter";
 import { PlanTrend } from "./plan-trend";
 import { ProteinScatter } from "./protein-scatter";
+import { StarValue } from "@/components/recipes/star-rating";
+import { WeekSeries } from "./week-series";
 
 export function StatsDashboard({
   recipes,
@@ -39,6 +45,10 @@ export function StatsDashboard({
   mondays,
   goals,
   training,
+  cookLogs,
+  costs,
+  longNotCookedWeeks,
+  today,
 }: {
   recipes: StatsRecipe[];
   planEntries: StatsPlanEntry[];
@@ -46,6 +56,10 @@ export function StatsDashboard({
   mondays: string[];
   goals: { default: Goals; training: Goals };
   training: { weekdays: number[]; overrides: Record<string, boolean> };
+  cookLogs: CookLog[];
+  costs: Record<string, { perServing: number; complete: boolean }>;
+  longNotCookedWeeks: number;
+  today: string;
 }) {
   const [selection, setSelection] = useState<StatsSelection | null>(null);
   const listRef = useRef<HTMLElement>(null);
@@ -67,6 +81,24 @@ export function StatsDashboard({
   );
   const top = useMemo(() => mostPlanned(planEntries, new Map(Object.entries(recipeTitles))), [planEntries, recipeTitles]);
   const selected = useMemo(() => applySelection(recipes, selection), [recipes, selection]);
+
+  // Phase 12: Koch-Log und Kosten
+  const titles = useMemo(() => new Map(Object.entries(recipeTitles)), [recipeTitles]);
+  const cooked = useMemo(() => mostCooked(cookLogs, titles), [cookLogs, titles]);
+  const cookWeeks = useMemo(() => cookedPerWeek(cookLogs, mondays), [cookLogs, mondays]);
+  const longAgo = useMemo(
+    () => longNotCooked(cookLogs, today, longNotCookedWeeks).filter((l) => titles.has(l.recipeId)),
+    [cookLogs, today, longNotCookedWeeks, titles],
+  );
+  const costWeeks = useMemo(() => weeklyFoodCosts(planEntries, mondays, mondayOf, costs), [planEntries, mondays, costs]);
+  const perEuro = useMemo(() => proteinPerEuro(recipes, costs), [recipes, costs]);
+  const costList = useMemo(
+    () =>
+      recipes
+        .flatMap((r) => (costs[r.id] ? [{ id: r.id, title: r.title, ...costs[r.id] }] : []))
+        .sort((a, b) => a.perServing - b.perServing),
+    [recipes, costs],
+  );
 
   function select(next: StatsSelection) {
     // Zweiter Klick auf dieselbe Auswahl hebt sie wieder auf
@@ -272,6 +304,166 @@ export function StatsDashboard({
                 </li>
               ))}
             </ol>
+          )}
+        </ChartCard>
+      </div>
+
+      {/* Phase 12: Kochen und Kosten */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard title="Meistgekocht" description="Laut Koch-Log, mit deiner Durchschnittsbewertung.">
+          {cooked.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch nichts gekocht. Trag es am Ende des Kochmodus oder auf der Rezeptseite ein.</p>
+          ) : (
+            <ol className="grid gap-1">
+              {cooked.map((t) => (
+                <li key={t.recipeId}>
+                  <button
+                    type="button"
+                    onClick={() => select({ kind: "recipes", label: t.title, ids: [t.recipeId] })}
+                    className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-xl px-2 py-1.5 text-left hover:bg-muted"
+                  >
+                    <span className="flex min-w-0 items-center gap-2 text-sm">
+                      <span className="truncate">{t.title}</span>
+                      {t.avgRating != null ? <StarValue value={t.avgRating} className="text-xs text-muted-foreground" /> : null}
+                    </span>
+                    <span className="text-sm font-semibold">{t.count}×</span>
+                    <span className="col-span-2 h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
+                      <span className="block h-full rounded-full bg-primary" style={{ width: `${(t.count / cooked[0].count) * 100}%` }} />
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Kochaktivität"
+          description={`Gekochte Gerichte pro Woche, die letzten ${mondays.length} Wochen.`}
+          table={
+            <DataTable head={["Woche", "Gekocht"]} rows={cookWeeks.map((w) => [`KW ${isoWeekNumber(w.monday)}`, w.count])} />
+          }
+        >
+          <WeekSeries
+            points={cookWeeks.map((w) => ({ monday: w.monday, value: w.count }))}
+            kind="bar"
+            color="var(--chart-1)"
+            label="Gekocht"
+            format={(v) => formatNumber(v, 0)}
+          />
+        </ChartCard>
+
+        <ChartCard
+          title="Lange nicht gekocht"
+          description={`Gut bewertet (ab 4 Sternen) und seit mindestens ${longNotCookedWeeks} Wochen nicht gekocht.`}
+        >
+          {longAgo.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nichts – alles, was du magst, war in letzter Zeit dran.</p>
+          ) : (
+            <ul className="grid gap-1">
+              {longAgo.map((l) => (
+                <li key={l.recipeId}>
+                  <Link href={`/rezepte/${l.recipeId}`} className="flex items-center justify-between gap-3 rounded-xl px-2 py-1.5 text-sm hover:bg-muted">
+                    <span className="truncate">{titles.get(l.recipeId)}</span>
+                    <span className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                      <StarValue value={l.avgRating} />
+                      vor {l.weeksAgo} Wochen
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Essenskosten pro Woche"
+          description="Geplante Portionen mal Kosten pro Portion nach deinen Preisen."
+          table={
+            <DataTable
+              head={["Woche", "Kosten", "Vollständig"]}
+              rows={costWeeks.map((w) => [`KW ${isoWeekNumber(w.monday)}`, w.total == null ? "–" : formatEuro(w.total), w.total == null ? "–" : w.complete ? "ja" : "nein"])}
+            />
+          }
+        >
+          {costWeeks.every((w) => w.total == null) ? (
+            <p className="text-sm text-muted-foreground">
+              Noch keine Kosten: Trag unter{" "}
+              <Link href="/preise" className="font-medium text-primary underline-offset-4 hover:underline">
+                Preise
+              </Link>{" "}
+              ein, was deine Zutaten kosten.
+            </p>
+          ) : (
+            <WeekSeries
+              points={costWeeks.map((w) => ({
+                monday: w.monday,
+                value: w.total,
+                note: w.total != null && !w.complete ? "einzelne Preise fehlen (mindestens)" : undefined,
+              }))}
+              kind="line"
+              color="var(--chart-2)"
+              label="Kosten"
+              format={(v) => formatEuro(v)}
+            />
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Kosten pro Portion"
+          description="Deine Rezepte nach Kosten pro Portion, die günstigsten zuerst."
+          table={
+            <DataTable
+              head={["Rezept", "€ pro Portion", "Alle Preise da"]}
+              rows={costList.map((c) => [c.title, formatEuro(c.perServing), c.complete ? "ja" : "nein"])}
+            />
+          }
+        >
+          {costList.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch keine Rezepte mit Preisen.</p>
+          ) : (
+            <ol className="grid gap-1">
+              {costList.slice(0, 8).map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => select({ kind: "recipes", label: c.title, ids: [c.id] })}
+                    className="grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 rounded-xl px-2 py-1.5 text-left hover:bg-muted"
+                  >
+                    <span className="truncate text-sm">{c.title}</span>
+                    <span className="text-sm font-semibold tabular-nums">
+                      {c.complete ? "" : "ab "}
+                      {formatEuro(c.perServing)}
+                    </span>
+                    <span className="col-span-2 h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
+                      <span
+                        className="block h-full rounded-full bg-chart-2"
+                        style={{ width: `${(c.perServing / costList[costList.length - 1].perServing) * 100}%` }}
+                      />
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Protein pro Euro"
+          description="Kosten pro Portion gegen Protein. Oben links: viel Protein für wenig Geld. Nur Rezepte mit allen Preisen."
+          table={
+            <DataTable
+              head={["Rezept", "€ pro Portion", "Protein (g)", "Protein pro €"]}
+              rows={[...perEuro]
+                .sort((a, b) => b.proteinPerEuro - a.proteinPerEuro)
+                .map((p) => [p.title, formatEuro(p.cost), Math.round(p.protein), Math.round(p.proteinPerEuro)])}
+            />
+          }
+        >
+          {perEuro.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch kein Rezept mit Preisen für alle Zutaten.</p>
+          ) : (
+            <CostScatter points={perEuro} onSelect={(p) => select({ kind: "recipes", label: p.title, ids: [p.id] })} />
           )}
         </ChartCard>
       </div>

@@ -2,7 +2,9 @@ import { z } from "zod";
 import { AUTO_TAG_LABELS, type AutoTag } from "@/lib/labels";
 import type { RecipeAuthor } from "./community";
 import type { Enums } from "@/lib/supabase/database.types";
+import { GOOD_RATING } from "./cooklog";
 import { parseDecimal } from "./decimal";
+import { daysBetween } from "./week";
 
 export type RecipeListNutrition = {
   kcal_per_serving: number | null;
@@ -35,6 +37,13 @@ export type RecipeListItem = {
   author?: RecipeAuthor;
   /** in Entdecken: Der Nutzer hat schon eine eigene Kopie */
   copied?: boolean;
+  /** Phase 12 (eigenes Buch): Kosten pro Portion nach eigenen Preisen */
+  costPerServing?: number | null;
+  /** false: einzelnen Zutaten fehlt ein Preis, die Kosten sind eine Untergrenze */
+  costComplete?: boolean;
+  /** Phase 12: Ø-Bewertung aus dem Koch-Log und letztes Kochen (YYYY-MM-DD) */
+  avgRating?: number | null;
+  lastCooked?: string | null;
 };
 
 export function autoTagsFor(item: Pick<RecipeListItem, "is_meal_prep" | "nutrition">): AutoTag[] {
@@ -80,6 +89,16 @@ export const recipeFilterSchema = z.object({
     .transform((v) => v === "1")
     .catch(false),
   sortierung: z.enum(SORTS).optional().catch(undefined),
+  /** Phase 12: höchstens so viel € pro Portion */
+  kosten: optionalNumber.catch(undefined),
+  /** Phase 12: Ø-Bewertung mindestens (1–5) */
+  bewertung: optionalNumber.catch(undefined),
+  /** Phase 12: nur gut bewertete, lange nicht gekochte */
+  lange: z
+    .string()
+    .optional()
+    .transform((v) => v === "1")
+    .catch(false),
 });
 
 export type RecipeFilter = z.infer<typeof recipeFilterSchema>;
@@ -117,7 +136,10 @@ function matchesTag(item: RecipeListItem, tag: string) {
   return item.tags.some((t) => normalize(t) === wanted);
 }
 
-export function filterRecipes(items: RecipeListItem[], filter: RecipeFilter): RecipeListItem[] {
+/** Für „lange nicht gekocht“: heute und die Wochen-Grenze aus den Einstellungen. */
+export type FilterContext = { today: string; longNotCookedWeeks: number };
+
+export function filterRecipes(items: RecipeListItem[], filter: RecipeFilter, context?: FilterContext): RecipeListItem[] {
   const query = filter.q ? normalize(filter.q) : null;
 
   const result = items.filter((item) => {
@@ -128,6 +150,12 @@ export function filterRecipes(items: RecipeListItem[], filter: RecipeFilter): Re
     if (filter.zeit != null) {
       const minutes = totalMinutes(item);
       if (minutes == null || minutes > filter.zeit) return false;
+    }
+    if (filter.kosten != null && (item.costPerServing == null || item.costPerServing > filter.kosten)) return false;
+    if (filter.bewertung != null && (item.avgRating ?? 0) < filter.bewertung) return false;
+    if (filter.lange && context) {
+      if ((item.avgRating ?? 0) < GOOD_RATING || !item.lastCooked) return false;
+      if (daysBetween(item.lastCooked, context.today) < context.longNotCookedWeeks * 7) return false;
     }
     if (query) {
       const haystack = normalize([item.title, item.description ?? "", ...item.tags, item.author?.name ?? ""].join(" "));
@@ -164,6 +192,14 @@ export function collectTags(items: RecipeListItem[]): string[] {
 
 export function hasActiveFilter(filter: RecipeFilter) {
   return Boolean(
-    filter.q || filter.kategorie || filter.tag || filter.protein != null || filter.zeit != null || filter.favoriten,
+    filter.q ||
+      filter.kategorie ||
+      filter.tag ||
+      filter.protein != null ||
+      filter.zeit != null ||
+      filter.favoriten ||
+      filter.kosten != null ||
+      filter.bewertung != null ||
+      filter.lange,
   );
 }

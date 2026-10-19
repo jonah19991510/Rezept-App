@@ -7,16 +7,37 @@ import { RecipeCard } from "@/components/recipes/recipe-card";
 import { RecipeFilters } from "@/components/recipes/recipe-filters";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
+import { cookSummary } from "@/lib/domain/cooklog";
 import { collectTags, filterRecipes, hasActiveFilter, parseRecipeFilter } from "@/lib/domain/recipe-filter";
+import { todayInBerlin } from "@/lib/domain/week";
+import { getCookLogs, getLongNotCookedWeeks, getRecipeCosts } from "@/lib/server/kitchen-log";
 import { getOwnRecipeList } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Rezepte" };
 
 export default async function RecipesPage({ searchParams }: PageProps<"/rezepte">) {
   const user = await requireUser();
-  const [all, params] = await Promise.all([getOwnRecipeList(user.id), searchParams]);
+  const [list, params, costs, logs, longWeeks] = await Promise.all([
+    getOwnRecipeList(user.id),
+    searchParams,
+    getRecipeCosts(),
+    getCookLogs(user.id),
+    getLongNotCookedWeeks(user.id),
+  ]);
+  // Phase 12: Kosten pro Portion und Koch-Log für Filter und Karten
+  const all = list.map((r) => {
+    const s = cookSummary(logs.filter((l) => l.recipeId === r.id));
+    const cost = costs.get(r.id);
+    return {
+      ...r,
+      costPerServing: cost?.perServing ?? null,
+      costComplete: cost ? cost.priced === cost.count : undefined,
+      avgRating: s.avgRating,
+      lastCooked: s.lastDate,
+    };
+  });
   const filter = parseRecipeFilter(params);
-  const recipes = filterRecipes(all, filter);
+  const recipes = filterRecipes(all, filter, { today: todayInBerlin(), longNotCookedWeeks: longWeeks });
 
   const newButton = (
     <div className="flex flex-wrap gap-2">
@@ -49,7 +70,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/rezepte"
         description={`${all.length} ${all.length === 1 ? "Rezept" : "Rezepte"} in deinem Buch`}
         actions={newButton}
       />
-      <RecipeFilters ownTags={collectTags(all)} />
+      <RecipeFilters ownTags={collectTags(all)} ownBook />
 
       {recipes.length === 0 ? (
         <EmptyState icon={SearchX} title="Nichts gefunden">

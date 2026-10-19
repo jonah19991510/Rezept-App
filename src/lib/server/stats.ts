@@ -5,6 +5,8 @@ import type { StatsPlanEntry, StatsRecipe } from "@/lib/domain/stats";
 import { addDays, mondayOf, todayInBerlin } from "@/lib/domain/week";
 import { Constants, type Json } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
+import type { CookLog } from "@/lib/domain/cooklog";
+import { getCookLogs, getLongNotCookedWeeks, getRecipeCosts } from "./kitchen-log";
 import { getAllGoals, getTrainingDays } from "./plan";
 
 const FOOD_GROUPS = new Set<string>(Constants.public.Enums.food_group);
@@ -26,6 +28,11 @@ export type StatsData = {
   mondays: string[];
   goals: { default: Goals; training: Goals };
   training: { weekdays: number[]; overrides: Record<string, boolean> };
+  /** Phase 12: eigenes Koch-Log (alle Einträge), Kosten pro Portion, „Lange nicht gekocht“ */
+  cookLogs: CookLog[];
+  costs: Record<string, { perServing: number; complete: boolean }>;
+  longNotCookedWeeks: number;
+  today: string;
 };
 
 /** Anzahl Wochen im Wochenplan-Verlauf (inklusive der aktuellen). */
@@ -36,7 +43,7 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   const currentMonday = mondayOf(todayInBerlin());
   const mondays = Array.from({ length: STATS_WEEKS }, (_, i) => addDays(currentMonday, (i - STATS_WEEKS + 1) * 7));
 
-  const [recipes, nutrition, plan, goals, training] = await Promise.all([
+  const [recipes, nutrition, plan, goals, training, cookLogs, costs, longNotCookedWeeks] = await Promise.all([
     supabase.from("recipes").select("id, title, category, servings, is_meal_prep").eq("owner_id", userId).eq("recipe_type", "dish"),
     supabase
       .from("recipe_nutrition")
@@ -51,6 +58,9 @@ export async function getStatsData(userId: string): Promise<StatsData> {
       .lte("date", addDays(currentMonday, 6)),
     getAllGoals(userId),
     getTrainingDays(userId, mondays[0], addDays(currentMonday, 6)),
+    getCookLogs(userId),
+    getRecipeCosts(),
+    getLongNotCookedWeeks(userId),
   ]);
   if (recipes.error || nutrition.error || plan.error) throw new Error("Statistiken konnten nicht geladen werden.");
 
@@ -92,5 +102,19 @@ export async function getStatsData(userId: string): Promise<StatsData> {
     };
   });
 
-  return { recipes: statsRecipes, planEntries, recipeTitles, mondays, goals, training };
+  // Titel auch für gekochte Rezepte, die nicht (mehr) im Wochenplan stehen
+  for (const r of statsRecipes) recipeTitles[r.id] ??= r.title;
+
+  return {
+    recipes: statsRecipes,
+    planEntries,
+    recipeTitles,
+    mondays,
+    goals,
+    training,
+    cookLogs,
+    costs: Object.fromEntries([...costs].map(([id, c]) => [id, { perServing: c.perServing, complete: c.priced === c.count }])),
+    longNotCookedWeeks,
+    today: todayInBerlin(),
+  };
 }

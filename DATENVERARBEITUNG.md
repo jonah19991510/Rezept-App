@@ -106,6 +106,14 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 
 ## Änderungsverlauf
 
+- **Phase 12:** Jetzt genutzt: `ingredient_prices` (eigene Zutatenpreise, optional Laden), `recipe_versions`
+  (frühere Fassungen eigener Rezepte mit optionaler Änderungsnotiz, nur für den Owner), `cook_logs` mit Anzeige,
+  Einträgen von Hand und Löschen, `user_settings.long_not_cooked_weeks`. Neue View `recipe_costs` rechnet Kosten nur
+  aus den Preisen des angemeldeten Nutzers (andere sehen fremde Preise nie, auch nicht bei öffentlichen Rezepten).
+  Preise und Koch-Log sind nur für den Nutzer selbst sichtbar; Versionen nur für den Owner des Rezepts. Alles im
+  Datenexport enthalten und beim Löschen von Rezept bzw. Account per Cascade entfernt. Keine neuen Tabellen,
+  keine neuen Dienstleister.
+
 - **Phase 11:** Jetzt genutzt: `user_settings.training_weekdays` (Standard-Trainingstage), `user_goals` mit Typ
   „training“ (Ziel an Trainingstagen), `plan_days` (im Plan umgeschaltete Trainingstage) und `meal_prep_batches`
   (Kochtag, gekochte Portionen) mit `meal_plan_entries.batch_id/is_leftover`. Alles nur für den Nutzer selbst

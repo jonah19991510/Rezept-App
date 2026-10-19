@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 11 (Trainingstage mit eigenem Ziel, Lücken-Hinweis, Meal Prep, Reste-Vorschläge; davor: Vorratsschrank, „Was kann ich kochen?“, Vorrat in der Einkaufsliste, Text-Export, Kochmodus mit Timern, Portionen skalieren, Einheiten-Umrechnung, Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 12 (Preise und Kosten pro Portion, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken dazu; davor: Trainingstage mit eigenem Ziel, Lücken-Hinweis, Meal Prep, Reste-Vorschläge, Vorratsschrank, „Was kann ich kochen?“, Vorrat in der Einkaufsliste, Text-Export, Kochmodus mit Timern, Portionen skalieren, Einheiten-Umrechnung, Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -155,7 +155,8 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
 ## Rezepte und Zutaten
 
 - **Rezepte** unter „Rezepte“ anlegen, bearbeiten, duplizieren, löschen und als Favorit markieren.
-  Suche und Filter (Kategorie, Tags, Protein ab, Zeit bis) stehen in der Adresszeile, Zurück funktioniert.
+  Suche und Filter (Kategorie, Tags, Protein ab, Zeit bis, Kosten pro Portion, Bewertung, „lange nicht gekocht“)
+  stehen in der Adresszeile, Zurück funktioniert.
 - **Zutaten** sucht der Editor zuerst in der eigenen Zutatentabelle. Findet sich nichts, gibt es
   „Bei Open Food Facts suchen“ (deutsche Produkte zuerst) oder „Selbst anlegen“. Übernommene Zutaten
   stehen danach allen zur Verfügung. Open-Food-Facts-Daten stehen unter der Open Database License (ODbL).
@@ -183,6 +184,16 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
   mehrere laufen parallel und klingeln mit Ton und Vibration. Der Bildschirm bleibt an (nur über HTTPS, also live).
   Am Ende „Gekocht!“ mit Bewertung und Notiz.
 - **Editor:** Zutaten einem Schritt zuordnen („Gebraucht in Schritt 2“), Timer pro Schritt in Minuten.
+- **Koch-Log:** Am Ende des Kochmodus oder auf der Rezeptseite („Gekocht eintragen“) Datum, Bewertung (1–5) und Notiz.
+  Die Rezeptseite zeigt „Zuletzt gekocht vor …“, wie oft, die Durchschnittsbewertung und alle Notizen; die letzte
+  Notiz steht im Kochmodus vor dem Start.
+- **Versionen:** Jede Änderung an Zutaten, Mengen, Schritten oder Portionen legt beim Speichern eine neue Version an
+  (mit optionaler Notiz „Was hast du geändert?“). Auf der Rezeptseite: Verlauf, Vergleich zweier Versionen
+  (Änderungen farbig, Makro-Differenz) und „Wiederherstellen“.
+- **Preise und Kosten:** Profilmenü → Preise (Preis für eine Packung, z. B. 1,29 € für 500 g, optional Laden). Daraus
+  Kosten pro Rezept und Portion (View `recipe_costs`), pro Tag und Woche im Wochenplan und eine Schätzung für die
+  Einkaufsliste. Fehlen Preise, sagt die App „mindestens“ und wie viele Zutaten ohne Preis sind. Schneller: in der
+  Einkaufsliste beim Abhaken „Preis eintragen“.
 - **Einheiten-Umrechner** (Profilmenü): cup, tbsp, tsp, fl oz, pint, quart, oz, lb, stick → g/ml (cups zutatenabhängig
   über die Dichte, z. B. 1 cup Mehl ≈ 127 g, 1 cup Zucker ≈ 204 g), °F ↔ °C. Dieselbe Umrechnung nutzt der Import.
 
@@ -226,7 +237,8 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
 ## Statistik
 
 Diagramme zum eigenen Rezeptbuch und Wochenplan (Kategorien, Auto-Tags, Protein gegen kcal, Zusammensetzung,
-Makroverteilung, Verlauf gegen Tagesziele, meistgeplant). Ein Tipp auf ein Segment, einen Balken oder Punkt
+Makroverteilung, Verlauf gegen Tagesziele mit Trainingstagen, meistgeplant, meistgekocht mit Bewertung,
+Kochaktivität, lange nicht gekocht, Essenskosten pro Woche, Kosten pro Portion, Protein pro Euro). Ein Tipp auf ein Segment, einen Balken oder Punkt
 filtert die Rezeptliste darunter. Jedes Diagramm hat eine Tabellenansicht.
 
 Die Diagrammfarben sind auf Farbsehschwäche und Kontrast geprüft (hell und dunkel). Neue Farben bitte vorher
@@ -257,7 +269,8 @@ ebenso prüfen statt nach Gefühl wählen.
 
 - Schema als Migrationen in `supabase/migrations/` (nie nachträglich ändern, immer eine neue anlegen).
 - Jede Tabelle hat Row Level Security. Prüfanleitung: [docs/RLS-PRUEFUNG.md](docs/RLS-PRUEFUNG.md).
-- Makros pro Rezept berechnet die View `recipe_nutrition` (gesamt, pro Portion, Auto-Tags).
+- Makros pro Rezept berechnet die View `recipe_nutrition` (gesamt, pro Portion, Auto-Tags), Kosten die View
+  `recipe_costs` (nach den Preisen des angemeldeten Nutzers). Versionen legt `save_recipe` beim Speichern an.
   Schwellenwerte für „High Protein“ und „Low Carb“ stehen in der Tabelle `app_config`.
 - TypeScript-Typen der Datenbank: `src/lib/supabase/database.types.ts` (nach Schemaänderungen neu generieren).
 

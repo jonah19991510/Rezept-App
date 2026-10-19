@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { CookingMode } from "@/components/cooking/cooking-mode";
 import { requireUser } from "@/lib/auth";
 import { parseDecimal } from "@/lib/domain/decimal";
+import { notesNewestFirst } from "@/lib/domain/cooklog";
+import { getCookLogs } from "@/lib/server/kitchen-log";
 import { getRecipeDetail } from "@/lib/server/recipes";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -24,6 +26,7 @@ export default async function CookPage({ params, searchParams }: PageProps<"/koc
   if (!detail) notFound();
 
   const { recipe, ingredients, steps } = detail;
+  const lastNote = notesNewestFirst(await getCookLogs(user.id, recipe.id))[0];
   // ?portionen=6 von der Rezeptseite übernehmen (nur sinnvolle Werte)
   const requested = parseDecimal(typeof query.portionen === "string" ? query.portionen : null);
   const initialServings = requested != null && requested >= 0.5 && requested <= 100 ? requested : recipe.servings;
@@ -43,6 +46,7 @@ export default async function CookPage({ params, searchParams }: PageProps<"/koc
         stepPosition: l.step_position,
       }))}
       steps={steps.map((s) => ({ position: s.position, text: s.text, timerSeconds: s.timer_seconds }))}
+      lastNote={lastNote?.note ? { text: lastNote.note, date: lastNote.date } : null}
     />
   );
 }

@@ -7,6 +7,8 @@ import {
   categoryTable,
   compositionRows,
   mostPlanned,
+  proteinPerEuro,
+  weeklyFoodCosts,
   weeklyPlanSeries,
   type StatsRecipe,
 } from "./stats";
@@ -152,5 +154,30 @@ describe("applySelection", () => {
     expect(applySelection(list, { kind: "tag", label: "Vegan", tag: "vegan" }).map((r) => r.id)).toEqual(["a"]);
     expect(applySelection(list, { kind: "recipes", label: "b", ids: ["b"] }).map((r) => r.id)).toEqual(["b"]);
     expect(applySelection(list, null)).toHaveLength(2);
+  });
+});
+
+describe("Kosten-Statistik", () => {
+  const entries = [
+    { date: "2026-10-12", recipeId: "bowl", servings: 2, perServing: null },
+    { date: "2026-10-13", recipeId: "dal", servings: 1, perServing: null },
+    { date: "2026-10-20", recipeId: "dal", servings: 1, perServing: null },
+  ];
+  const costs = { bowl: { perServing: 2.5, complete: true }, dal: { perServing: 1.2, complete: false } };
+
+  it("summiert die Essenskosten pro Woche", () => {
+    const weeks = weeklyFoodCosts(entries, ["2026-10-05", "2026-10-12", "2026-10-19"], mondayOf, costs);
+    expect(weeks[0]).toEqual({ monday: "2026-10-05", total: null, complete: false });
+    expect(weeks[1].total).toBeCloseTo(6.2);
+    expect(weeks[1].complete).toBe(false);
+    expect(weeks[2].total).toBeCloseTo(1.2);
+  });
+
+  it("rechnet Protein pro Euro nur mit vollständigen Preisen", () => {
+    const result = proteinPerEuro(
+      [recipe({ id: "bowl", protein: 40 }), recipe({ id: "dal", protein: 20 }), recipe({ id: "x", protein: 10 })],
+      costs,
+    );
+    expect(result).toEqual([{ id: "bowl", title: "bowl", cost: 2.5, protein: 40, proteinPerEuro: 16 }]);
   });
 });

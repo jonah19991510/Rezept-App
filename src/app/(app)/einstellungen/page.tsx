@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/lib/auth";
+import { getLongNotCookedWeeks } from "@/lib/server/kitchen-log";
 import { getAllGoals, getTrainingWeekdays } from "@/lib/server/plan";
 import { DataSection, DeleteAccount, DisplayNameForm, PasswordForm } from "./account-forms";
 import { GoalsForm } from "./goals-form";
+import { LongNotCookedForm } from "./long-not-cooked-form";
 import { TrainingDaysForm } from "./training-days-form";
 
 export const metadata: Metadata = { title: "Einstellungen" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [goals, trainingWeekdays] = await Promise.all([getAllGoals(user.id), getTrainingWeekdays(user.id)]);
+  const [goals, trainingWeekdays, longWeeks] = await Promise.all([
+    getAllGoals(user.id),
+    getTrainingWeekdays(user.id),
+    getLongNotCookedWeeks(user.id),
+  ]);
 
   return (
     <>
@@ -61,6 +67,16 @@ export default async function SettingsPage() {
           Zum Beispiel mehr Protein und kcal. Leere Felder übernehmen das normale Tagesziel.
         </p>
         <GoalsForm initial={goals.training} goalType="training" />
+      </section>
+
+      <section className="mb-6 rounded-3xl border bg-card p-5" aria-labelledby="sec-lange">
+        <h2 id="sec-lange" className="mb-1 text-lg font-semibold">
+          Lange nicht gekocht
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Der Wochenplan schlägt gut bewertete Rezepte (ab 4 Sternen) vor, die du so lange nicht mehr gekocht hast.
+        </p>
+        <LongNotCookedForm initial={longWeeks} />
       </section>
 
       <section className="mb-6 rounded-3xl border bg-card p-5" aria-labelledby="sec-daten">

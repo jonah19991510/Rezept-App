@@ -62,6 +62,13 @@ export type Database = {
             foreignKeyName: "cocktail_details_recipe_id_fkey"
             columns: ["recipe_id"]
             isOneToOne: true
+            referencedRelation: "recipe_costs"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "cocktail_details_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: true
             referencedRelation: "recipe_nutrition"
             referencedColumns: ["recipe_id"]
           },
@@ -110,6 +117,13 @@ export type Database = {
             foreignKeyName: "cook_logs_recipe_id_fkey"
             columns: ["recipe_id"]
             isOneToOne: false
+            referencedRelation: "recipe_costs"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "cook_logs_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
             referencedRelation: "recipe_nutrition"
             referencedColumns: ["recipe_id"]
           },
@@ -146,6 +160,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "favorites_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_costs"
+            referencedColumns: ["recipe_id"]
+          },
           {
             foreignKeyName: "favorites_recipe_id_fkey"
             columns: ["recipe_id"]
@@ -337,6 +358,13 @@ export type Database = {
             foreignKeyName: "meal_plan_entries_recipe_id_fkey"
             columns: ["recipe_id"]
             isOneToOne: false
+            referencedRelation: "recipe_costs"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "meal_plan_entries_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
             referencedRelation: "recipe_nutrition"
             referencedColumns: ["recipe_id"]
           },
@@ -382,6 +410,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "meal_prep_batches_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_costs"
+            referencedColumns: ["recipe_id"]
+          },
           {
             foreignKeyName: "meal_prep_batches_recipe_id_fkey"
             columns: ["recipe_id"]
@@ -552,6 +587,13 @@ export type Database = {
             foreignKeyName: "recipe_ingredients_recipe_id_fkey"
             columns: ["recipe_id"]
             isOneToOne: false
+            referencedRelation: "recipe_costs"
+            referencedColumns: ["recipe_id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
             referencedRelation: "recipe_nutrition"
             referencedColumns: ["recipe_id"]
           },
@@ -587,6 +629,13 @@ export type Database = {
           timer_seconds?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "recipe_steps_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_costs"
+            referencedColumns: ["recipe_id"]
+          },
           {
             foreignKeyName: "recipe_steps_recipe_id_fkey"
             columns: ["recipe_id"]
@@ -629,6 +678,13 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "recipe_versions_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_costs"
+            referencedColumns: ["recipe_id"]
+          },
           {
             foreignKeyName: "recipe_versions_recipe_id_fkey"
             columns: ["recipe_id"]
@@ -710,6 +766,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "recipes_forked_from_id_fkey"
+            columns: ["forked_from_id"]
+            isOneToOne: false
+            referencedRelation: "recipe_costs"
+            referencedColumns: ["recipe_id"]
+          },
           {
             foreignKeyName: "recipes_forked_from_id_fkey"
             columns: ["forked_from_id"]
@@ -859,6 +922,17 @@ export type Database = {
       }
     }
     Views: {
+      recipe_costs: {
+        Row: {
+          cost_per_serving: number | null
+          cost_total: number | null
+          ingredient_count: number | null
+          priced_count: number | null
+          recipe_id: string | null
+          servings: number | null
+        }
+        Relationships: []
+      }
       recipe_nutrition: {
         Row: {
           carbs_per_serving: number | null
@@ -894,7 +968,12 @@ export type Database = {
       duplicate_recipe: { Args: { p_recipe_id: string }; Returns: string }
       replace_plan_shopping_items: { Args: { p_items: Json }; Returns: number }
       save_recipe: {
-        Args: { p_ingredients: Json; p_recipe: Json; p_steps: Json }
+        Args: {
+          p_change_note?: string
+          p_ingredients: Json
+          p_recipe: Json
+          p_steps: Json
+        }
         Returns: string
       }
       search_ingredients: {
