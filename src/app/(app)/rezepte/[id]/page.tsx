@@ -5,6 +5,7 @@ import { ArrowLeft, CircleCheck, Clock, ExternalLink, GitFork, TriangleAlert, Us
 import { FavoriteButton } from "@/components/recipes/favorite-button";
 import { MacroSummary } from "@/components/recipes/macro-summary";
 import { PublishToggle } from "@/components/recipes/publish-toggle";
+import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { RecipeActions } from "@/components/recipes/recipe-actions";
 import { RecipeTags } from "@/components/recipes/recipe-tags";
 import { requireUser } from "@/lib/auth";
@@ -61,6 +62,8 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
             In dein Rezeptbuch übernommen. Das ist jetzt deine eigene, private Kopie: Du kannst sie frei bearbeiten.
           </p>
         ) : null}
+
+        <RecipePhoto recipeId={recipe.id} imagePath={recipe.image_url} title={recipe.title} isOwner={detail.isOwner} />
 
         <header className="space-y-3">
           {recipe.category ? (

@@ -27,6 +27,8 @@ export type RecipeListItem = {
   updated_at: string;
   nutrition: RecipeListNutrition | null;
   isFavorite: boolean;
+  /** Storage-Pfad des Fotos (recipes.image_url) */
+  image_url?: string | null;
   /** veröffentlicht (Entdecken) */
   isPublic?: boolean;
   /** nur in Entdecken gesetzt */

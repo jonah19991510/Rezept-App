@@ -5,7 +5,7 @@ import type { RecipeListItem } from "@/lib/domain/recipe-filter";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
-const LIST_COLUMNS = "id, title, description, category, tags, is_meal_prep, prep_minutes, cook_minutes, updated_at";
+const LIST_COLUMNS = "id, title, description, category, tags, is_meal_prep, prep_minutes, cook_minutes, updated_at, image_url";
 const LIST_NUTRITION =
   "recipe_id, kcal_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving, is_high_protein, is_low_carb, is_vegetarian, is_vegan";
 

@@ -4,7 +4,7 @@
 sind. Grundlage für eine spätere Datenschutzerklärung. **Kein Rechtstext.** Wird mit jeder Phase
 aktualisiert.
 
-Letzte Aktualisierung: Phase 6 (19.10.2026)
+Letzte Aktualisierung: Phase 7 (19.10.2026)
 
 ## Grundsätze
 
@@ -49,7 +49,7 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `cook_logs` | Kochdatum, Bewertung, Notiz | 12 | nur Nutzer selbst |
 | `favorites` | Lieblingsrezepte | 2 | nur Nutzer selbst |
 | `ingredients` (Spalte `created_by`) | selbst angelegte Zutaten | 2 | Zutaten sind global für alle lesbar; `created_by` wird beim Löschen auf leer gesetzt |
-| Storage-Bucket `recipe-photos/<user-id>/…` | Rezeptfotos, vor dem Upload ohne EXIF/GPS | 7 | wie das Rezept |
+| Storage-Bucket `recipe-photos/<user-id>/<rezept-id>/…` (privat) | Rezeptfotos (groß + Vorschaubild), vor dem Upload im Browser verkleinert und neu kodiert, dadurch **ohne EXIF/GPS** | 7 | wie das Rezept (Owner; bei öffentlichen Rezepten alle Eingeloggten), ausgeliefert nur über die App-Route `/foto/…` |
 
 **Veröffentlichte Rezepte (ab Phase 6):** Rezepte sind standardmäßig privat. Erst der Schalter „Öffentlich“ auf
 der Rezeptseite macht ein Rezept für alle eingeloggten Nutzer sichtbar (Seite „Entdecken“, Auswahl im Wochenplan),
@@ -74,7 +74,7 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 | **Supabase** (Supabase Inc.) | Datenbank, Auth, Storage, Standard-Mailversand | Projekt in Frankfurt (AWS `eu-central-1`) | alle oben genannten Daten, Auth-Logs, Einladungs-/Passwort-Mails |
 | **Vercel** (Vercel Inc.) | Hosting der App ab Phase 8 | Functions in Frankfurt (`fra1`), statische Dateien über weltweites CDN | Request-Logs (u. a. IP-Adresse, URL), keine Analytics |
 | **Open Food Facts** (gemeinnützige Organisation) | Nährwert-Datenbank (aktiv seit Phase 2) | Server `search.openfoodfacts.org` | nur der Suchbegriff, nur auf Knopfdruck, abgefragt vom Server der App (also mit dessen IP, nicht der des Nutzers), User-Agent nur „Rezeptbuch/0.1“. **Keine** Nutzerdaten |
-| Webseiten beim Link-Import (Phase 7) | Rezept-Quellen | – | serverseitiger Abruf der URL, **keine** Nutzerdaten |
+| Webseiten beim Link-Import (aktiv seit Phase 7) | Rezept-Quellen | – | nur die eingegebene Adresse, abgerufen vom Server der App (dessen IP, nicht die des Nutzers), ohne Cookies und Referer, User-Agent „Rezeptbuch/0.1“. **Keine** Nutzerdaten. Gespeichert wird nur die Quell-URL am Rezept |
 
 ## Rechte der Nutzer
 
@@ -98,6 +98,12 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 - [ ] noindex-Regeln bewusst überprüft (robots.txt, Meta-Tag, `X-Robots-Tag`): sollen sie bleiben?
 
 ## Änderungsverlauf
+
+- **Phase 7:** Rezeptfotos im privaten Storage-Bucket (Ordner pro Nutzer und Rezept), vor dem Upload im Browser ohne
+  Metadaten neu kodiert; beim Löschen eines Rezepts wird der Ordner geleert, beim Löschen des Accounts der ganze
+  Nutzerordner. Kopien (Duplizieren/Übernehmen) bekommen eine eigene Kopie des Fotos, die der neuen Person gehört.
+  Import per Link: Abruf fremder Webseiten durch den Server, ohne Nutzerdaten; Fotos der Seite werden nicht
+  übernommen. Keine neuen Tabellen, keine neuen Dienstleister (Storage gehört zu Supabase).
 
 - **Phase 6:** Community. Schalter „Öffentlich“ (`recipes.is_public`), Seite „Entdecken“ mit Anzeigename des Autors
   (nie E-Mail), „In mein Rezeptbuch übernehmen“ (private Kopie mit `forked_from_id`), öffentliche Rezepte anderer im

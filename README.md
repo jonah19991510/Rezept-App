@@ -3,7 +3,7 @@
 Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 6 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken). Details in [PROGRESS.md](PROGRESS.md),
+**Stand:** Phase 7 (Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link). Details in [PROGRESS.md](PROGRESS.md),
 die vollständige Anforderung in [SPEC.md](SPEC.md).
 
 ## Tech-Stack
@@ -167,6 +167,14 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
 - **Auto-Tags:** High Protein (≥ 30 g Protein pro Portion oder ≥ 30 % der kcal aus Protein),
   Vegetarisch, Vegan, Low Carb (≤ 20 g Kohlenhydrate pro Portion), Meal-Prep (Schalter im Rezept).
   Schwellenwerte ändern: neue Migration, die `app_config` aktualisiert.
+
+- **Fotos** auf der Rezeptseite hinzufügen, ändern oder entfernen. Der Browser verkleinert das Foto vorher
+  (1600 px, Vorschaubild 800 px) und entfernt dabei alle Kameradaten wie den GPS-Standort. Gespeichert wird in
+  einem privaten Storage-Bucket; die App liefert Fotos über `/foto/…` nur an Leute aus, die das Rezept sehen dürfen.
+- **Import per Link** („Aus Link“ in Rezepte): Die App lädt die Seite selbst und liest das Rezept aus dem
+  schema.org-Format, das fast alle Rezeptseiten haben. In der Bestätigungsansicht ordnest du die Zutaten zu,
+  danach geht es in den normalen Editor. Amerikanische Einheiten (cup, oz, lb) werden umgerechnet, Fotos der Seite
+  nicht übernommen. Manche Seiten sperren automatische Abrufe; dann hilft nur von Hand anlegen.
 
 ## Wochenplan
 

@@ -1,6 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import { BookCheck, Clock, Globe, Heart } from "lucide-react";
 import { authorLabel } from "@/lib/domain/community";
+import { photoUrl } from "@/lib/domain/photo";
 import { autoTagsFor, totalMinutes, type RecipeListItem } from "@/lib/domain/recipe-filter";
 import { formatNumber } from "@/lib/format";
 import { formatMinutes } from "@/lib/format-quantity";
@@ -15,8 +17,20 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
   return (
     <Link
       href={`/rezepte/${recipe.id}`}
-      className="group flex h-full flex-col gap-3 rounded-3xl border bg-card p-4 shadow-sm shadow-foreground/5 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      className="group flex h-full flex-col gap-3 overflow-hidden rounded-3xl border bg-card p-4 shadow-sm shadow-foreground/5 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
+      {recipe.image_url ? (
+        <div className="relative -mx-4 -mt-4 aspect-[16/10] bg-muted">
+          <Image
+            src={photoUrl(recipe.image_url, "klein")}
+            alt=""
+            fill
+            unoptimized // Vorschaubild ist schon klein (800 px) und kommt aus der geschützten Route /foto
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover"
+          />
+        </div>
+      ) : null}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-1">
           {recipe.category ? (

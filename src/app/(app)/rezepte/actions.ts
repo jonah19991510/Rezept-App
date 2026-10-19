@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { resolveLineGrams } from "@/lib/domain/units";
+import { copyPhotoToRecipe, removeRecipePhotoFolder } from "@/lib/server/photos";
 import { createClient } from "@/lib/supabase/server";
 import { forkRecipeSchema, setRecipePublicSchema, type SetRecipePublicInput } from "@/lib/validation/community";
 import { flattenIssues, recipeInputSchema, type RecipeInput } from "@/lib/validation/recipe";
@@ -75,6 +76,8 @@ export async function deleteRecipeAction(recipeId: string): Promise<{ ok: false;
   if (!idSchema.safeParse(recipeId).success) return { ok: false, message: "Ungültiges Rezept." };
 
   const supabase = await createClient();
+  // Fotos verschwinden nicht per Cascade: vorher den Ordner des Rezepts leeren
+  await removeRecipePhotoFolder(supabase, user.id, recipeId);
   const { data, error } = await supabase
     .from("recipes")
     .delete()
@@ -87,13 +90,20 @@ export async function deleteRecipeAction(recipeId: string): Promise<{ ok: false;
   redirect("/rezepte");
 }
 
+/** Kopiert das Foto des Originals (falls vorhanden) in den Ordner der neuen Kopie. */
+async function copySourcePhoto(supabase: Awaited<ReturnType<typeof createClient>>, sourceId: string, userId: string, newId: string) {
+  const { data: source } = await supabase.from("recipes").select("image_url").eq("id", sourceId).maybeSingle();
+  await copyPhotoToRecipe(supabase, source?.image_url ?? null, userId, newId);
+}
+
 export async function duplicateRecipeAction(recipeId: string): Promise<{ ok: false; message: string }> {
-  await requireUser();
+  const user = await requireUser();
   if (!idSchema.safeParse(recipeId).success) return { ok: false, message: "Ungültiges Rezept." };
 
   const supabase = await createClient();
   const { data: newId, error } = await supabase.rpc("duplicate_recipe", { p_recipe_id: recipeId });
   if (error || !newId) return { ok: false, message: "Das Rezept konnte nicht kopiert werden." };
+  await copySourcePhoto(supabase, recipeId, user.id, newId);
 
   revalidatePath("/rezepte");
   redirect(`/rezepte/${newId}/bearbeiten`);
@@ -137,7 +147,7 @@ export async function setRecipePublicAction(input: SetRecipePublicInput): Promis
 
 /** „In mein Rezeptbuch übernehmen“: private, bearbeitbare Kopie mit forked_from_id, danach zur Kopie. */
 export async function forkRecipeAction(recipeId: string): Promise<{ ok: false; message: string }> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = forkRecipeSchema.safeParse({ recipeId });
   if (!parsed.success) return { ok: false, message: "Ungültiges Rezept." };
 
@@ -148,6 +158,8 @@ export async function forkRecipeAction(recipeId: string): Promise<{ ok: false; m
     if (error?.code === "P0002") return { ok: false, message: "Das Rezept ist nicht mehr öffentlich." };
     return { ok: false, message: "Das Rezept konnte nicht übernommen werden." };
   }
+  // Eigene Kopie des Fotos: bleibt, auch wenn das Original privat wird oder verschwindet
+  await copySourcePhoto(supabase, parsed.data.recipeId, user.id, newId);
 
   revalidatePath("/rezepte");
   revalidatePath("/entdecken");

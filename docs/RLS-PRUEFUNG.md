@@ -22,10 +22,13 @@ Geprüft wird unter anderem:
   kann A's privates Rezept nicht übernehmen und A's Rezept nicht auf privat stellen; A sieht B's Kopie nicht;
   `profiles` hat keine E-Mail-Spalte. Macht A das Rezept wieder privat, sieht B es nicht mehr, sein
   Plan-Eintrag bleibt, „Woche kopieren“ überspringt ihn ohne Fehler, B's Kopie bleibt.
+- Fotos (Phase 7): B sieht im Storage das Foto von A's öffentlichem Rezept, nicht das des privaten; B kann weder in
+  A's Ordner noch für A's Rezept hochladen und kein fremdes Foto an sein Rezept hängen (Check-Constraint, `23514`).
+  Löschen geht ohnehin nur über die Storage-API, und dort nur im eigenen Ordner.
 - Nach dem Löschen von A sind Profil, Rezepte und Favoriten von A weg, und auch der Wochenplan-Eintrag
   von B, der auf A's öffentliches Rezept zeigte. B's Kopie bleibt (Verweis auf das Original leer).
 
-Letzter Lauf: 19.10.2026 (Phase 6), alle Werte wie erwartet.
+Letzter Lauf: 19.10.2026 (Phase 7, Storage-Teil einzeln), alle Werte wie erwartet.
 
 ## 2. Prüfung in der App
 
@@ -56,6 +59,9 @@ Du brauchst zwei Accounts (dein Admin-Account und einen eingeladenen Test-Accoun
 6. **Veröffentlichen (Phase 6):** Admin macht ein Rezept öffentlich → Test-Account sieht es unter „Entdecken“ mit
    dem Anzeigenamen, nirgends eine E-Mail. Admin stellt es wieder auf privat → Test-Account bekommt beim direkten
    Aufruf der Rezept-Adresse „Seite nicht gefunden“, im Wochenplan steht „Rezept nicht mehr verfügbar“.
-7. **noindex:** <http://localhost:3000/robots.txt> zeigt `Disallow: /`. In den Entwicklertools
+7. **Fotos (Phase 7):** Admin lädt ein Foto zu einem privaten Rezept hoch und kopiert die Bildadresse (Rechtsklick →
+   „Bildadresse kopieren“, `/foto/…`). Im privaten Fenster mit dem Test-Account geöffnet → „Nicht gefunden“;
+   abgemeldet → Login-Seite. Nach dem Veröffentlichen sieht der Test-Account das Foto.
+8. **noindex:** <http://localhost:3000/robots.txt> zeigt `Disallow: /`. In den Entwicklertools
    (Netzwerk → Dokument → Antwort-Header) steht `X-Robots-Tag: noindex, nofollow`, im HTML
    `<meta name="robots" content="noindex, nofollow">`.

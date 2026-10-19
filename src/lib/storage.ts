@@ -1,2 +1,2 @@
-/** Storage-Bucket für Rezeptfotos (wird in Phase 7 angelegt). Ein Ordner pro Nutzer-ID. */
+/** Privater Storage-Bucket für Rezeptfotos (Migration …131933_recipe_photos). Pfad: <owner>/<rezept>/<foto>.webp */
 export const RECIPE_PHOTO_BUCKET = "recipe-photos";

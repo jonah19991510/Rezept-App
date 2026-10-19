@@ -15,6 +15,8 @@
 --   Phase 6: B_fork=owner_B,private,forked_from_pub,ingredients=2, B_forks_private_A=blocked,
 --   B_unpublishes_A=0, A_sees_B_fork=0, profiles_mail_columns=0, A_unpublishes=1,
 --   B_sees_unpublished=0, B_plan_entry_kept=1, B_copy_week_ok=0 (übersprungen, kein Fehler), B_fork_kept=1
+--   Phase 7 (Fotos): B_reads_photo_priv_A=0, B_reads_photo_pub_A=1, B_uploads_into_A_folder=blocked,
+--   B_uploads_for_A_recipe=blocked, B_uploads_own=ok, B_sets_foreign_image_path=blocked(23514), A_reads_photo_own=2
 --   after_delete_A_*=0 (Cascade), B_plan_entries_on_deleted_public_recipe=0, B_fork_after_delete_A=1 (forked_from=null)
 
 do $$
@@ -95,6 +97,40 @@ begin
            from public.recipes r join public.recipe_nutrition n2 on n2.recipe_id = r.id order by r.title loop
     out := out || ' | ' || t.title || ': kcal=' || t.kcal_per_serving || ' P=' || t.protein_per_serving || ' HP=' || t.is_high_protein || ' LC=' || t.is_low_carb || ' veg=' || t.is_vegetarian || ' vegan=' || t.is_vegan || ' groups=' || t.grams_by_food_group;
   end loop;
+
+  -- Phase 7: Fotos im Storage (Zeilen direkt angelegt, wie sie der Upload anlegen würde)
+  execute 'reset role';
+  insert into storage.objects (bucket_id, name, owner_id) values
+    ('recipe-photos', a || '/' || r_priv || '/11111111-1111-4111-8111-111111111111.webp', a::text),
+    ('recipe-photos', a || '/' || r_pub || '/22222222-2222-4222-8222-222222222222.webp', a::text);
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  select count(*) into n from storage.objects where name like a || '/' || r_priv || '/%'; out := out || ' | B_reads_photo_priv_A=' || n;
+  select count(*) into n from storage.objects where name like a || '/' || r_pub || '/%'; out := out || ' | B_reads_photo_pub_A=' || n;
+  begin
+    insert into storage.objects (bucket_id, name) values ('recipe-photos', a || '/' || r_pub || '/33333333-3333-4333-8333-333333333333.webp');
+    out := out || ' | B_uploads_into_A_folder=ALLOWED';
+  exception when others then out := out || ' | B_uploads_into_A_folder=blocked';
+  end;
+  begin
+    insert into storage.objects (bucket_id, name) values ('recipe-photos', b || '/' || r_pub || '/33333333-3333-4333-8333-333333333333.webp');
+    out := out || ' | B_uploads_for_A_recipe=ALLOWED';
+  exception when others then out := out || ' | B_uploads_for_A_recipe=blocked';
+  end;
+  insert into public.recipes (owner_id, title) values (b, 'Rezept B') returning id into r_fork;
+  begin
+    insert into storage.objects (bucket_id, name) values ('recipe-photos', b || '/' || r_fork || '/44444444-4444-4444-8444-444444444444.webp');
+    out := out || ' | B_uploads_own=ok';
+  exception when others then out := out || ' | B_uploads_own=FAILED(' || sqlerrm || ')';
+  end;
+  begin
+    update public.recipes set image_url = a || '/' || r_pub || '/22222222-2222-4222-8222-222222222222.webp' where id = r_fork;
+    out := out || ' | B_sets_foreign_image_path=ALLOWED';
+  exception when others then out := out || ' | B_sets_foreign_image_path=blocked(' || sqlstate || ')';
+  end;
+  delete from public.recipes where id = r_fork;
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  select count(*) into n from storage.objects where name like a || '/%'; out := out || ' | A_reads_photo_own=' || n;
 
   -- Phase 6: Community (übernehmen, veröffentlichen, wieder privat machen)
   perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);

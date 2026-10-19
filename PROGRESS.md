@@ -9,14 +9,16 @@
 | 3 – Wochenplan mit Tageszielen | **fertig** (19.10.2026), vom Nutzer getestet |
 | 4 – Einkaufsliste | **fertig** (19.10.2026), vom Nutzer getestet |
 | 5 – Statistiken | **fertig** (19.10.2026), vom Nutzer abgenommen |
-| 6 – Community: veröffentlichen, Entdecken, übernehmen | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
-| 7 – Fotos und Import per Link | offen, **nächste Phase** |
-| 8–15 | offen |
+| 6 – Community: veröffentlichen, Entdecken, übernehmen | **fertig** (19.10.2026), vom Nutzer abgenommen |
+| 7 – Fotos und Import per Link | **fertig (19.10.2026)**, wartet auf Test und OK des Nutzers |
+| 8 – PWA, Feinschliff, Einstellungen, Deployment | offen, **nächste Phase** |
+| 9–15 | offen |
 
-**Nächster Schritt:** Nutzer testet Phase 6 (siehe „Wie der Nutzer Phase 6 testet“). Erst nach seinem OK mit
-Phase 7 beginnen. Angesehen hat Claude die neuen Ansichten wieder über eine vorübergehende Vorschauseite mit
-Beispieldaten (Produktions-Build auf Port 3002, Handy-Breite, hell/dunkel), vor dem Commit gelöscht. Echte Abläufe mit
-Login (veröffentlichen, übernehmen, einplanen) hat der SQL-Test `rls_check.sql` gegen die Datenbank geprüft.
+**Nächster Schritt:** Nutzer testet Phase 7 (siehe „Wie der Nutzer Phase 7 testet“). Erst nach seinem OK mit
+Phase 8 beginnen. Geprüft hat Claude: Verkleinern und EXIF-Entfernung im echten Browser (Test-JPEG mit GPS-Daten
+und Drehung: Ausgabe ohne EXIF/GPS, richtig gedreht, 1600/800 px), Import-Zerleger gegen echte Seiten (Chefkoch,
+BBC Good Food, Budget Bytes), Laden der Seite inkl. Weiterleitung und Sperre lokaler Adressen, Storage-Regeln per
+SQL-Test. Upload und Import mit Login hat Claude nicht selbst durchgeklickt.
 
 **Entwicklungsserver:** Der Nutzer möchte, dass Claude zu Beginn jeder Sitzung den LAN-Server startet
 (`npm run dev:lan` bzw. Preview „rezept-app-lan“), damit PC (localhost:3000) und Handy (http://<PC-IP>:3000)
@@ -59,6 +61,46 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 7 entstanden ist
+
+- **Migration** `…131933_recipe_photos`: privater Bucket `recipe-photos` (max. 3 MB, nur WebP/JPEG), Pfad
+  `<owner>/<rezept>/<foto>.webp` + `<foto>-klein.webp`. Policies: lesen = eigener Ordner oder Foto eines lesbaren
+  Rezepts (eigen/öffentlich) im Ordner seines Owners; hochladen nur in den eigenen Ordner zu einem eigenen Rezept;
+  löschen nur im eigenen Ordner; kein Überschreiben. Check-Constraint: `recipes.image_url` (enthält den Pfad, keine
+  URL) muss in `<owner>/<rezept>/` liegen. `duplicate_recipe` kopiert den Fotopfad nicht mehr (siehe unten).
+- **Fotos:** `photo-compress.ts` verkleinert im Browser (Canvas, 1600 px + Vorschaubild 800 px, WebP, in Safari JPEG),
+  wendet die EXIF-Drehung an und wirft dabei alle Metadaten weg. Hochladen direkt aus dem Browser in den Storage
+  (Server-Action vergibt vorher die Pfade und prüft den Owner), danach `setRecipePhotoAction` (prüft Pfad + Datei,
+  löscht das alte Foto). Auf der Rezeptseite: „Foto hinzufügen“ bzw. Foto mit „Ändern“/Entfernen; Karten zeigen das
+  Vorschaubild. Ausgeliefert über die Route `/foto/<pfad>` mit den Rechten des Nutzers (privat zwischengespeichert).
+  Rezept löschen räumt den Foto-Ordner, Duplizieren/Übernehmen kopiert das Foto in den eigenen Ordner der Kopie
+  (bleibt, wenn das Original verschwindet). Account löschen löscht den Ordner schon seit Phase 1.
+- **Import per Link** `/rezepte/import` (Knopf „Aus Link“ in Rezepte): Server lädt die Seite (`fetch-page.ts`:
+  nur http/https, Standard-Ports, DNS-Prüfung gegen private Adressen bei jeder Weiterleitung, 10 s, 3 MB, kein
+  Cookie/Referer), liest schema.org/Recipe aus JSON-LD (`recipe-import.ts`: @graph, Typ-Listen, HowToSection,
+  ISO-Dauer, Portionen, Entities, Kategorie raten, Chefkoch-„von <Benutzer>“ weg), zerlegt Zutatenzeilen
+  (`ingredient-line.ts`: Brüche, Bereiche, kg/l/dl, EL/TL, Prise, Gebinde wie Dose/Bund/Pck. als Stück mit Notiz,
+  US-Einheiten cup/oz/lb/fl oz/stick metrisch mit „aus 1 cup“ als Notiz) und sucht je Zeile einen Vorschlag in der
+  Zutatentabelle. **Bestätigungsansicht:** Original, Menge, Zutat (✓ genau, ! Vorschlag prüfen, fehlt), „Ändern“
+  öffnet die Zutatensuche mit dem Namen vorbelegt, „Weglassen“. Danach der normale Editor mit allem vorbefüllt,
+  Quell-URL gesetzt, privat.
+- **Tests:** photo, ingredient-line, recipe-import, url-safety, import-draft (zusammen 135 Tests im Projekt);
+  `rls_check.sql` um Storage-Fälle erweitert.
+
+## Wie der Nutzer Phase 7 testet
+
+1. Eins deiner Rezepte öffnen → „Foto hinzufügen“ → Foto wählen (am Handy auch direkt mit der Kamera). Nach kurzem
+   „wird verkleinert/hochgeladen“ erscheint es groß oben; in „Rezepte“ und „Entdecken“ als Vorschaubild auf der Karte.
+2. „Ändern“ mit einem anderen Foto, dann das Mülleimer-Symbol: Foto ist weg.
+3. Ein Rezept mit Foto duplizieren: Die Kopie hat ihr eigenes Foto. Kopie löschen.
+4. Rezepte → „Aus Link“ → z. B. ein Chefkoch-Rezept einfügen → „Rezept laden“. Zuordnung prüfen: Vorschläge mit „!“
+   ansehen, eine Zutat ohne Treffer über „Zutat wählen“ suchen (oder „Bei Open Food Facts suchen“), eine Zeile
+   weglassen. „Weiter zum Bearbeiten“ → Mengen, Kategorie, Schritte prüfen → Speichern.
+5. Optional eine englische Seite (z. B. BBC Good Food): cups/oz werden in ml/g umgerechnet, die Notiz zeigt das
+   Original.
+6. Am Handy: Foto direkt aufnehmen. Hinweis: Bei iPhones mit „High Efficiency“ (HEIC) kommt meist trotzdem JPEG an;
+   falls nicht, erscheint ein Hinweis.
 
 ## Was in Phase 6 entstanden ist
 
@@ -316,6 +358,18 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 31. **Phase 6 – Nach dem Übernehmen** geht es zur Rezeptseite der Kopie (nicht direkt in den Editor wie bei
     „Duplizieren“).
 
+19.10.2026 (Umsetzung Phase 7):
+
+32. **Phase 7 – Privater Bucket + eigene Foto-Route** statt öffentlicher Bucket oder signierter URLs: Fotos privater
+    Rezepte sind nie öffentlich abrufbar, die Adressen bleiben gleich (Browser kann zwischenspeichern). Für die
+    Rezeptkarten ohne Login (Phase 14) muss die Route dann zusätzlich den Share-Token akzeptieren.
+33. **Phase 7 – Foto auf der Rezeptseite** statt im Editor (ein neues Rezept hat vor dem ersten Speichern noch keine
+    ID für den Ordner). Nach dem Import: speichern, dann Foto hinzufügen.
+34. **Phase 7 – Fotos von Webseiten werden beim Import nicht übernommen** (Urheberrecht; das eigene Foto ist besser).
+35. **Phase 7 – US-Einheiten schon beim Import umgerechnet** (cup pauschal 240 ml, oz, lb, fl oz, stick Butter
+    113 g), weil SPEC das für den Import verlangt. Zutatenabhängige Cup-Dichten, °F im Schritttext und der Umrechner
+    kommen mit Phase 9.
+
 ## Offene Punkte
 
 - Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
@@ -323,15 +377,16 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
   „Meine Daten herunterladen“ in Phase 8 erledigen. Mit dem Nutzer klären.
 - Portionen skalieren auf der Rezeptseite kommt mit Phase 9 (Kochmodus).
 - `step_position` (Zutat je Schritt) wird beim Speichern erhalten, aber erst in Phase 9 im Editor bearbeitbar.
-- Fotos (Phase 7) fehlen im Editor noch bewusst.
-- Phase 7: `duplicate_recipe` kopiert `image_url` mit. Liegt das Foto im Storage-Ordner des Originals, verschwindet
-  es bei der Kopie, sobald das Original gelöscht wird. Beim Übernehmen das Foto in den eigenen Ordner kopieren.
+- Phase 14: Route `/foto/…` für geteilte Rezeptkarten ohne Login öffnen (nur mit gültigem Share-Token, per
+  Security-Definer-Funktion) und Open-Graph-Bild daraus erzeugen.
+- Phase 8: Datenexport „Meine Daten herunterladen“ sollte die Fotos mindestens als Liste (oder als Dateien) enthalten.
+- Import: Seiten, die Bots sperren (z. B. Allrecipes, Simply Recipes: Antwort 402), lassen sich nicht laden; die App
+  sagt das und verweist auf „von Hand anlegen“.
 - Statistik „Meistgeplant“: Ein Tipp auf ein fremdes (öffentliches) Rezept filtert die eigene Liste darunter auf
   „nichts“, weil es nicht im eigenen Buch ist. Kleinigkeit, bei Gelegenheit verbessern.
 - Advisor-Hinweis „Leaked Password Protection“ (Prüfung neuer Passwörter gegen HaveIBeenPwned, per
   k-Anonymität) ist aus. Optional im Dashboard (Authentication → Policies/Passwords), evtl. nur in bezahlten Plänen.
 - Phase 8: „Account löschen“ in den Einstellungen nutzt `deleteUserCompletely` aus `src/lib/server/delete-user.ts`.
-- Phase 7: Storage-Bucket `recipe-photos` anlegen (Name steht in `src/lib/storage.ts`).
 - Phase 14: Security-Definer-Funktion `get_shared_recipe(token)` für `/r/[token]` (Proxy lässt `/r/` schon durch).
 
 ## Bekannte Probleme

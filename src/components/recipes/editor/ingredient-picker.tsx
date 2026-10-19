@@ -25,13 +25,16 @@ export function IngredientPicker({
   open,
   onOpenChange,
   onSelect,
+  initialQuery,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (ingredient: IngredientOption) => void;
+  /** Suchbegriff beim ersten Öffnen (z. B. der Name aus einer importierten Zutatenzeile) */
+  initialQuery?: string;
 }) {
   const [mode, setMode] = useState<Mode>({ kind: "search" });
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery ?? "");
   const [results, setResults] = useState<IngredientOption[]>([]);
   const [searched, setSearched] = useState(false);
   const [offResults, setOffResults] = useState<IngredientCandidate[] | null>(null);
@@ -43,6 +46,21 @@ export function IngredientPicker({
 
   useEffect(() => () => {
     if (debounce.current) clearTimeout(debounce.current);
+  }, []);
+
+  // Mit Suchbegriff geöffnet: gleich suchen (nur beim ersten Anzeigen)
+  useEffect(() => {
+    const q = initialQuery?.trim();
+    if (!q) return;
+    latestQuery.current = q;
+    startLocal(async () => {
+      const found = await searchIngredientsAction(q);
+      if (latestQuery.current === q) {
+        setResults(found);
+        setSearched(true);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- absichtlich nur einmal
   }, []);
 
   function reset() {
