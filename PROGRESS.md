@@ -18,10 +18,14 @@
 | 12 – Preise und Kosten, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 13 – Markdown-Import und -Export | **fertig** (20.10.2026), vom Nutzer an PC und Handy getestet, live |
 | 14 – Teilen per Link, Rezeptkarte, Open-Graph-Bild, Druck- und Bildexport | **fertig** (20.10.2026), live (vom Nutzer bestätigt); Bugfix Handy-Zoom gepusht |
-| 15 – Cocktail-Bereich (Bar), Abschluss-Prüfung Export/Löschen | **fertig** (20.10.2026), lokal committet, Migration schon in der DB; wartet auf den Test des Nutzers (LAN) und die Push-Freigabe |
+| 15 – Cocktail-Bereich (Bar), Abschluss-Prüfung Export/Löschen | **fertig** (20.10.2026), live; dazu Seite „Zutaten“ (ansehen, bearbeiten, löschen, Preise) |
 
-**Nächster Schritt:** Nutzer testet Phase 15 und den Gesamttest am Handy (Anleitung unten), dann Push auf `master`
-(= live) und Deployment per Vercel-Connector prüfen. Danach sind alle Phasen der SPEC fertig.
+**Stand:** Alle Phasen der SPEC sind fertig und live (Push `9c7e479` am 20.10.2026 → Deployment
+`dpl_FmC9e9SW7UtQPKKZvh1dC8tstMtq`, `source: git`, `target: production`, `fra1`, nach ca. 57 s „READY“, auf
+unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft).
+
+**Nächster Schritt:** Gesamttest am Handy auf der Live-Seite (Anleitung unter „Wie der Nutzer Phase 15 testet“),
+danach nur noch Wünsche des Nutzers und die offenen Punkte unten.
 
 **WhatsApp-Vorschau (20.10.2026):** Funktioniert (über mobile Daten getestet). Im Heim-WLAN fehlte sie, weil Vercel
 die IP des Heimnetzes mit dem „Security Checkpoint“ belegt hatte (403, `X-Vercel-Mitigated: challenge`) – sehr
