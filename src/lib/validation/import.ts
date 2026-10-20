@@ -11,3 +11,21 @@ export const importUrlSchema = z.object({
     .transform((v) => (/^[a-z][a-z0-9+.-]*:/i.test(v) ? v : `https://${v}`))
     .pipe(z.url({ protocol: /^https?$/, error: "Bitte eine Webadresse mit http(s):// angeben." })),
 });
+
+/** Markdown-Import: Zutatenzeilen eines Pakets ausgewählter Rezepte zum Zuordnen. */
+export const MARKDOWN_MATCH_BATCH = 10;
+
+export const markdownMatchSchema = z.object({
+  recipes: z
+    .array(
+      z.object({
+        ingredients: z
+          .array(z.object({ text: z.string().trim().min(1).max(300), extraNote: z.string().max(200) }))
+          .max(100),
+      }),
+    )
+    .min(1)
+    .max(MARKDOWN_MATCH_BATCH),
+});
+
+export type MarkdownMatchInput = z.infer<typeof markdownMatchSchema>;

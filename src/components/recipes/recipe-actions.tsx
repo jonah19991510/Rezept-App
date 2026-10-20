@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { BookCheck, Copy, EllipsisVertical, Pencil, Trash2 } from "lucide-react";
+import { BookCheck, Copy, EllipsisVertical, FileDown, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteRecipeAction, duplicateRecipeAction, forkRecipeAction } from "@/app/(app)/rezepte/actions";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -100,6 +100,11 @@ export function RecipeActions({
           <DropdownMenuItem className={ITEM} onClick={duplicate}>
             <Copy aria-hidden />
             Duplizieren
+          </DropdownMenuItem>
+          {/* Normaler Link: Der Browser lädt die .md-Datei herunter */}
+          <DropdownMenuItem className={ITEM} render={<a href={`/rezepte/${recipeId}/markdown`} download />}>
+            <FileDown aria-hidden />
+            Als Markdown
           </DropdownMenuItem>
           <DropdownMenuItem className={ITEM} variant="destructive" onClick={() => setConfirmDelete(true)}>
             <Trash2 aria-hidden />

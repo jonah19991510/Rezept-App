@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Download, FileUp, Loader2, Trash2 } from "lucide-react";
+import { Download, FileText, FileUp, Loader2, Trash2 } from "lucide-react";
 import { FormField } from "@/components/forms/form-field";
 import { FormMessage } from "@/components/forms/form-message";
 import { useValidatedAction } from "@/components/forms/use-validated-action";
@@ -135,6 +135,10 @@ export function DataSection() {
           <Download aria-hidden />
           Rezepte sichern
         </a>
+        <a href="/einstellungen/rezepte-markdown" download className={buttonVariants({ variant: "outline" })}>
+          <FileText aria-hidden />
+          Rezeptbuch als Markdown
+        </a>
         <Button type="button" variant="outline" onClick={() => input.current?.click()} disabled={pending}>
           {pending ? <Loader2 className="animate-spin" aria-hidden /> : <FileUp aria-hidden />}
           {pending ? "Wird importiert …" : "Sicherung importieren"}
@@ -163,6 +167,11 @@ export function DataSection() {
         <li>
           <strong className="font-medium text-foreground">Rezepte sichern</strong>: deine Rezepte in einem Format, das du
           hier wieder importieren kannst. Fotos sind nicht enthalten.
+        </li>
+        <li>
+          <strong className="font-medium text-foreground">Rezeptbuch als Markdown</strong>: alle Rezepte als lesbare
+          .md-Datei mit Inhaltsverzeichnis, z. B. für Obsidian oder zum Ausdrucken. Ein einzelnes Rezept gibt es auf der
+          Rezeptseite unter „⋮“ → „Als Markdown“.
         </li>
         <li>
           <strong className="font-medium text-foreground">Importieren</strong> legt die Rezepte zusätzlich an (privat),

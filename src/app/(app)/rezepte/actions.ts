@@ -14,10 +14,45 @@ import { restoreVersionSchema } from "@/lib/validation/kitchen-log";
 import { flattenIssues, recipeInputSchema, type RecipeInput } from "@/lib/validation/recipe";
 
 export type SaveRecipeResult = { ok: false; message?: string; fieldErrors?: Record<string, string[]> };
+export type SaveRecipeStayResult = SaveRecipeResult | { ok: true; recipeId: string };
 
-/** Rezept anlegen oder ändern. Bei Erfolg Weiterleitung zur Rezeptseite. */
-export async function saveRecipeAction(input: RecipeInput): Promise<SaveRecipeResult> {
+/**
+ * Rezept anlegen oder ändern. Bei Erfolg Weiterleitung zur Rezeptseite – außer mit `stay`
+ * (Markdown-Import: danach geht es mit dem nächsten Rezept weiter), dann kommt die ID zurück.
+ */
+export async function saveRecipeAction(input: RecipeInput, options?: { stay?: boolean }): Promise<SaveRecipeStayResult> {
   await requireUser();
+  const result = await persistRecipe(input);
+  if (!result.ok) return result;
+  revalidatePath("/rezepte");
+  revalidatePath(`/rezepte/${result.recipeId}`);
+  if (options?.stay) return result;
+  redirect(`/rezepte/${result.recipeId}`);
+}
+
+const MAX_BATCH_SAVE = 20;
+
+/** Markdown-Import: mehrere sicher erkannte Rezepte direkt speichern (neu, privat). */
+export async function saveRecipesBatchAction(
+  inputs: RecipeInput[],
+): Promise<{ ok: true; saved: number; failed: number } | { ok: false; message: string }> {
+  await requireUser();
+  if (!Array.isArray(inputs) || inputs.length === 0 || inputs.length > MAX_BATCH_SAVE) {
+    return { ok: false, message: "Ungültige Auswahl." };
+  }
+  let saved = 0;
+  let failed = 0;
+  // Nacheinander: save_recipe legt je Rezept auch die erste Version an
+  for (const input of inputs) {
+    const result = await persistRecipe({ ...input, id: undefined });
+    if (result.ok) saved++;
+    else failed++;
+  }
+  if (saved > 0) revalidatePath("/rezepte");
+  return { ok: true, saved, failed };
+}
+
+async function persistRecipe(input: RecipeInput): Promise<SaveRecipeStayResult> {
   const parsed = recipeInputSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, message: "Bitte prüfe die markierten Felder.", fieldErrors: flattenIssues(parsed.error) };
@@ -67,10 +102,7 @@ export async function saveRecipeAction(input: RecipeInput): Promise<SaveRecipeRe
     if (error?.code === "P0002") return { ok: false, message: "Das Rezept gibt es nicht mehr oder es gehört dir nicht." };
     return { ok: false, message: "Das Rezept konnte nicht gespeichert werden. Bitte versuche es noch einmal." };
   }
-
-  revalidatePath("/rezepte");
-  revalidatePath(`/rezepte/${recipeId}`);
-  redirect(`/rezepte/${recipeId}`);
+  return { ok: true, recipeId };
 }
 
 const idSchema = z.uuid();

@@ -1,6 +1,7 @@
 import "server-only";
 import type { CurrentUser } from "@/lib/auth";
 import { toBackupFile, type BackupFile, type RecipeRowForBackup } from "@/lib/domain/recipe-backup";
+import type { MarkdownRecipe } from "@/lib/domain/recipe-markdown";
 import { RECIPE_PHOTO_BUCKET } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
@@ -92,4 +93,63 @@ export async function buildRecipeBackup(userId: string): Promise<BackupFile> {
     .order("created_at");
   const rows = must(result, "Rezepte") as RecipeRowForBackup[];
   return toBackupFile(rows, new Date());
+}
+
+const MARKDOWN_SELECT = `id, title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url,
+  recipe_ingredients!recipe_ingredients_recipe_id_fkey(position, amount, unit, note, ingredient:ingredients!recipe_ingredients_ingredient_id_fkey(name)),
+  recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds)`;
+
+type MarkdownRow = Omit<MarkdownRecipe, "perServing" | "ingredients" | "steps"> & {
+  id: string;
+  recipe_ingredients: { position: number; amount: number | null; unit: MarkdownRecipe["ingredients"][number]["unit"]; note: string | null; ingredient: { name: string } }[];
+  recipe_steps: { position: number; text: string; timer_seconds: number | null }[];
+};
+
+async function toMarkdownRecipes(supabase: Awaited<ReturnType<typeof createClient>>, rows: MarkdownRow[]): Promise<MarkdownRecipe[]> {
+  if (rows.length === 0) return [];
+  const nutrition = must(
+    await supabase
+      .from("recipe_nutrition")
+      .select("recipe_id, kcal_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving, fiber_per_serving")
+      .in("recipe_id", rows.map((r) => r.id)),
+    "Nährwerte",
+  );
+  const byId = new Map(nutrition.map((n) => [n.recipe_id, n]));
+  return rows.map(({ id, recipe_ingredients, recipe_steps, ...r }) => {
+    const n = byId.get(id);
+    return {
+      ...r,
+      perServing:
+        n && n.kcal_per_serving != null
+          ? {
+              kcal: n.kcal_per_serving,
+              protein: n.protein_per_serving ?? 0,
+              carbs: n.carbs_per_serving ?? 0,
+              fat: n.fat_per_serving ?? 0,
+              fiber: n.fiber_per_serving ?? 0,
+            }
+          : null,
+      ingredients: [...recipe_ingredients]
+        .sort((a, b) => a.position - b.position)
+        .map((l) => ({ amount: l.amount, unit: l.unit, name: l.ingredient.name, note: l.note })),
+      steps: [...recipe_steps].sort((a, b) => a.position - b.position).map(({ text, timer_seconds }) => ({ text, timer_seconds })),
+    };
+  });
+}
+
+/** Ein lesbares Rezept (eigenes oder öffentliches, RLS) für den Markdown-Export. null, wenn nicht lesbar. */
+export async function getRecipeForMarkdown(recipeId: string): Promise<MarkdownRecipe | null> {
+  const supabase = await createClient();
+  const result = await supabase.from("recipes").select(MARKDOWN_SELECT).eq("id", recipeId).maybeSingle();
+  if (result.error) throw new Error(`Rezept konnte nicht gelesen werden (${result.error.code})`);
+  if (!result.data) return null;
+  const [recipe] = await toMarkdownRecipes(supabase, [result.data]);
+  return recipe ?? null;
+}
+
+/** Alle eigenen Rezepte (Küche) für das Buch als Markdown. */
+export async function getOwnRecipesForMarkdown(userId: string): Promise<MarkdownRecipe[]> {
+  const supabase = await createClient();
+  const result = await supabase.from("recipes").select(MARKDOWN_SELECT).eq("owner_id", userId).eq("recipe_type", "dish");
+  return toMarkdownRecipes(supabase, must(result, "Rezepte"));
 }

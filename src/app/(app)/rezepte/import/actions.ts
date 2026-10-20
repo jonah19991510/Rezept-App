@@ -2,16 +2,12 @@
 
 import { requireUser } from "@/lib/auth";
 import type { ImportDraft, ImportLine } from "@/lib/domain/import-draft";
-import { toIngredientOption, type IngredientOption } from "@/lib/domain/ingredient-option";
-import { parseIngredientLine, searchTermsFor } from "@/lib/domain/ingredient-line";
 import { extractRecipe } from "@/lib/domain/recipe-import";
 import { FetchPageError, fetchPublicPage } from "@/lib/server/fetch-page";
-import { createClient } from "@/lib/supabase/server";
-import { importUrlSchema } from "@/lib/validation/import";
+import { createIngredientMatcher } from "@/lib/server/ingredient-match";
+import { importUrlSchema, markdownMatchSchema, type MarkdownMatchInput } from "@/lib/validation/import";
 
 export type ImportResult = { ok: true; draft: ImportDraft } | { ok: false; message: string };
-
-const normalize = (s: string) => s.toLocaleLowerCase("de-DE").normalize("NFKD").replace(/\p{Diacritic}/gu, "").trim();
 
 /**
  * Import per Link: Seite serverseitig laden, schema.org/Recipe lesen, Zutatenzeilen zerlegen und
@@ -37,27 +33,8 @@ export async function importFromUrlAction(input: { url: string }): Promise<Impor
     };
   }
 
-  const supabase = await createClient();
-  const cache = new Map<string, IngredientOption | null>();
-  async function search(term: string): Promise<IngredientOption | null> {
-    const key = normalize(term);
-    if (!cache.has(key)) {
-      const { data } = await supabase.rpc("search_ingredients", { p_query: term, p_limit: 1 });
-      cache.set(key, data?.[0] ? toIngredientOption(data[0]) : null);
-    }
-    return cache.get(key) ?? null;
-  }
-
-  const lines: ImportLine[] = await Promise.all(
-    recipe.ingredientLines.map(async (raw) => {
-      const line = parseIngredientLine(raw);
-      for (const term of searchTermsFor(line.name)) {
-        const match = await search(term);
-        if (match) return { ...line, match, exact: normalize(match.name) === normalize(line.name) };
-      }
-      return { ...line, match: null, exact: false };
-    }),
-  );
+  const matchLine = await createIngredientMatcher();
+  const lines: ImportLine[] = await Promise.all(recipe.ingredientLines.map(matchLine));
 
   return {
     ok: true,
@@ -73,4 +50,31 @@ export async function importFromUrlAction(input: { url: string }): Promise<Impor
       steps: recipe.steps,
     },
   };
+}
+
+export type MarkdownMatchResult = { ok: true; lines: ImportLine[][] } | { ok: false; message: string };
+
+/**
+ * Markdown-Import (Phase 13): Die Datei liest der Browser selbst; hierher kommen nur die Zutatenzeilen
+ * der ausgewählten Rezepte (in Paketen), damit der Server Vorschläge aus der Zutatentabelle sucht.
+ * Zusätze aus der Datei (Gruppe wie „Teig“, „optional“) kommen vor die erkannte Notiz.
+ */
+export async function matchMarkdownIngredientsAction(input: MarkdownMatchInput): Promise<MarkdownMatchResult> {
+  await requireUser();
+  const parsed = markdownMatchSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Die Rezepte konnten nicht gelesen werden." };
+
+  const matchLine = await createIngredientMatcher();
+  const lines = await Promise.all(
+    parsed.data.recipes.map((recipe) =>
+      Promise.all(
+        recipe.ingredients.map(async ({ text, extraNote }) => {
+          const line = await matchLine(text);
+          const note = [extraNote, line.note].filter(Boolean).join(", ").slice(0, 200);
+          return { ...line, note };
+        }),
+      ),
+    ),
+  );
+  return { ok: true, lines };
 }

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, Link2, Plus, SearchX } from "lucide-react";
+import { BookOpen, Download, Plus, SearchX } from "lucide-react";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { RecipeCard } from "@/components/recipes/recipe-card";
@@ -42,8 +42,8 @@ export default async function RecipesPage({ searchParams }: PageProps<"/rezepte"
   const newButton = (
     <div className="flex flex-wrap gap-2">
       <Link href="/rezepte/import" className={buttonVariants({ variant: "outline" })}>
-        <Link2 aria-hidden />
-        Aus Link
+        <Download aria-hidden />
+        Importieren
       </Link>
       <Link href="/rezepte/neu" className={buttonVariants()}>
         <Plus aria-hidden />

@@ -98,6 +98,8 @@ export function ImportFlow({ thresholds, tagSuggestions }: { thresholds: Nutriti
         draft={draft}
         choices={choices}
         onChoicesChange={setChoices}
+        origin={`Gefunden auf ${hostOf(draft.sourceUrl)}`}
+        backLabel="Andere Adresse"
         onBack={() => setStep("url")}
         onContinue={() => {
           setStep("edit");
@@ -130,17 +132,28 @@ export function ImportFlow({ thresholds, tagSuggestions }: { thresholds: Nutriti
   );
 }
 
-/** Bestätigungsansicht: jede Zutatenzeile mit Original, erkannter Menge und zugeordneter Zutat. */
-function ImportReview({
+/**
+ * Bestätigungsansicht: jede Zutatenzeile mit Original, erkannter Menge und zugeordneter Zutat.
+ * Auch für den Markdown-Import (dort mit Hinweisen, was unsicher war).
+ */
+export function ImportReview({
   draft,
   choices,
   onChoicesChange,
+  origin,
+  notes = [],
+  backLabel,
   onBack,
   onContinue,
 }: {
   draft: ImportDraft;
   choices: LineChoice[];
   onChoicesChange: (choices: LineChoice[]) => void;
+  /** Zeile über dem Titel, z. B. „Gefunden auf chefkoch.de“ */
+  origin: string;
+  /** Hinweise unter dem Titel, z. B. „Portionen fehlen“ */
+  notes?: string[];
+  backLabel: string;
   onBack: () => void;
   onContinue: () => void;
 }) {
@@ -164,12 +177,22 @@ function ImportReview({
   return (
     <div className="space-y-6">
       <section className="space-y-1">
-        <p className="text-sm text-muted-foreground">Gefunden auf {hostOf(draft.sourceUrl)}</p>
+        <p className="text-sm text-muted-foreground">{origin}</p>
         <h2 className="text-2xl font-semibold text-balance">{draft.title}</h2>
         <p className="text-sm text-muted-foreground">
           {draft.lines.length} Zutaten · {draft.steps.length} Schritte
           {draft.servings ? ` · ${draft.servings} Portionen` : ""}
         </p>
+        {notes.length > 0 ? (
+          <ul className="flex flex-wrap gap-1.5 pt-1">
+            {notes.map((note) => (
+              <li key={note} className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs text-primary">
+                <CircleAlert className="size-3.5" aria-hidden />
+                {note}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </section>
 
       <section aria-labelledby="zuordnung" className="space-y-3">
@@ -249,9 +272,9 @@ function ImportReview({
           {summary.suggested ? ` · ${summary.suggested} Vorschläge prüfen` : ""}
         </p>
         <div className="flex w-full gap-2 sm:w-auto">
-          <Button type="button" variant="outline" onClick={onBack} aria-label="Andere Adresse">
+          <Button type="button" variant="outline" onClick={onBack} aria-label={backLabel}>
             <ArrowLeft aria-hidden />
-            <span className="max-sm:hidden">Andere Adresse</span>
+            <span className="max-sm:hidden">{backLabel}</span>
           </Button>
           <Button type="button" onClick={onContinue} className="flex-1 sm:flex-none">
             Weiter zum Bearbeiten

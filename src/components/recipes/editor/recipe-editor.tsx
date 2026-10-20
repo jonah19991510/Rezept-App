@@ -90,10 +90,16 @@ export function RecipeEditor({
   initial,
   thresholds,
   tagSuggestions,
+  onSaved,
+  cancel,
 }: {
   initial: EditorInitial;
   thresholds: NutritionThresholds;
   tagSuggestions: string[];
+  /** Markdown-Import: nach dem Speichern hier weitermachen statt zur Rezeptseite zu wechseln */
+  onSaved?: (recipeId: string) => void;
+  /** Statt „Abbrechen“ (Link zur Übersicht) eine eigene Aktion, z. B. „Überspringen“ */
+  cancel?: { label: string; onClick: () => void };
 }) {
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description);
@@ -243,8 +249,12 @@ export function RecipeEditor({
     setMessage(undefined);
     startTransition(async () => {
       setDirty(false);
-      const result = await saveRecipeAction(input);
-      // Bei Erfolg leitet die Action weiter; hier landen nur Fehler
+      const result = await saveRecipeAction(input, onSaved ? { stay: true } : undefined);
+      // Bei Erfolg leitet die Action weiter (außer mit onSaved); sonst landen hier nur Fehler
+      if (result?.ok) {
+        onSaved?.(result.recipeId);
+        return;
+      }
       if (result && !result.ok) {
         setDirty(true);
         setErrors(result.fieldErrors ?? {});
@@ -572,9 +582,15 @@ export function RecipeEditor({
           <span className="block text-xs text-muted-foreground">pro Portion</span>
         </p>
         <div className="flex gap-2">
-          <Link href={cancelHref} className={buttonVariants({ variant: "ghost" })}>
-            Abbrechen
-          </Link>
+          {cancel ? (
+            <Button type="button" variant="ghost" onClick={cancel.onClick} disabled={pending}>
+              {cancel.label}
+            </Button>
+          ) : (
+            <Link href={cancelHref} className={buttonVariants({ variant: "ghost" })}>
+              Abbrechen
+            </Link>
+          )}
           <Button type="button" onClick={save} disabled={pending}>
             {pending ? "Wird gespeichert …" : "Speichern"}
           </Button>

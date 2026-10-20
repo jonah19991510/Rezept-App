@@ -16,11 +16,10 @@
 | 10 – Vorratsschrank, „Was kann ich kochen?“, Text-Export | **fertig** (19.10.2026), live, vom Nutzer abgenommen (Teilen am Handy erst über HTTPS prüfbar) |
 | 11 – Trainingstage, Lücken-Hinweis, Meal Prep, Reste-Vorschläge | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 12 – Preise und Kosten, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
-| 13–15 | offen |
+| 13 – Markdown-Import und -Export | **fertig** (20.10.2026), vom Nutzer an PC und Handy getestet, live |
+| 14–15 | offen |
 
-**Nächster Schritt:** Pause auf Wunsch des Nutzers (19.10.2026 abends). Phase 13 (Markdown-Import und -Export)
-erst beginnen, wenn er es sagt; vorher eine Markdown-Beispieldatei bei ihm anfragen. Zu Beginn der nächsten Sitzung
-den LAN-Server starten.
+**Nächster Schritt:** Phase 14 (Teilen per Link mit Rezeptkarte, Open-Graph-Bild, Druck- und Bildexport).
 
 **Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
 (Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`
@@ -76,6 +75,80 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 13 entstanden ist: Markdown-Export
+
+- **Format** `src/lib/domain/recipe-markdown.ts` (mit Tests): je Rezept Überschrift, Zeile mit Kategorie, Portionen,
+  Vorbereitung/Kochen, Meal-Prep, dann Beschreibung, `**Tags:**`, `**Pro Portion:**` (kcal + Makros, nur wenn
+  berechenbar), `Zutaten` als Liste („250 g Rote Linsen, Notiz“ wie auf der Rezeptseite, Brüche wie ½ TL),
+  `Zubereitung` nummeriert (mehrzeilige Schritte eingerückt, Timer als „*(Timer: 20 Min.)*“), `Quelle: <URL>`.
+  Markdown-Zeichen im Text werden maskiert.
+- **Einzelnes Rezept:** Rezeptseite → „⋮“ → „Als Markdown“ → `/rezepte/[id]/markdown` (Titel als `#`, Dateiname aus
+  dem Titel, z. B. `kaesespaetzle.md`). Nur für eigene Rezepte im Menü; die Route liefert, was RLS lesen lässt.
+- **Ganzes Buch:** Einstellungen → „Rezeptbuch als Markdown“ → `/einstellungen/rezepte-markdown`
+  (`rezeptbuch-JJJJ-MM-TT.md`): `# Rezeptbuch von <Name>`, Datum und Anzahl, `## Inhalt` mit Links, nach Kategorie
+  gruppiert (Reihenfolge wie im Filter, „Ohne Kategorie“ zuletzt, darin alphabetisch), dann alle Rezepte als `##`
+  mit `---` dazwischen. Sprungmarken wie GitHub/Obsidian/VS Code (Umlaute bleiben, Doppelte bekommen -1, -2, die
+  wiederholten „Zutaten“/„Zubereitung“ zählen mit). Wie die Rezept-Sicherung nur Küchenrezepte, ohne Fotos.
+- Abfrage in `data-export.ts` (`getRecipeForMarkdown`, `getOwnRecipesForMarkdown`) mit dem Client des Nutzers;
+  Typprüfung der Select-Strings ohne Cast.
+- 225 Tests, Typecheck und Lint grün; beide Routen leiten ohne Login auf `/login` um. Kein Browser-Check mit echten
+  Daten (Claude kann sich nicht anmelden), deshalb Test durch den Nutzer.
+
+## Was in Phase 13 entstanden ist: Markdown-Import
+
+- **Quelle des Nutzers:** Notion-Datenbank „Rezepte“ (Dashboard / Personal / Essen & Trinken, ca. 120 Einträge).
+  Aufbau je Rezeptseite (per Notion-Connector gelesen, nichts verändert): Eigenschaften „Art“ (Pasta, Auflauf, Reis,
+  Fleisch, Pizza/Flammenkuchen, Getränk, Sandwich, Suppe, Frittiert, Saucen, Burger, Brötchen/ Brot, Wrap, Toastie,
+  Bowl, Snacks, Mexikanisch), „Kategorie“ (Mittag/Abend, Snack, Frühstück), kcal/Eiweiß/Fett/KH „pro Person“ als Text;
+  graue Kästen „Vorbereitung“, „Koch- / Backzeit“, „Küche“, „Anzahl Personen“ (oft leer); Bild; „### Zutaten“ und
+  „### Zubereitung“ als Listen, teils mit Gruppen („Teig:“, „Für die Füllung: Wrap“), „**Optionale Zutat**“ und
+  „**Optionaler Zubereitungsschritt**“; leere Vorlagen „Page 3“.
+- **Parser** `src/lib/domain/markdown-import.ts` (Tests): ein Rezept pro Überschrift. Die Rezept-Ebene ist die tiefste
+  Überschriften-Ebene, unter der „Zutaten“/„Zubereitung“ stehen (Notion: `#` je Datei, eigener Buch-Export: `##`);
+  sonst oberste Ebene bzw. unter einem einzelnen Buchtitel; ohne Überschrift der Dateiname (Notion-ID wird entfernt).
+  Erkennt Eigenschaften als Zeilen/Zitate/fett („Art: Pasta“, „> Anzahl Personen: 4“, „**Tags:** …“), Zeiten
+  („10 min“, „1 Std. 15 Min.“, „1,5 h“), Portionen (Spanne → kleinere Zahl + Hinweis), Kategorie aus Art/Kategorie
+  (nicht passende Werte wie „Wrap“ werden Tags, „Mittag/Abend“ wird ignoriert), „Küche“ als Tag, Quelle,
+  Nährwerte als Vergleichstext („Laut Datei: 972 kcal · Eiweiß 46,9 g …“), Gruppen und „optional“ als Zusatz in der
+  Notiz, Gruppen in Schritten als Präfix („Teig: …“), Aufzählungen ohne Menge („Salz, Pfeffer, Olivenöl“) als einzelne
+  Zutaten (nur groß geschriebene Wörter, also nicht „Zwiebel, gewürfelt“), Tabellen, Timer aus dem eigenen Export.
+  Leere Seiten (ohne Zutaten, Schritte, Beschreibung) werden übersprungen. Hinweise: „Portionen fehlen“, „Keine Zutaten
+  erkannt“, „Keine Schritte erkannt“, „Kein richtiger Titel“ (Page 3 …). Rundreise mit dem eigenen Export getestet.
+- **Dateien lesen** `src/lib/markdown-files.ts` (nur im Browser, Tests): `.md`/`.txt`, mehrere Dateien oder ZIP
+  (auch das verschachtelte „…-Part-1.zip“ großer Notion-Exporte), nur Markdown wird entpackt, höchstens 30 MB Text.
+  Neue Abhängigkeit **fflate** 0.8 (MIT, ohne weitere Abhängigkeiten).
+- **Ablauf** `/rezepte/import?quelle=markdown` (Reiter „Per Link“ / „Aus Markdown“, Knopf auf `/rezepte` heißt jetzt
+  „Importieren“), Komponente `markdown-import-flow.tsx`:
+  1. Datei wählen (mit Anleitung für den Notion-Export).
+  2. Vorschau aller erkannten Rezepte mit Häkchen; vorausgewählt ist alles außer Doppelten (Titel schon im Buch)
+     und Seiten ohne richtigen Titel.
+  3. Zutaten zuordnen auf dem Server in Paketen zu 10 Rezepten (`matchMarkdownIngredientsAction`, Zod;
+     gemeinsamer Matcher `src/lib/server/ingredient-match.ts`, auch vom Link-Import benutzt, mit Cache).
+  4. **Sicher erkannte** Rezepte (`reviewReasons` leer: Portionen da, Zutaten und Schritte da, jede Zutat genau
+     gefunden und in Gramm umrechenbar) werden direkt gespeichert (`saveRecipesBatchAction`, je 20).
+  5. Alle anderen nacheinander: dieselbe Bestätigungsansicht wie beim Link-Import (`ImportReview`, jetzt exportiert,
+     mit Hinweisen, was unsicher war) → Editor → Speichern → nächstes Rezept; „Überspringen“ jederzeit. Beim Verlassen
+     der Seite fragt der Browser nach, solange noch Rezepte offen sind.
+  6. Zusammenfassung (direkt gespeichert, geprüft, übersprungen, Fehler). Alles privat, ohne Fotos.
+- `saveRecipeAction(input, { stay: true })` gibt die ID zurück statt weiterzuleiten; der Editor hat dafür `onSaved`
+  und `cancel` (z. B. „Überspringen“).
+- 250 Tests, Typecheck, Lint und Build grün. Browser-Check über eine Vorschauseite (Datei per Skript gewählt,
+  Auswahl-Liste am PC und bei 375 px, Notion-Anleitung aufklappen) – wieder gelöscht. Zuordnen/Speichern braucht
+  Login und ist deshalb nur durch die Unit-Tests und den Typcheck abgesichert.
+
+## Wie der Nutzer Phase 13 testet
+
+1. Ein Rezept öffnen → „⋮“ → „Als Markdown“: Datei wird gespeichert, Titel, Zutaten mit Mengen, Schritte stimmen.
+2. Einstellungen → „Rezeptbuch als Markdown“: Datei z. B. in VS Code (Vorschau) oder Obsidian öffnen, im
+   Inhaltsverzeichnis auf ein Rezept klicken → springt dorthin.
+3. Am Handy dasselbe (Download landet in „Dateien“ bzw. „Downloads“).
+4. Notion: Seite „Rezepte“ → „•••“ → „Exportieren“ → „Markdown & CSV“, „Unterseiten einschließen“ und „Ordner für
+   Unterseiten erstellen“ an → ZIP speichern.
+5. Rezepte → „Importieren“ → „Aus Markdown“ → ZIP auswählen: Liste prüfen (Titel, Zutaten-/Schrittzahl, Hinweise,
+   leere „Page 3“ übersprungen). Zum Testen erst nur 2–3 Rezepte auswählen.
+6. „Übernehmen“: Zutaten zuordnen bzw. weglassen, im Editor Portionen ergänzen, speichern → nächstes Rezept.
+7. Die eben exportierte Buch-Datei (Schritt 2) wieder importieren: Doppelte sind abgewählt.
 
 ## Was in Phase 12 entstanden ist
 
@@ -692,7 +765,9 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
   Zielwoche stehen (er wird ignoriert, weil sein Kochtag fehlt). Bei Gelegenheit `copy_plan_week` per Migration
   batch-fähig machen und verwaiste Batches aufräumen.
 
-- Markdown-Beispieldatei für Phase 13 beim Nutzer anfragen.
+- Markdown-Import: Fotos aus dem Notion-ZIP werden nicht übernommen (wären im Archiv dabei; Ergänzung für später).
+- Markdown-Import: Die Warteschlange zur Prüfung lebt nur in der offenen Seite; wer sie verlässt, fängt mit der
+  Datei neu an (bereits gespeicherte Rezepte sind dann „Gibt es schon im Buch“ und abgewählt).
 - Preise: Es gibt eine Packungsangabe je Zutat (keine Preise je Laden nebeneinander). Reicht für den Anfang.
 - Statistik „Meistgekocht“: Gekochte öffentliche Rezepte anderer erscheinen mit Titel „Rezept“, ein Tipp darauf
   filtert die eigene Liste auf „nichts“ (wie bei „Meistgeplant“).
