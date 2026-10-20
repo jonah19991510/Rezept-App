@@ -21,6 +21,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
+  // Absolute Adressen für Link-Vorschauen (og:image der geteilten Rezeptkarten)
+  metadataBase: new URL(process.env.SITE_URL?.trim() || "http://localhost:3000"),
   title: {
     default: "Rezeptbuch",
     template: "%s · Rezeptbuch",

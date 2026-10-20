@@ -62,6 +62,17 @@ bestehen, wenn das Original wieder privat gemacht oder gelöscht wird oder der A
 nur noch „Rezept nicht mehr verfügbar“; beim Löschen des Rezepts verschwinden sie per Cascade. Wer ein Rezept wann
 übernommen oder eingeplant hat, sieht der Owner nicht.
 
+**Teilen per Link (ab Phase 14):** Der Owner kann zu einem Rezept einen Link erzeugen (`recipes.share_token`,
+22 zufällige Zeichen). Wer den Link hat, sieht ohne Account eine Rezeptkarte: Titel, Beschreibung, Foto, Zutaten,
+Schritte, Nährwerte und den **Anzeigenamen** des Owners – auch bei privaten Rezepten. Nicht enthalten sind E-Mail,
+Nutzer- und Rezept-IDs und der Speicherpfad des Fotos (das Foto liefert die App über `/r/<token>/foto` aus). Gelesen
+wird nur über die Datenbankfunktion `get_shared_recipe` (genau ein Rezept pro Token); an den Tabellenrechten ändert
+sich nichts. Messenger holen beim Teilen ein Vorschaubild (`/r/<token>/opengraph-image`) und die Seitenvorschau
+direkt beim Server ab; dafür dürfen deren Vorschau-Bots laut `robots.txt` nur `/r/` lesen, indexiert wird nichts
+(noindex). Eingeloggte können eine private Kopie übernehmen (`fork_shared_recipe`, mit Foto-Kopie in den eigenen
+Ordner). „Widerrufen“ löscht den Token sofort: Seite, Foto und Bilder antworten danach mit 404 (Browser dürfen das
+Foto bis zu 10 Minuten zwischenspeichern). Der Token verschwindet mit dem Rezept bzw. Account.
+
 **Hinweis:** Tagesziele, Trainingstage und Essenspläne können Rückschlüsse auf Gesundheit und
 Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
@@ -105,6 +116,18 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 - [ ] noindex-Regeln bewusst überprüft (robots.txt, Meta-Tag, `X-Robots-Tag`): sollen sie bleiben?
 
 ## Änderungsverlauf
+
+- **Phase 14:** Teilen per Link (siehe „Teilen per Link“ oben): Spalte `recipes.share_token` wird jetzt genutzt,
+  neue Datenbankfunktionen `set_recipe_share`, `get_shared_recipe` (auch ohne Login, Security Definer, nur ein
+  Rezept pro Token) und `fork_shared_recipe`. Öffentliche Seite `/r/<token>` mit Druckansicht, Vorschaubild für
+  Messenger und Bild-Export (Story-Format) – alles wird beim Abruf erzeugt und nicht gespeichert. `robots.txt`
+  erlaubt bekannten Vorschau-Bots (WhatsApp/Facebook, Telegram, X, Slack, Discord, LinkedIn) nur `/r/`. Im
+  Datenexport enthalten (Spalte `share_token`), beim Löschen von Rezept oder Account entfernt. Keine neuen
+  Tabellen, keine neuen Dienstleister.
+
+- **Phase 13:** Markdown-Export (einzelnes Rezept, ganzes Buch) wird beim Abruf erzeugt und nicht gespeichert.
+  Markdown-Import: Die Datei liest nur der Browser; an den Server gehen nur die Zutatenzeilen der ausgewählten
+  Rezepte (für die Zuordnung) und danach die gespeicherten Rezepte. Keine neuen Tabellen, keine neuen Dienstleister.
 
 - **Phase 12:** Jetzt genutzt: `ingredient_prices` (eigene Zutatenpreise, optional Laden), `recipe_versions`
   (frühere Fassungen eigener Rezepte mit optionaler Änderungsnotiz, nur für den Owner), `cook_logs` mit Anzeige,

@@ -68,4 +68,15 @@ Du brauchst zwei Accounts (dein Admin-Account und einen eingeladenen Test-Accoun
    Der einzige Admin bekommt beim Löschen einen Hinweis statt einer Löschung.
 9. **noindex:** <http://localhost:3000/robots.txt> zeigt `Disallow: /`. In den Entwicklertools
    (Netzwerk → Dokument → Antwort-Header) steht `X-Robots-Tag: noindex, nofollow`, im HTML
-   `<meta name="robots" content="noindex, nofollow">`.
+   `<meta name="robots" content="noindex, nofollow">`. Ab Phase 14 dürfen nur Vorschau-Bots der Messenger
+   zusätzlich `/r/` lesen (eigener Block in robots.txt); auch dort steht noindex.
+10. **Teilen per Link (Phase 14):** Admin öffnet ein **privates** Rezept → „Teilen per Link“ → „Link erstellen“ →
+   Link kopieren. Im privaten Fenster **abgemeldet** öffnen: Rezeptkarte mit Foto, Anzeigename, keine E-Mail;
+   Knopf „Anmelden zum Übernehmen“. Mit dem Test-Account angemeldet: „In mein Rezeptbuch übernehmen“ → private
+   Kopie mit Foto. Dann beim Admin „Widerrufen“ → der alte Link zeigt „Link ungültig“, `…/foto` und `…/bild`
+   antworten mit „Nicht gefunden“; die Kopie des Test-Accounts bleibt. Im SQL-Editor als Gegenprobe:
+
+   ```sql
+   -- ohne gültigen Token kommt nichts zurück
+   select public.get_shared_recipe('AAAAAAAAAAAAAAAAAAAAAA');
+   ```

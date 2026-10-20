@@ -17,9 +17,11 @@
 | 11 – Trainingstage, Lücken-Hinweis, Meal Prep, Reste-Vorschläge | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 12 – Preise und Kosten, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 13 – Markdown-Import und -Export | **fertig** (20.10.2026), vom Nutzer an PC und Handy getestet, live |
-| 14–15 | offen |
+| 14 – Teilen per Link, Rezeptkarte, Open-Graph-Bild, Druck- und Bildexport | **fertig** (20.10.2026), Migration live, App-Code lokal committet, noch nicht gepusht; Test durch den Nutzer steht aus |
+| 15 | offen |
 
-**Nächster Schritt:** Phase 14 (Teilen per Link mit Rezeptkarte, Open-Graph-Bild, Druck- und Bildexport).
+**Nächster Schritt:** Nutzer testet Phase 14 (siehe unten), danach Push (= Deployment). Die Link-Vorschau in
+WhatsApp & Co. lässt sich erst live prüfen (die Messenger müssen die Seite aus dem Internet abrufen).
 
 **Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
 (Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`
@@ -75,6 +77,58 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 14 entstanden ist
+
+- **Migration** `…20261020080000_share_links` (schon in der Datenbank, live läuft unverändert weiter):
+  Format-Check für `recipes.share_token` (22 Zeichen base64url), `set_recipe_share(recipe, enabled)` (Invoker, nur
+  Owner; behält einen vorhandenen Token, Widerrufen setzt null), `get_shared_recipe(token)` (Security Definer, auch
+  für `anon`; liefert genau ein Rezept als JSON ohne IDs/E-Mail, Autor nur Anzeigename, Nährwerte pro Portion),
+  `fork_shared_recipe(token)` (Security Definer, nur eingeloggt; private Kopie mit `forked_from_id`). An der RLS von
+  `recipes` ändert sich nichts. Gegen die echte DB mit einem sich selbst zurückrollenden Test geprüft (Token-Länge,
+  gleich bleibender Token, keine IDs, anon liest keine Tabelle und kann nicht kopieren, falsche Tokens → null,
+  Kopie gehört dem Aufrufer). Security-Advisor: die neuen Warnungen „Security Definer ausführbar“ für
+  `get_shared_recipe`/`fork_shared_recipe` sind gewollt (SPEC). `rls_auto_enable()` (anon ausführbar) und
+  „Leaked Password Protection“ waren schon vorher da.
+- **Rezeptseite (Owner):** Karte „Teilen per Link“ (`share-link.tsx`): Link erstellen, Kopieren (ohne HTTPS mit
+  Fallback zum Markieren), Teilen (Web Share API, wo vorhanden), Ansehen, Widerrufen mit Bestätigung.
+- **Öffentliche Rezeptkarte** `/r/[token]` (ohne Login, Pfad war im Proxy schon frei): Foto, Kategorie, Titel,
+  „von <Anzeigename>“, Beschreibung, Portionen/Zeit, Tags, Nährwerte und Zutaten mit Portions-Skalierung
+  (`ScaledRecipeContent` mit `showCookButton={false}`), Schritte, Stand und Quelle. Knöpfe: „In mein Rezeptbuch
+  übernehmen“ (eingeloggt; Foto wird mit dem Admin-Client in den eigenen Ordner kopiert, weil das Original privat
+  sein kann), „Dein Rezept öffnen“ (eigenes Rezept), „Anmelden zum Übernehmen“ (Gast, zurück per `?weiter=`),
+  „Drucken“, „Als Bild“. Ungültiger/widerrufener Link: eigene Seite „Link ungültig“.
+- **Foto** `/r/[token]/foto`: Server lädt den Pfad, den `get_shared_recipe` liefert, mit dem Admin-Client; der
+  Speicherpfad (enthält die Nutzer-ID) erreicht nie den Browser. `Cache-Control: private, max-age=600`.
+- **Link-Vorschau** `opengraph-image.tsx` (1200×630, JPEG ~110 KB) und **Story-Bild** `/r/[token]/bild`
+  (1080×1920, JPEG ~270 KB, Download `titel.jpg`), gebaut in `src/lib/share-images.tsx` mit ImageResponse. WebP-Fotos
+  zeichnet der ImageResponse-Renderer nicht, daher wandelt **sharp** (jetzt direkte Abhängigkeit, gleiche Version
+  0.35.5 wie in Next) das Foto vorher in JPEG und das fertige PNG danach in JPEG (WhatsApp zeigt große Bilder sonst
+  nicht). Schrift: die in Next eingebaute (Fraunces/Inter gibt es nur als woff2, das ImageResponse nicht liest).
+- **Meta:** `metadataBase` aus `SITE_URL` (absolute og:image-Adressen), og:title/description/type/locale, Twitter-Card.
+  noindex bleibt überall. `robots.ts`: Vorschau-Bots (facebookexternalhit, WhatsApp, TelegramBot, Twitterbot,
+  Slackbot-LinkExpanding, Discordbot, LinkedInBot) dürfen `/r/` lesen, sonst `Disallow: /` für alle.
+- **Druckansicht:** Kopf, Knöpfe, Portionsschalter ausgeblendet, Karte ohne Rahmen, Schritte brechen nicht mitten durch.
+- Domain `src/lib/domain/shared-recipe.ts` (Zod-Prüfung der DB-Antwort, Texte, Dateiname; Tests), Server
+  `src/lib/server/shared-recipes.ts`, Actions `rezepte/share-actions.ts` und `r/[token]/actions.ts`.
+- Doku: `DATENVERARBEITUNG.md` (Abschnitt „Teilen per Link“, Änderungsverlauf Phase 13/14),
+  `docs/RLS-PRUEFUNG.md` Punkt 10.
+- 256 Tests, Typecheck, Lint und Build grün. Browser-Check als Gast mit einem kurz gesetzten Test-Token auf
+  „Pad Kra Pao“ (privat, mit Foto): Karte am PC und bei 375 px, Portionen 2 → 4, Meta-Tags, Vorschau- und Story-Bild
+  angesehen, nach dem Widerrufen 404 für Seite und Foto. Test-Token wieder entfernt. Nicht im Browser geprüft (braucht
+  Login): die Karte „Teilen per Link“ auf der Rezeptseite und „In mein Rezeptbuch übernehmen“ (Datenbankteil per
+  SQL-Test geprüft, Foto-Kopie nicht).
+
+## Wie der Nutzer Phase 14 testet
+
+1. Ein privates Rezept mit Foto öffnen → ganz unten „Teilen per Link“ → „Link erstellen“ → „Kopieren“.
+2. Den Link in einem privaten Fenster (abgemeldet) öffnen: Rezeptkarte mit Foto, Portionen umschalten, „Drucken“
+   (Vorschau: ohne Knöpfe), „Als Bild“ (JPEG im Story-Format).
+3. Mit einem zweiten Account (oder wieder angemeldet im normalen Fenster): „In mein Rezeptbuch übernehmen“ → private
+   Kopie mit Foto. Beim eigenen Rezept steht stattdessen „Dein Rezept öffnen“.
+4. Am Handy (http://192.168.178.47:3000) dasselbe; „Teilen“ öffnet dort das Teilen-Menü.
+5. „Widerrufen“ → der alte Link zeigt „Link ungültig“.
+6. Nach dem Deployment: den Link per WhatsApp an dich selbst schicken → Vorschau mit Foto, Titel und Makros.
 
 ## Was in Phase 13 entstanden ist: Markdown-Export
 

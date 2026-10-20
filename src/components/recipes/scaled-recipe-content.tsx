@@ -32,6 +32,7 @@ export function ScaledRecipeContent({
   lines,
   missingGramsNames,
   steps,
+  showCookButton = true,
 }: {
   recipeId: string;
   servings: number;
@@ -39,6 +40,8 @@ export function ScaledRecipeContent({
   lines: ScalableLine[];
   missingGramsNames: string[];
   steps: ReactNode;
+  /** Geteilte Rezeptkarte: ohne Kochmodus (braucht Login und ein lesbares Rezept) */
+  showCookButton?: boolean;
 }) {
   const [target, setTarget] = useState(servings);
   const factor = scaleFactor(target, servings);
@@ -47,12 +50,14 @@ export function ScaledRecipeContent({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3">
-        <Link href={`/kochen/${recipeId}?portionen=${target}`} className={buttonVariants({ size: "lg" })}>
-          <ChefHat aria-hidden />
-          Kochen starten
-        </Link>
-      </div>
+      {showCookButton ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href={`/kochen/${recipeId}?portionen=${target}`} className={buttonVariants({ size: "lg" })}>
+            <ChefHat aria-hidden />
+            Kochen starten
+          </Link>
+        </div>
+      ) : null}
 
       {perServing ? (
         <section aria-labelledby="makros" className="rounded-3xl border bg-card p-4 md:p-5">
@@ -79,13 +84,15 @@ export function ScaledRecipeContent({
               Zutaten
             </h2>
             {changed ? (
-              <Button type="button" variant="ghost" size="sm" onClick={() => setTarget(servings)}>
+              <Button type="button" variant="ghost" size="sm" className="print:hidden" onClick={() => setTarget(servings)}>
                 <RotateCcw aria-hidden />
                 Original ({String(servings).replace(".", ",")})
               </Button>
             ) : null}
           </div>
-          <PortionStepper value={target} onChange={setTarget} />
+          <div className="print:hidden">
+            <PortionStepper value={target} onChange={setTarget} />
+          </div>
           {lines.length === 0 ? (
             <p className="text-sm text-muted-foreground">Noch keine Zutaten eingetragen.</p>
           ) : (

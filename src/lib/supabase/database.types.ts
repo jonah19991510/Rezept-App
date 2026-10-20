@@ -966,6 +966,8 @@ export type Database = {
         Returns: number
       }
       duplicate_recipe: { Args: { p_recipe_id: string }; Returns: string }
+      fork_shared_recipe: { Args: { p_token: string }; Returns: string }
+      get_shared_recipe: { Args: { p_token: string }; Returns: Json }
       replace_plan_shopping_items: { Args: { p_items: Json }; Returns: number }
       save_recipe: {
         Args: {
@@ -1004,6 +1006,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      set_recipe_share: {
+        Args: { p_enabled: boolean; p_recipe_id: string }
+        Returns: string
       }
     }
     Enums: {

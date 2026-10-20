@@ -10,6 +10,7 @@ import { RecipeActions } from "@/components/recipes/recipe-actions";
 import { RecipeCost } from "@/components/recipes/recipe-cost";
 import { RecipeTags } from "@/components/recipes/recipe-tags";
 import { ScaledRecipeContent } from "@/components/recipes/scaled-recipe-content";
+import { ShareLink } from "@/components/recipes/share-link";
 import { VersionHistory } from "@/components/recipes/version-history";
 import { requireUser } from "@/lib/auth";
 import { authorName } from "@/lib/domain/community";
@@ -20,6 +21,7 @@ import { formatMinutes } from "@/lib/format-quantity";
 import { CATEGORY_LABELS } from "@/lib/labels";
 import { getCookLogs, getIngredientNutrition, getRecipeCost, getRecipeVersions } from "@/lib/server/kitchen-log";
 import { getRecipeDetail } from "@/lib/server/recipes";
+import { getSiteUrl } from "@/lib/site-url";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -189,6 +191,10 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
 
       {detail.isOwner ? (
         <PublishToggle recipeId={recipe.id} isPublic={recipe.is_public} displayName={user.displayName} />
+      ) : null}
+
+      {detail.isOwner ? (
+        <ShareLink recipeId={recipe.id} title={recipe.title} initialToken={recipe.share_token} siteOrigin={await getSiteUrl()} />
       ) : null}
 
       {recipe.source_url ? (
