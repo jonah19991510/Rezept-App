@@ -837,8 +837,6 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
   klingelt der Timer erst beim Aufwecken (Browser-Grenze; Push-Benachrichtigungen wären ein eigenes Thema).
 - Die Konsole meldet in der Entwicklung „Encountered a script tag while rendering React component“ (kommt von
   next-themes, harmlos).
-- Phase 14: Route `/foto/…` für geteilte Rezeptkarten ohne Login öffnen (nur mit gültigem Share-Token, per
-  Security-Definer-Funktion) und Open-Graph-Bild daraus erzeugen.
 - Datenexport enthält die Fotos nur als Liste. Ein ZIP mit allen Fotos wäre eine Ergänzung für später.
 - Rezept-Sicherung kennt nur Küchenrezepte; Cocktail-Felder mit Phase 15 ergänzen (Format-Version 2).
 - Service-Worker-Version (`VERSION` in `public/sw.js`) bei Änderungen am Caching hochzählen.
@@ -852,7 +850,6 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
   „nichts“, weil es nicht im eigenen Buch ist. Kleinigkeit, bei Gelegenheit verbessern.
 - Advisor-Hinweis „Leaked Password Protection“ (Prüfung neuer Passwörter gegen HaveIBeenPwned, per
   k-Anonymität) ist aus. Optional im Dashboard (Authentication → Policies/Passwords), evtl. nur in bezahlten Plänen.
-- Phase 14: Security-Definer-Funktion `get_shared_recipe(token)` für `/r/[token]` (Proxy lässt `/r/` schon durch).
 
 ## Bekannte Probleme
 
