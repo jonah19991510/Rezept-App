@@ -100,7 +100,8 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 ## Ergänzung nach Phase 15: Seite „Zutaten“ (20.10.2026, Wunsch des Nutzers)
 
 - **Profilmenü → Zutaten** (`/zutaten`): alle Zutaten aus den eigenen Rezepten und Cocktails plus alle selbst
-  angelegten, mit Suche und Ansichten „Alle / In Rezepten / Selbst angelegt / Ohne Preis“. Je Zeile Zutatengruppe,
+  angelegten, mit Suche und Ansichten „Alle / In Rezepten / Selbst angelegt / Ohne Preis“. „Selbst angelegt“ heißt
+  selbst erstellt (Quelle „user“); aus Open Food Facts übernommene Zutaten stehen nur unter „Alle“ (bzw. „In Rezepten“). Je Zeile Zutatengruppe,
   Herkunft (Grundbestand, Open Food Facts, selbst angelegt), Anzahl Rezepte und eigener Preis pro 100 g/ml.
 - Antippen öffnet **Preis** (eintragen, ändern, löschen; dasselbe Formular wie unter Preise), **Bearbeiten** (nur
   selbst angelegte Zutaten: Name, Nährwerte, Gruppe, Ernährungsform, Stückgewicht, Dichte, Alkoholgehalt) bzw.

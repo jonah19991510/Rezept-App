@@ -19,10 +19,11 @@ export type MyIngredientPrice = {
 
 export type MyIngredient = {
   ingredient: IngredientOption;
-  /** selbst angelegt (auch aus Open Food Facts übernommen) */
+  /**
+   * Selbst erstellt (Quelle „user“). Aus Open Food Facts übernommene Zutaten zählen nicht dazu: die hat der Nutzer
+   * nur hinzugefügt, nicht erstellt. Selbst erstellte sind auch die einzigen, die er ändern darf (RLS).
+   */
   isOwn: boolean;
-  /** Angaben änderbar: selbst angelegt und nicht aus Open Food Facts */
-  editable: boolean;
   /** eigene Rezepte und Cocktails, in denen die Zutat vorkommt (alphabetisch, ohne Doppelte) */
   recipes: { id: string; title: string; type: Enums<"recipe_type"> }[];
   price: MyIngredientPrice | null;
@@ -48,8 +49,7 @@ export function collectMyIngredients(input: {
       const { created_by, ...ingredient } = row;
       item = {
         ingredient,
-        isOwn: created_by === input.userId,
-        editable: canEditIngredient(row, input.userId),
+        isOwn: canEditIngredient({ created_by, source: row.source }, input.userId),
         recipes: [],
         price: input.prices.get(row.id) ?? null,
       };
@@ -105,7 +105,7 @@ export function filterMyIngredients(items: MyIngredient[], filter: { q?: string;
 /** Herkunft für die Anzeige. */
 export function ingredientOrigin(item: Pick<MyIngredient, "isOwn" | "ingredient">): string {
   if (item.ingredient.source === "seed") return "Grundbestand";
-  if (item.ingredient.source === "openfoodfacts") return item.isOwn ? "von dir aus Open Food Facts" : "Open Food Facts";
+  if (item.ingredient.source === "openfoodfacts") return "Open Food Facts";
   return item.isOwn ? "selbst angelegt" : "von jemand anderem angelegt";
 }
 

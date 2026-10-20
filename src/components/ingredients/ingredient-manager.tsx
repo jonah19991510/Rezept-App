@@ -135,7 +135,7 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
                   <span className="min-w-0">
                     <span className="flex items-center gap-1.5 font-medium">
                       <span className="truncate">{item.ingredient.name}</span>
-                      {item.editable ? <Pencil className="size-3.5 shrink-0 text-muted-foreground" aria-label="bearbeitbar" /> : null}
+                      {item.isOwn ? <Pencil className="size-3.5 shrink-0 text-muted-foreground" aria-label="bearbeitbar" /> : null}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {FOOD_GROUP_LABELS[item.ingredient.food_group]} · {ingredientOrigin(item)}
@@ -166,7 +166,7 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
                 {(
                   [
                     ["preis", "Preis"],
-                    ["angaben", open.editable ? "Bearbeiten" : "Angaben"],
+                    ["angaben", open.isOwn ? "Bearbeiten" : "Angaben"],
                     ["rezepte", `Rezepte (${open.recipes.length})`],
                   ] as const
                 ).map(([key, label]) => (
@@ -189,7 +189,7 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
               {tab === "preis" ? <PriceForm key={open.ingredient.id} initial={priceDraft(open)} onDone={done} hideHeader /> : null}
 
               {tab === "angaben" ? (
-                open.editable ? (
+                open.isOwn ? (
                   <div className="space-y-3">
                     <p className="text-xs text-muted-foreground">
                       Die Angaben gelten in allen Rezepten mit dieser Zutat. Ändern sich Stückgewicht oder Dichte, rechnet die

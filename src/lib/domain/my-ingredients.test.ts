@@ -38,20 +38,15 @@ describe("collectMyIngredients", () => {
     expect(items.map((i) => i.ingredient.name)).toEqual(["Ärger-Soße", "Müsli Bio", "Omas Gewürz", "Zucker"]);
   });
 
-  it("Rezepte je Zutat ohne Doppelte, alphabetisch; selbst angelegte auch ohne Rezept", () => {
+  it("Rezepte je Zutat ohne Doppelte, alphabetisch; eigene Zutaten (auch übernommene) auch ohne Rezept", () => {
     const zucker = items.find((i) => i.ingredient.id === "z")!;
     expect(zucker.recipes.map((r) => r.title)).toEqual(["Apfelkuchen", "Zimtschnecken"]);
     expect(zucker.price).toEqual(PRICE);
     expect(items.find((i) => i.ingredient.id === "m")!.recipes).toEqual([]);
   });
 
-  it("bearbeitbar nur eigene mit Quelle „user“", () => {
-    expect(Object.fromEntries(items.map((i) => [i.ingredient.id, [i.isOwn, i.editable]]))).toEqual({
-      z: [false, false],
-      o: [true, true],
-      m: [true, false],
-      f: [false, false],
-    });
+  it("selbst angelegt (und bearbeitbar) nur eigene mit Quelle „user“, nicht aus Open Food Facts übernommene", () => {
+    expect(Object.fromEntries(items.map((i) => [i.ingredient.id, i.isOwn]))).toEqual({ z: false, o: true, m: false, f: false });
     expect(items[0].ingredient).not.toHaveProperty("created_by");
     expect(canEditIngredient({ created_by: ME, source: "user" }, ME)).toBe(true);
     expect(canEditIngredient({ created_by: ME, source: "seed" }, ME)).toBe(false);
@@ -60,17 +55,18 @@ describe("collectMyIngredients", () => {
   it("Ansichten und Suche", () => {
     const names = (view: Parameters<typeof filterMyIngredients>[1]) => filterMyIngredients(items, view).map((i) => i.ingredient.name);
     expect(names({ view: "rezepte" })).toEqual(["Ärger-Soße", "Omas Gewürz", "Zucker"]);
-    expect(names({ view: "eigene" })).toEqual(["Müsli Bio", "Omas Gewürz"]);
+    expect(names({ view: "eigene" })).toEqual(["Omas Gewürz"]);
     expect(names({ view: "ohne-preis" })).toEqual(["Ärger-Soße", "Müsli Bio", "Omas Gewürz"]);
     expect(names({ q: "arger" })).toEqual(["Ärger-Soße"]);
-    expect(names({ q: "bio mu", view: "eigene" })).toEqual(["Müsli Bio"]);
+    expect(names({ q: "bio mu" })).toEqual(["Müsli Bio"]);
+    expect(names({ q: "bio mu", view: "eigene" })).toEqual([]);
     expect(names({ q: "  " })).toHaveLength(4);
   });
 
   it("Herkunft", () => {
     expect(items.map(ingredientOrigin)).toEqual([
       "von jemand anderem angelegt",
-      "von dir aus Open Food Facts",
+      "Open Food Facts",
       "selbst angelegt",
       "Grundbestand",
     ]);
