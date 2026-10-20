@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Martini } from "lucide-react";
-import { BarMood } from "@/components/bar/bar-mood";
 import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
@@ -30,7 +29,6 @@ export default async function BarStatsPage() {
 
   return (
     <>
-      <BarMood />
       <KitchenBarSwitch active="bar" kitchenHref="/statistik" barHref="/statistik/bar" />
       <PageHeader title="Statistik" description="Was in deiner Bar steckt." />
       {stats.total === 0 ? (

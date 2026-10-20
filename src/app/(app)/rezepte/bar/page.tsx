@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GlassWater, Martini, Plus, SearchX } from "lucide-react";
-import { BarMood } from "@/components/bar/bar-mood";
 import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
@@ -16,7 +15,7 @@ import { getOwnRecipeList } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Bar" };
 
-/** Phase 15: eigene Cocktails (Rezepte mit recipe_type „cocktail“) in der Bar-Stimmung. */
+/** Phase 15: eigene Cocktails (Rezepte mit recipe_type „cocktail“) im selben Design wie die Küche. */
 export default async function BarPage({ searchParams }: PageProps<"/rezepte/bar">) {
   const user = await requireUser();
   const [list, params, costs, logs] = await Promise.all([
@@ -54,7 +53,6 @@ export default async function BarPage({ searchParams }: PageProps<"/rezepte/bar"
 
   return (
     <>
-      <BarMood />
       <KitchenBarSwitch active="bar" kitchenHref="/rezepte" barHref="/rezepte/bar" />
       {all.length === 0 ? (
         <>

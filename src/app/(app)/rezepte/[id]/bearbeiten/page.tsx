@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { BarMood } from "@/components/bar/bar-mood";
 import { PageHeader } from "@/components/layout/page-header";
 import { RecipeEditor } from "@/components/recipes/editor/recipe-editor";
 import { requireUser } from "@/lib/auth";
@@ -30,7 +29,6 @@ export default async function EditRecipePage({ params }: PageProps<"/rezepte/[id
   const list = await getOwnRecipeList(user.id, recipe.recipe_type);
   return (
     <div className="mx-auto max-w-3xl">
-      {isCocktail ? <BarMood /> : null}
       <PageHeader title={isCocktail ? "Cocktail bearbeiten" : "Rezept bearbeiten"} description={recipe.title} />
       <RecipeEditor
         thresholds={thresholds}

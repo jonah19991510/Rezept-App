@@ -16,8 +16,6 @@ const MUTED = "#6e6058";
 const CARD = "#fffcf7";
 const BORDER = "#e4ddd3";
 const MACRO = { protein: "#3067b8", carbs: "#da950b", fat: "#4e822c" } as const;
-/** Phase 15: Bernstein und Grün der Bar-Stimmung */
-const BAR = { amber: "#d79a2b", green: "#1f5a45" } as const;
 
 /** Oberzeile: Kategorie, bei Cocktails „Cocktail · geshaked“ */
 function kicker(recipe: SharedRecipe): string | null {
@@ -52,8 +50,8 @@ function Macros({ recipe, scale }: { recipe: SharedRecipe; scale: number }) {
   // Cocktails: Alkoholgehalt, Gramm Alkohol und kcal pro Drink statt Makros
   const items = a
     ? [
-        { label: "% vol", value: formatNumber(a.abv_percent, 1), color: BAR.amber },
-        { label: "Alkohol", value: `${formatNumber(a.alcohol_g, 0)} g`, color: BAR.green },
+        { label: "% vol", value: formatNumber(a.abv_percent, 1), color: BRAND_TERRACOTTA },
+        { label: "Alkohol", value: `${formatNumber(a.alcohol_g, 0)} g`, color: MUTED },
         ...(m ? [{ label: "kcal", value: formatNumber(Math.round(m.kcal), 0), color: BRAND_TERRACOTTA }] : []),
       ]
     : m

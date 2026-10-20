@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { GlassWater, Wine } from "lucide-react";
-import { BarMood } from "@/components/bar/bar-mood";
 import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
@@ -53,7 +52,6 @@ export default async function WhatToMixPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <BarMood />
       <PageHeader title="Einkauf" description="Was kann ich mit meiner Bar mixen?" />
       <ShoppingTabs active="/einkauf/was-kochen" />
       <KitchenBarSwitch active="bar" kitchenHref="/einkauf/was-kochen" barHref="/einkauf/was-mixen" />

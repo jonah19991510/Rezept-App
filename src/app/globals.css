@@ -157,10 +157,8 @@
   --sidebar-ring: oklch(0.68 0.14 40);
 }
 
-/* Bar-Stimmung (Phase 15): tiefes Grün mit Bernstein-Akzent, gleiches System. Nur am Bildschirm, gedruckt hell. */
-@media screen {
-[data-mood="bar"],
-:root:has([data-bar-mood]) {
+/* Bar-Stimmung (Phase 15): tiefes Grün mit Bernstein-Akzent, gleiches System */
+[data-mood="bar"] {
   --background: oklch(0.22 0.03 165);
   --foreground: oklch(0.94 0.015 85);
   --card: oklch(0.26 0.032 165);
@@ -171,30 +169,6 @@
   --primary-foreground: oklch(0.2 0.03 165);
   --border: oklch(1 0 0 / 12%);
   --ring: oklch(0.75 0.14 70);
-  /* Phase 15: restliche Farben, damit Menüs, Dialoge, Felder und Navigation mitziehen */
-  --popover: oklch(0.26 0.032 165);
-  --popover-foreground: oklch(0.94 0.015 85);
-  --secondary: oklch(0.3 0.032 165);
-  --secondary-foreground: oklch(0.94 0.015 85);
-  --accent: oklch(0.32 0.035 160);
-  --accent-foreground: oklch(0.94 0.015 85);
-  --input: oklch(1 0 0 / 16%);
-  --destructive: oklch(0.68 0.19 27);
-  --sage: oklch(0.72 0.09 150);
-  --sage-foreground: oklch(0.2 0.03 165);
-  --macro-kcal: oklch(0.75 0.14 70);
-  --chart-grid: #2c4a40;
-  --chart-axis: #9fb3a6;
-  --sidebar: oklch(0.2 0.03 165);
-  --sidebar-foreground: oklch(0.94 0.015 85);
-  --sidebar-primary: oklch(0.75 0.14 70);
-  --sidebar-primary-foreground: oklch(0.2 0.03 165);
-  --sidebar-accent: oklch(0.3 0.035 160);
-  --sidebar-accent-foreground: oklch(0.94 0.015 85);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.75 0.14 70);
-  color-scheme: dark;
-}
 }
 
 @layer base {

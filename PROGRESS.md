@@ -114,8 +114,8 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
   Alkohol = Volumen × abv; % vol = Alkohol / (Volumen × (1 + Verdünnung)); Gramm = ml × 0,789. Dazu Basisspirituose
   (Spirituose mit dem größten Volumen, sonst Likör/Wein; „Rum, weiß“ → „Rum“) und `bottleHints` für „die eine Flasche“.
 - **Umschalter Küche | Bar** oben auf Rezepte (`/rezepte/bar`), „Was kann ich kochen/mixen?“, Statistik
-  (`/statistik/bar`) und Entdecken (`/entdecken/bar`). Bar-Ansichten in der Bar-Stimmung (grün/Bernstein, über einen
-  Marker und `:root:has([data-bar-mood])`, schon beim ersten Bild, gedruckt hell). Cocktail-Karten zeigen
+  (`/statistik/bar`) und Entdecken (`/entdecken/bar`). Die Bar hat dasselbe Design wie die Küche (Wunsch des
+  Nutzers, siehe Entscheidung 68). Cocktail-Karten zeigen
   Basisspirituose · Methode · Glas, % vol, g Alkohol, kcal; Filter Basisspirituose, Methode (unter „Mehr“), Sortierung
   „Stärkste/Leichteste zuerst“.
 - **Editor** (`/rezepte/neu?typ=cocktail`): Drinks, Zubereitungszeit, Glas, Methode, Eis, Garnitur; Einheiten mit cl,
@@ -123,7 +123,7 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
   Spirituosen ohne Alkoholgehalt. Neue Zutaten: Feld „Alkoholgehalt (% vol)“ bei Spirituosen und Likören/Wein.
 - **Rezeptseite** für Cocktails: Glas, Eis, Garnitur, Karte „Pro Drink“ (% vol, g Alkohol, ml im Glas, Verdünnung,
   darunter Nährwerte), Drinks statt Portionen, „Mixen starten“, Koch-Log heißt „Gemixt“, Kosten pro Drink.
-- **Mix-Modus:** Kochmodus mit Bar-Stimmung, „Wie viele Drinks mixt du?“, „Gemixt!“ am Ende (Bewertung, Notiz,
+- **Mix-Modus:** Kochmodus mit „Wie viele Drinks mixt du?“, „Gemixt!“ am Ende (Bewertung, Notiz,
   Vorrat abziehen wie beim Kochen).
 - **Bar-Bestand / „Was kann ich mixen?“** (`/einkauf/was-mixen`): wie „Was kann ich kochen?“ (ganzer Vorrat, Küche
   und Bar), oben „Die eine Flasche: X“ mit den Cocktails, die sie freischaltet, und den nächstbesten. Ohne Bar-Bestand
@@ -156,7 +156,7 @@ Am PC <http://localhost:3000>, am Handy <http://192.168.178.47:3000> (LAN-Server
 1. Rezepte → oben „Bar“ → „Neuer Cocktail“: Daiquiri, 1 Drink, Coupette, geshaked, Garnitur Limettenrad; Zutaten
    6 cl Rum weiß, 3 cl Limettensaft, 2 cl Zuckersirup. Unten steht live ca. 17,5 % vol, 18,9 g Alkohol, ≈ 138 ml.
    Methode auf „gerührt“ stellen → 18,2 % vol. Speichern.
-2. Rezeptseite: grüne Bar-Stimmung, „Pro Drink“-Karte, Drinks-Schalter (2 Drinks → 12 cl Rum), „Mixen starten“ →
+2. Rezeptseite (gleiches Design wie bei Gerichten): „Pro Drink“-Karte, Drinks-Schalter (2 Drinks → 12 cl Rum), „Mixen starten“ →
    Mix-Modus bis „Gemixt!“, Bewertung speichern → Abschnitt „Gemixt“ auf der Rezeptseite.
 3. Zwei, drei weitere Cocktails (z. B. Negroni gerührt, Gin Tonic gebaut, ein alkoholfreier). Bar-Liste: Filter
    „Alle Spirituosen“, Sortierung „Stärkste zuerst“, unter „Mehr“ die Methode.
@@ -930,8 +930,9 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 67. **Phase 15 – „Die eine Flasche“** zählt Cocktails, denen genau diese eine Zutat fehlt, und nur Spirituosen,
     Liköre/Wein und Sirupe/Säfte (Minze oder Limetten sind keine Flasche, stehen aber unter „Fehlt 1 Zutat“).
     Abgeglichen wird der ganze Vorrat (Küche und Bar).
-68. **Phase 15 – Bar-Stimmung** per Marker-Element und `:root:has(...)` statt per JavaScript: kein Aufblitzen,
-    Kopfzeile und Navigation ziehen mit; nur am Bildschirm (Druck bleibt hell).
+68. **Phase 15 – Bar im selben Design wie die Küche:** Eine eigene, dunklere Bar-Stimmung (grün/Bernstein) war
+    gebaut, der Nutzer wollte aber das Küchen-Design (20.10.2026); wieder entfernt. Der seit Phase 1 vorbereitete
+    CSS-Block `[data-mood="bar"]` in `globals.css` bleibt ungenutzt stehen.
 
 ## Offene Punkte
 

@@ -51,7 +51,7 @@ export function CookingMode({
   steps: CookStep[];
   /** Phase 12: letzte Notiz aus dem Koch-Log, prominent vor dem Start */
   lastNote?: { text: string; date: string } | null;
-  /** Phase 15: Cocktails im Mix-Modus (Bar-Stimmung, Drinks, „Gemixt!“) */
+  /** Phase 15: Cocktails im Mix-Modus (Drinks, „Gemixt!“) */
   kind?: Enums<"recipe_type">;
 }) {
   const w = KIND_WORDS[kind];
@@ -113,7 +113,7 @@ export function CookingMode({
   const stepLines = useMemo(() => (step ? lines.filter((l) => l.stepPosition === step.position) : []), [lines, step]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground" data-mood={kind === "cocktail" ? "bar" : undefined}>
+    <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground">
       <header className="flex items-center gap-2 border-b px-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2">
         <Button type="button" variant="ghost" size="icon-lg" onClick={exit} aria-label={`${w.mode} beenden`}>
           <X className="size-6" aria-hidden />

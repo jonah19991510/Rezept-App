@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CircleCheck, Clock, ExternalLink, GitFork, GlassWater, Snowflake, Sparkles, Users } from "lucide-react";
-import { BarMood } from "@/components/bar/bar-mood";
 import { CookLogSection } from "@/components/recipes/cook-log-section";
 import { FavoriteButton } from "@/components/recipes/favorite-button";
 import { PublishToggle } from "@/components/recipes/publish-toggle";
@@ -43,7 +42,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   if (!detail) notFound();
 
   const { recipe, nutrition, ingredients, steps, cocktail, alcohol } = detail;
-  // Phase 15: Cocktails mit Bar-Stimmung, Drinks und Alkoholgehalt
+  // Phase 15: Cocktails mit Drinks und Alkoholgehalt
   const isCocktail = recipe.recipe_type === "cocktail";
   const kicker = isCocktail
     ? [
@@ -79,7 +78,6 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
 
   return (
     <article className="space-y-8">
-      {isCocktail ? <BarMood /> : null}
       <div className="space-y-4">
         <Link
           href={back.href}

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
-import { BarMood } from "@/components/bar/bar-mood";
 import { RecipeEditor } from "@/components/recipes/editor/recipe-editor";
 import { requireUser } from "@/lib/auth";
 import { collectTags } from "@/lib/domain/recipe-filter";
@@ -21,7 +20,6 @@ export default async function NewRecipePage({ searchParams }: PageProps<"/rezept
 
   return (
     <div className="mx-auto max-w-3xl">
-      {cocktail ? <BarMood /> : null}
       <PageHeader title={cocktail ? "Neuer Cocktail" : "Neues Rezept"} />
       <RecipeEditor
         thresholds={thresholds}

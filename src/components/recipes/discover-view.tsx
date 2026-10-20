@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Compass, Martini, SearchX } from "lucide-react";
-import { BarMood } from "@/components/bar/bar-mood";
 import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
@@ -29,7 +28,6 @@ export async function DiscoverView({
 
   return (
     <>
-      {bar ? <BarMood /> : null}
       <KitchenBarSwitch active={bar ? "bar" : "kitchen"} kitchenHref="/entdecken" barHref="/entdecken/bar" />
       {all.length === 0 ? (
         <>

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Clock, ExternalLink, GlassWater, Snowflake, Sparkles, Users } from "lucide-react";
-import { BarMood } from "@/components/bar/bar-mood";
 import { Brand } from "@/components/layout/brand";
 import { RecipeTags } from "@/components/recipes/recipe-tags";
 import { ScaledRecipeContent } from "@/components/recipes/scaled-recipe-content";
@@ -52,7 +51,7 @@ export default async function SharedRecipePage({ params }: PageProps<"/r/[token]
   const prep = formatMinutes(recipe.prep_minutes);
   const cook = formatMinutes(recipe.cook_minutes);
   const total = formatMinutes((recipe.prep_minutes ?? 0) + (recipe.cook_minutes ?? 0));
-  // Phase 15: Cocktails mit Bar-Stimmung, Glas/Methode/Eis/Garnitur und Alkoholgehalt pro Drink
+  // Phase 15: Cocktails mit Glas/Methode/Eis/Garnitur und Alkoholgehalt pro Drink
   const isCocktail = recipe.recipe_type === "cocktail";
   const cocktail = recipe.cocktail;
   const kicker = isCocktail
@@ -63,7 +62,6 @@ export default async function SharedRecipePage({ params }: PageProps<"/r/[token]
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 print:max-w-none print:p-0">
-      {isCocktail ? <BarMood /> : null}
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Brand href="/" />
       </header>
