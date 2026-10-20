@@ -40,13 +40,13 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 
 | Tabelle | Inhalt | Ab Phase | Sichtbar für |
 |---|---|---|---|
-| `recipes` (+ `recipe_ingredients`, `recipe_steps`, `cocktail_details`) | Rezepte, optional Quell-URL; `forked_from_id` = Verweis auf das Original bei übernommenen Rezepten | 2 / 6 | nur Owner; bei `is_public` (Schalter, ab Phase 6) alle eingeloggten Nutzer mit Anzeigename des Owners |
+| `recipes` (+ `recipe_ingredients`, `recipe_steps`, `cocktail_details`) | Rezepte und Cocktails (ab Phase 15: `recipe_type`, Glas, Methode, Eis, Garnitur), optional Quell-URL; `forked_from_id` = Verweis auf das Original bei übernommenen Rezepten | 2 / 6 | nur Owner; bei `is_public` (Schalter, ab Phase 6) alle eingeloggten Nutzer mit Anzeigename des Owners |
 | `recipe_versions` | frühere Fassungen eines Rezepts | 12 | nur Owner |
 | `meal_plan_entries`, `meal_prep_batches`, `plan_days` | Wochenplan, Meal Prep, Trainingstage | 3 / 11 | nur Nutzer selbst |
 | `user_goals` | Tagesziele kcal/Protein/KH/Fett | 3 / 11 | nur Nutzer selbst |
 | `user_settings` | Standard-Trainingstage, Einkaufs-Sortierung, Präferenzen | 1 (leer angelegt) | nur Nutzer selbst |
 | `shopping_list_items` | Einkaufsliste | 4 | nur Nutzer selbst |
-| `pantry_items` | Vorrat (Küche/Bar), Ablaufdatum | 10 | nur Nutzer selbst |
+| `pantry_items` | Vorrat (Küche/Bar), Ablaufdatum; Bereich „Bar“ = Bar-Bestand (Spirituosen, Liköre, Sirupe, Säfte) | 10 / 15 | nur Nutzer selbst |
 | `ingredient_prices` | Preise, optional Laden | 12 | nur Nutzer selbst |
 | `cook_logs` | Kochdatum, Bewertung, Notiz, Portionen, Rezeptversion | 9 (Eintrag über den Kochmodus) / 12 (Anzeige) | nur Nutzer selbst |
 | `favorites` | Lieblingsrezepte | 2 | nur Nutzer selbst |
@@ -73,8 +73,15 @@ direkt beim Server ab; dafür dürfen deren Vorschau-Bots laut `robots.txt` nur 
 Ordner). „Widerrufen“ löscht den Token sofort: Seite, Foto und Bilder antworten danach mit 404 (Browser dürfen das
 Foto bis zu 10 Minuten zwischenspeichern). Der Token verschwindet mit dem Rezept bzw. Account.
 
+**Bar (ab Phase 15):** Cocktails sind Rezepte mit `recipe_type = cocktail` und Zeile in `cocktail_details`; es gibt
+keine neue Tabelle mit Nutzerdaten. Der Alkoholgehalt pro Drink wird bei jedem Abruf aus den Zutaten berechnet
+(View `recipe_alcohol`, Verdünnung je Methode aus `app_config`) und nicht gespeichert. Für Cocktails gelten dieselben
+Regeln wie für Rezepte (privat, öffentlich, Teilen per Link, Datenexport, Löschen per Cascade). Die geteilte Karte
+zeigt bei Cocktails zusätzlich Glas, Methode, Eis, Garnitur und den Alkoholgehalt.
+
 **Hinweis:** Tagesziele, Trainingstage und Essenspläne können Rückschlüsse auf Gesundheit und
-Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
+Lebensgewohnheiten zulassen. Das gilt auch für Cocktails, Bar-Bestand und „Gemixt“-Einträge im Koch-Log (Konsum von
+Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ### Nicht personenbezogen
 
@@ -116,6 +123,15 @@ Lebensgewohnheiten zulassen. Das sollte die spätere Datenschutzerklärung ausdr
 - [ ] noindex-Regeln bewusst überprüft (robots.txt, Meta-Tag, `X-Robots-Tag`): sollen sie bleiben?
 
 ## Änderungsverlauf
+
+- **Phase 15:** Cocktail-Bereich (siehe „Bar“ oben). Genutzt werden die seit Phase 1 vorhandenen Felder
+  `recipes.recipe_type`, `cocktail_details` und `pantry_items.location = bar`, dazu die Spalte `ingredients.abv`.
+  Neu: View `recipe_alcohol` (Security Invoker, nur eingeloggt, RLS des Aufrufers), Eintrag `cocktail_dilution` in
+  `app_config`, 25 Bar-Zutaten im Grundbestand. `get_shared_recipe` liefert zusätzlich Cocktail-Felder und
+  Alkoholgehalt, `save_recipe` speichert Typ und Cocktail-Felder (Versionen enthalten sie). Datenexport: Cocktails
+  stehen bei den Rezepten (mit `cocktail_details`), der Bar-Bestand beim Vorrat; Rezept-Sicherung (Format-Version 2)
+  und Markdown-Export enthalten jetzt auch Cocktails. Account-Löschung per Cascade geprüft (SQL-Test
+  `supabase/tests/bar_check.sql`). Keine neuen Tabellen mit Nutzerdaten, keine neuen Dienstleister.
 
 - **Phase 14:** Teilen per Link (siehe „Teilen per Link“ oben): Spalte `recipes.share_token` wird jetzt genutzt,
   neue Datenbankfunktionen `set_recipe_share`, `get_shared_recipe` (auch ohne Login, Security Definer, nur ein

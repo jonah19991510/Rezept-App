@@ -6,7 +6,7 @@ import { parseIngredientLine } from "./ingredient-line";
 
 const ing = (id: string, name: string): IngredientOption => ({
   id, name, kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, food_group: "other", diet: "none",
-  piece_weight_g: null, density_g_per_ml: null, source: "seed", is_staple: false,
+  piece_weight_g: null, density_g_per_ml: null, abv: null, source: "seed", is_staple: false,
 });
 
 const linsen = ing("i1", "Rote Linsen");

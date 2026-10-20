@@ -6,7 +6,7 @@ import { extractRecipe } from "./recipe-import";
 
 const ing = (id: string, name: string, density: number | null): IngredientOption => ({
   id, name, kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, food_group: "other", diet: "none",
-  piece_weight_g: null, density_g_per_ml: density, source: "seed", is_staple: false,
+  piece_weight_g: null, density_g_per_ml: density, abv: null, source: "seed", is_staple: false,
 });
 
 describe("Import mit Einheiten-Umrechnung", () => {

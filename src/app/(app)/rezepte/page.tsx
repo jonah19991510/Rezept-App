@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BookOpen, Download, Plus, SearchX } from "lucide-react";
+import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { RecipeCard } from "@/components/recipes/recipe-card";
@@ -55,6 +56,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/rezepte"
   if (all.length === 0) {
     return (
       <>
+        <KitchenBarSwitch active="kitchen" kitchenHref="/rezepte" barHref="/rezepte/bar" />
         <PageHeader title="Rezepte" description="Dein persönliches Rezeptbuch." />
         <EmptyState icon={BookOpen} title="Dein Rezeptbuch ist noch leer" action={newButton}>
           Leg dein erstes Rezept an. Die Makros rechnet die App aus den Zutaten selbst aus.
@@ -65,6 +67,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/rezepte"
 
   return (
     <>
+      <KitchenBarSwitch active="kitchen" kitchenHref="/rezepte" barHref="/rezepte/bar" />
       <PageHeader
         title="Rezepte"
         description={`${all.length} ${all.length === 1 ? "Rezept" : "Rezepte"} in deinem Buch`}

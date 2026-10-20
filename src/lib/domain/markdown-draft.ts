@@ -1,4 +1,5 @@
-import type { RecipeInput } from "@/lib/validation/recipe";
+import type { Enums } from "@/lib/supabase/database.types";
+import type { CocktailInput, RecipeInput } from "@/lib/validation/recipe";
 import { draftToEditorInitial, initialChoices, type DraftEditorInitial, type ImportDraft, type ImportLine, type LineChoice } from "./import-draft";
 import type { MarkdownImportRecipe } from "./markdown-import";
 import { resolveLineGrams } from "./units";
@@ -35,28 +36,36 @@ export function reviewReasons(recipe: MarkdownImportRecipe, lines: ImportLine[])
   return reasons;
 }
 
-/** Startwerte für den Editor: wie beim Link-Import, dazu Tags, Meal-Prep und Timer aus der Datei. */
+/** Editor-Startwerte aus dem Markdown-Import, mit Typ und Cocktail-Feldern (Phase 15). */
+export type MarkdownEditorInitial = DraftEditorInitial & { recipe_type: Enums<"recipe_type">; cocktail: CocktailInput | null };
+
+/** Startwerte für den Editor: wie beim Link-Import, dazu Tags, Meal-Prep, Timer und Cocktail-Felder aus der Datei. */
 export function markdownEditorInitial(
   recipe: MarkdownImportRecipe,
   draft: ImportDraft,
   choices: LineChoice[],
-): { initial: DraftEditorInitial; dropped: string[] } {
+): { initial: MarkdownEditorInitial; dropped: string[] } {
   const { initial, dropped } = draftToEditorInitial(draft, choices);
+  const cocktail = recipe.recipeType === "cocktail";
   return {
     dropped,
     initial: {
       ...initial,
+      recipe_type: recipe.recipeType,
+      cocktail: cocktail ? { ...recipe.cocktail } : null,
+      is_meal_prep: cocktail ? false : recipe.isMealPrep,
       servings: recipe.servings ?? initial.servings,
       tags: recipe.tags,
-      is_meal_prep: recipe.isMealPrep,
       steps: recipe.steps.map((s) => ({ text: s.text, timer_seconds: s.timer_seconds })),
     },
   };
 }
 
 /** Für das direkte Speichern sicherer Rezepte: Editor-Startwerte → Eingabe für saveRecipe. */
-export function toRecipeInput(initial: DraftEditorInitial): RecipeInput {
+export function toRecipeInput(initial: MarkdownEditorInitial): RecipeInput {
   return {
+    recipe_type: initial.recipe_type,
+    cocktail: initial.cocktail,
     title: initial.title,
     description: initial.description,
     servings: initial.servings,

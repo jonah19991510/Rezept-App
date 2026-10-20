@@ -12,7 +12,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { cookLogSchema } from "@/lib/validation/cooking";
 
 /** Abschluss: Bewertung und Notiz fürs Koch-Log (beides freiwillig). */
-export function CookDone({ recipeId, servings, onBack }: { recipeId: string; servings: number; onBack: () => void }) {
+export function CookDone({
+  recipeId,
+  servings,
+  onBack,
+  kind = "dish",
+}: {
+  recipeId: string;
+  servings: number;
+  onBack: () => void;
+  /** Phase 15: „Gemixt!“ im Mix-Modus */
+  kind?: "dish" | "cocktail";
+}) {
   const [rating, setRating] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const [message, setMessage] = useState<string>();
@@ -49,7 +60,7 @@ export function CookDone({ recipeId, servings, onBack }: { recipeId: string; ser
     <div className="mx-auto max-w-xl space-y-6 p-4 md:p-8">
       <div className="space-y-2 text-center">
         <PartyPopper className="mx-auto size-12 text-primary" aria-hidden />
-        <h1 className="text-3xl font-semibold">Gekocht!</h1>
+        <h1 className="text-3xl font-semibold">{kind === "cocktail" ? "Gemixt!" : "Gekocht!"}</h1>
         <p className="text-muted-foreground">Wie war&apos;s? Bewertung und Notiz helfen dir beim nächsten Mal.</p>
       </div>
 
@@ -66,7 +77,7 @@ export function CookDone({ recipeId, servings, onBack }: { recipeId: string; ser
           onChange={(e) => setNote(e.target.value)}
           maxLength={1000}
           rows={3}
-          placeholder="z. B. nächstes Mal mehr Chili"
+          placeholder={kind === "cocktail" ? "z. B. nächstes Mal weniger Sirup" : "z. B. nächstes Mal mehr Chili"}
         />
       </div>
 

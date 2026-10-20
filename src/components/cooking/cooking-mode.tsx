@@ -11,6 +11,8 @@ import { formatCountdown, formatDuration, splitStepText } from "@/lib/domain/tim
 import type { Unit } from "@/lib/domain/units";
 import { dayMonth } from "@/lib/domain/week";
 import { formatScaledQuantity } from "@/lib/format-quantity";
+import { KIND_WORDS } from "@/lib/labels";
+import type { Enums } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
 import { CookDone } from "./cook-done";
 import { PantryConsumption } from "./pantry-consumption";
@@ -39,6 +41,7 @@ export function CookingMode({
   lines,
   steps,
   lastNote = null,
+  kind = "dish",
 }: {
   recipeId: string;
   title: string;
@@ -48,7 +51,10 @@ export function CookingMode({
   steps: CookStep[];
   /** Phase 12: letzte Notiz aus dem Koch-Log, prominent vor dem Start */
   lastNote?: { text: string; date: string } | null;
+  /** Phase 15: Cocktails im Mix-Modus (Bar-Stimmung, Drinks, „Gemixt!“) */
+  kind?: Enums<"recipe_type">;
 }) {
+  const w = KIND_WORDS[kind];
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("start");
   const [servings, setServings] = useState(initialServings);
@@ -107,9 +113,9 @@ export function CookingMode({
   const stepLines = useMemo(() => (step ? lines.filter((l) => l.stepPosition === step.position) : []), [lines, step]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground" data-mood={kind === "cocktail" ? "bar" : undefined}>
       <header className="flex items-center gap-2 border-b px-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2">
-        <Button type="button" variant="ghost" size="icon-lg" onClick={exit} aria-label="Kochmodus beenden">
+        <Button type="button" variant="ghost" size="icon-lg" onClick={exit} aria-label={`${w.mode} beenden`}>
           <X className="size-6" aria-hidden />
         </Button>
         <p className="min-w-0 flex-1 truncate font-heading text-lg font-semibold">{title}</p>
@@ -158,9 +164,9 @@ export function CookingMode({
             ) : null}
             <section className="space-y-2" aria-labelledby="kochen-portionen">
               <h2 id="kochen-portionen" className="text-lg font-medium">
-                Für wie viele Portionen kochst du?
+                {kind === "cocktail" ? "Wie viele Drinks mixt du?" : "Für wie viele Portionen kochst du?"}
               </h2>
-              <PortionStepper value={servings} onChange={setServings} size="lg" />
+              <PortionStepper value={servings} onChange={setServings} size="lg" kind={kind} />
               {servings !== recipeServings ? (
                 <p className="text-sm text-muted-foreground">Alle Mengen sind umgerechnet (Rezept: {String(recipeServings).replace(".", ",")}).</p>
               ) : null}
@@ -175,7 +181,7 @@ export function CookingMode({
                 setPhase(steps.length > 0 ? "steps" : "done");
               }}
             >
-              {steps.length > 0 ? "Los geht's" : "Gekocht!"}
+              {steps.length > 0 ? "Los geht's" : `${w.done}!`}
               <ChevronRight className="size-6" aria-hidden />
             </Button>
           </div>
@@ -258,7 +264,7 @@ export function CookingMode({
 
         {phase === "done" ? (
           <>
-            <CookDone recipeId={recipeId} servings={servings} onBack={steps.length > 0 ? () => setPhase("steps") : () => setPhase("start")} />
+            <CookDone recipeId={recipeId} servings={servings} kind={kind} onBack={steps.length > 0 ? () => setPhase("steps") : () => setPhase("start")} />
             <div className="mx-auto max-w-xl px-4 pb-8 md:px-8">
               <PantryConsumption recipeId={recipeId} servings={servings} />
             </div>
@@ -276,7 +282,7 @@ export function CookingMode({
             {isLast ? (
               <>
                 <Check className="size-6" aria-hidden />
-                Gekocht!
+                {w.done}!
               </>
             ) : (
               <>
@@ -291,11 +297,11 @@ export function CookingMode({
       <Dialog open={confirmExit} onOpenChange={setConfirmExit}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Kochmodus beenden?</DialogTitle>
+            <DialogTitle>{w.mode} beenden?</DialogTitle>
             <DialogDescription>Es laufen noch Timer. Beim Beenden werden sie gestoppt.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>Weiterkochen</DialogClose>
+            <DialogClose render={<Button type="button" variant="outline" />}>{kind === "cocktail" ? "Weitermixen" : "Weiterkochen"}</DialogClose>
             <Button type="button" variant="destructive" onClick={() => router.push(`/rezepte/${recipeId}`)}>
               Beenden
             </Button>

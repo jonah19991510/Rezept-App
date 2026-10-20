@@ -361,3 +361,74 @@ describe("Hilfsfunktionen", () => {
     expect(preselect(page, new Set())).toBe(false);
   });
 });
+
+describe("Cocktails (Phase 15)", () => {
+  const daiquiri: MarkdownRecipe = {
+    title: "Daiquiri",
+    description: "Der Klassiker.",
+    servings: 1,
+    prep_minutes: 5,
+    cook_minutes: null,
+    category: "drink",
+    tags: ["sauer"],
+    is_meal_prep: false,
+    source_url: null,
+    perServing: { kcal: 152.4, protein: 0.1, carbs: 15, fat: 0, fiber: 0 },
+    ingredients: [
+      { amount: 6, unit: "cl", name: "Rum, weiß", note: null },
+      { amount: 3, unit: "cl", name: "Limettensaft", note: "frisch" },
+      { amount: 2, unit: "dash", name: "Angostura Bitter", note: null },
+    ],
+    steps: [{ text: "Alles auf Eis shaken.", timer_seconds: null }],
+    recipe_type: "cocktail",
+    cocktail: { glass: "coupette", method: "shaken", ice: "ohne, vorgekühltes Glas", garnish: "Limettenrad" },
+    alcohol: { abvPercent: 17.5, alcoholGrams: 18.9 },
+  };
+
+  it("Export zeigt Drinks, Methode, Glas, Eis, Garnitur und Alkohol pro Drink", () => {
+    const md = recipeToMarkdown(daiquiri);
+    expect(md).toContain("*Cocktail* · 1 Drink · geshaked · Glas Coupette · Zubereitung 5 Min.");
+    expect(md).toContain("**Eis:** ohne, vorgekühltes Glas");
+    expect(md).toContain("**Garnitur:** Limettenrad");
+    expect(md).toContain("**Pro Drink:** 17,5 % vol · 18,9 g Alkohol · 152 kcal");
+    expect(md).toContain("- 2 Dash Angostura Bitter");
+    expect(md).not.toContain("Pro Portion");
+  });
+
+  it("der eigene Export wird wieder als Cocktail erkannt", () => {
+    const [r] = parseMarkdownFiles([file("daiquiri.md", recipeToMarkdown(daiquiri))]).recipes;
+    expect(r).toMatchObject({
+      title: "Daiquiri",
+      recipeType: "cocktail",
+      servings: 1,
+      prepMinutes: 5,
+      category: "drink",
+      cocktail: { glass: "coupette", method: "shaken", ice: "ohne, vorgekühltes Glas", garnish: "Limettenrad" },
+      warnings: [],
+    });
+    expect(r.reference).toBe("17,5 % vol · 18,9 g Alkohol · 152 kcal");
+    expect(r.ingredients.map((i) => i.text)).toEqual(["6 cl Rum, weiß", "3 cl Limettensaft, frisch", "2 Dash Angostura Bitter"]);
+  });
+
+  it("im Buch eigene Gruppe „Cocktails“ am Ende; Gerichte bleiben Gerichte", () => {
+    const dish: MarkdownRecipe = { ...daiquiri, title: "Dal", recipe_type: "dish", cocktail: null, alcohol: null, category: "soup", servings: 4 };
+    const md = bookToMarkdown([daiquiri, dish], { title: "Buch", exportedAt: new Date("2026-10-20T10:00:00Z") });
+    expect(md.indexOf("**Suppe/Eintopf**")).toBeLessThan(md.indexOf("**Cocktails**"));
+    const recipes = parseMarkdownFiles([file("buch.md", md)]).recipes;
+    expect(recipes.map((x) => [x.title, x.recipeType])).toEqual([
+      ["Dal", "dish"],
+      ["Daiquiri", "cocktail"],
+    ]);
+  });
+
+  it("Eigenschaften aus anderen Quellen: Glas, Methode, Garnitur, Art: Cocktail", () => {
+    const [r] = parseMarkdownFiles([
+      file(
+        "negroni.md",
+        "# Negroni\n\nArt: Cocktail\nGlas: Tumbler\nMethode: gerührt\nGarnitur: Orangenzeste\n\n## Zutaten\n- 3 cl Gin\n\n## Zubereitung\n1. Rühren.\n",
+      ),
+    ]).recipes;
+    expect(r).toMatchObject({ recipeType: "cocktail", category: "drink", cocktail: { glass: "tumbler", method: "stirred", garnish: "Orangenzeste" } });
+    expect(r.tags).not.toContain("Cocktail");
+  });
+});

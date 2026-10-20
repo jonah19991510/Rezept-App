@@ -61,6 +61,7 @@ export function IngredientForm({
   const [diet, setDiet] = useState<Enums<"ingredient_diet"> | "">(initial.diet ?? "");
   const [pieceWeight, setPieceWeight] = useState("");
   const [density, setDensity] = useState("");
+  const [abv, setAbv] = useState("");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState<string>();
   const [pending, startTransition] = useTransition();
@@ -79,6 +80,7 @@ export function IngredientForm({
       diet: diet || null,
       piece_weight_g: parseDecimal(pieceWeight),
       density_g_per_ml: parseDecimal(density),
+      abv: abv.trim() ? (parseDecimal(abv) ?? Number.NaN) : null,
       external_id: initial.externalId ?? null,
     };
     const parsed = ingredientInputSchema.safeParse(input);
@@ -151,6 +153,19 @@ export function IngredientForm({
           </NativeSelect>
         </div>
       </div>
+
+      {/* Phase 15: Alkoholgehalt für Spirituosen, Liköre und Wein (Grundlage der Alkoholberechnung) */}
+      {foodGroup === "spirits" || foodGroup === "liqueurs_wine" || abv ? (
+        <FormField
+          label="Alkoholgehalt (% vol)"
+          name="ingredient-abv"
+          inputMode="decimal"
+          value={abv}
+          onChange={(e) => setAbv(e.target.value)}
+          hint="steht auf dem Etikett, z. B. 40"
+          errors={errors.abv}
+        />
+      ) : null}
 
       <details className="rounded-2xl border p-3">
         <summary className="min-h-8 cursor-pointer text-sm font-medium">Für Stück- und ml-Angaben (optional)</summary>

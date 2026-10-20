@@ -11,7 +11,7 @@ import {
 
 const ing = (id: string, name: string): BackupIngredient => ({
   id, name, kcal: 100, protein: 10, carbs: 10, fat: 1, fiber: 1, sugar: 1, food_group: "legumes", diet: "vegan",
-  piece_weight_g: null, density_g_per_ml: null,
+  piece_weight_g: null, density_g_per_ml: null, abv: null,
 });
 
 const LINSEN = ing("11111111-1111-4111-8111-111111111111", "Rote Linsen");
@@ -19,6 +19,8 @@ const KOKOS = ing("22222222-2222-4222-8222-222222222222", "Kokosmilch");
 const SPEZIAL = ing("33333333-3333-4333-8333-333333333333", "Omas Gewürzmischung");
 
 const row: RecipeRowForBackup = {
+  recipe_type: "dish",
+  cocktail_details: null,
   title: "Dal",
   description: null,
   servings: 4,
@@ -57,6 +59,45 @@ describe("toBackupFile", () => {
     expect(wrong.error?.issues[0].message).toMatch(/keine Rezept-Sicherung/);
     expect(backupFileSchema.safeParse({ ...file, recipes: [] }).success).toBe(false);
     expect(backupFileSchema.safeParse({ ...file, recipes: [{ ...file.recipes[0], servings: 0 }] }).success).toBe(false);
+  });
+
+  it("Version 2 mit Cocktail-Feldern und Alkoholgehalt", () => {
+    const rum: BackupIngredient = { ...ing("66666666-6666-4666-8666-666666666666", "Rum, weiß"), food_group: "spirits", abv: 40 };
+    const daiquiri: RecipeRowForBackup = {
+      ...row,
+      recipe_type: "cocktail",
+      cocktail_details: { glass: "coupette", method: "shaken", ice: null, garnish: "Limettenrad" },
+      title: "Daiquiri",
+      category: "drink",
+      recipe_ingredients: [{ position: 0, ingredient: rum, amount: 6, unit: "cl", grams: 57, note: null, step_position: null }],
+    };
+    const v2 = toBackupFile([daiquiri, row], now);
+    expect(v2.version).toBe(2);
+    expect(v2.recipes[0]).toMatchObject({ recipe_type: "cocktail", cocktail: { method: "shaken", garnish: "Limettenrad" } });
+    expect(v2.recipes[0].ingredients[0].ingredient.abv).toBe(40);
+    expect(v2.recipes[1]).toMatchObject({ recipe_type: "dish", cocktail: null });
+    const parsed = backupFileSchema.parse(JSON.parse(JSON.stringify(v2)));
+    expect(parsed.recipes[0].cocktail?.glass).toBe("coupette");
+  });
+
+  it("Gerichte haben keine Cocktail-Felder, auch wenn die Datenbank welche liefert", () => {
+    const odd = toBackupFile([{ ...row, cocktail_details: { glass: "tiki", method: null, ice: null, garnish: null } }], now);
+    expect(odd.recipes[0].cocktail).toBeNull();
+  });
+
+  it("Dateien der Version 1 bleiben importierbar (Gericht, Alkoholgehalt unbekannt)", () => {
+    // Datei wie aus Phase 8–14: ohne recipe_type, cocktail und abv
+    const v1 = JSON.parse(JSON.stringify({ ...file, version: 1 }));
+    for (const r of v1.recipes) {
+      delete r.recipe_type;
+      delete r.cocktail;
+      for (const l of r.ingredients) delete l.ingredient.abv;
+    }
+    const parsed = backupFileSchema.safeParse(v1);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.recipes[0]).toMatchObject({ recipe_type: "dish", cocktail: null });
+    expect(parsed.data?.recipes[0].ingredients[0].ingredient.abv).toBeNull();
+    expect(backupFileSchema.safeParse({ ...v1, version: 3 }).success).toBe(false);
   });
 
   it("Dateiname mit Datum", () => {

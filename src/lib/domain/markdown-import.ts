@@ -1,4 +1,4 @@
-import { CATEGORY_LABELS } from "@/lib/labels";
+import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS } from "@/lib/labels";
 import type { Enums } from "@/lib/supabase/database.types";
 
 // Markdown-Import (Phase 13): zerlegt eine oder mehrere .md-Dateien in Rezepte, ein Rezept pro Überschrift.
@@ -20,6 +20,14 @@ export type MarkdownImportRecipe = {
   tags: string[];
   isMealPrep: boolean;
   sourceUrl: string;
+  /** Phase 15: Cocktail (eigener Export „*Cocktail*“, „Glas:“, „Methode:“, „Art: Cocktail“) */
+  recipeType: Enums<"recipe_type">;
+  cocktail: {
+    glass: Enums<"glass"> | null;
+    method: Enums<"cocktail_method"> | null;
+    ice: string;
+    garnish: string;
+  };
   /** Zutatenzeilen im Original plus Zusatz aus Gruppe/„optional“, der in die Notiz wandert */
   ingredients: { text: string; extraNote: string }[];
   steps: { text: string; timer_seconds: number | null }[];
@@ -147,7 +155,39 @@ const CATEGORY_WORDS: Record<string, Enums<"recipe_category">> = {
   getranke: "drink",
   drink: "drink",
   drinks: "drink",
+  cocktail: "drink",
+  cocktails: "drink",
 };
+
+const COCKTAIL_WORDS = new Set(["cocktail", "cocktails", "longdrink", "longdrinks"]);
+
+// Phase 15: Glas und Methode aus dem eigenen Export („Coupette“, „geshaked“) und üblichen Schreibweisen
+const GLASS_WORDS: Record<string, Enums<"glass">> = { coupe: "coupette", "martini-glas": "martini", longdrink: "highball", rocks: "tumbler" };
+for (const [value, label] of Object.entries(GLASS_LABELS)) GLASS_WORDS[norm(label)] = value as Enums<"glass">;
+const METHOD_WORDS: Record<string, Enums<"cocktail_method">> = {
+  geschuttelt: "shaken",
+  geshakt: "shaken",
+  shaken: "shaken",
+  shake: "shaken",
+  stirred: "stirred",
+  ruhren: "stirred",
+  gebaut: "built",
+  built: "built",
+  build: "built",
+  "im glas gebaut": "built",
+  blended: "blended",
+  gemixt: "blended",
+  "im mixer": "blended",
+};
+for (const [value, label] of Object.entries(METHOD_LABELS)) METHOD_WORDS[norm(label)] = value as Enums<"cocktail_method">;
+
+export function glassFor(value: string): Enums<"glass"> | null {
+  return GLASS_WORDS[norm(plainText(value)).replace(/glas$/, "").trim()] ?? GLASS_WORDS[norm(plainText(value))] ?? null;
+}
+
+export function methodFor(value: string): Enums<"cocktail_method"> | null {
+  return METHOD_WORDS[norm(plainText(value))] ?? null;
+}
 for (const [value, label] of Object.entries(CATEGORY_LABELS)) CATEGORY_WORDS[norm(label)] = value as Enums<"recipe_category">;
 
 /** Werte, die keine eigene Kategorie und kein sinnvoller Tag sind (Notion „Kategorie: Mittag/Abend“). */
@@ -167,10 +207,29 @@ function splitValues(value: string): string[] {
 
 // ---------- Eigenschaften ----------
 
-type PropertyKind = "servings" | "prep" | "cook" | "total" | "type" | "category" | "tags" | "kitchen" | "source" | "macro" | "ignore";
+type PropertyKind =
+  | "servings"
+  | "prep"
+  | "cook"
+  | "total"
+  | "type"
+  | "category"
+  | "tags"
+  | "kitchen"
+  | "source"
+  | "macro"
+  | "glass"
+  | "method"
+  | "ice"
+  | "garnish"
+  | "ignore";
 
 const PROPERTY_KEYS: [RegExp, PropertyKind][] = [
-  [/^(anzahl )?(personen|portionen|portion)$|^servings?$|^fur$|^ergibt$/, "servings"],
+  [/^(anzahl )?(personen|portionen|portion|drinks?)$|^servings?$|^fur$|^ergibt$/, "servings"],
+  [/^glas$|^glass$/, "glass"],
+  [/^methode$|^technik$|^method$/, "method"],
+  [/^eis$|^ice$/, "ice"],
+  [/^garnitur$|^garnish$|^deko$/, "garnish"],
   [/^vorbereitung(szeit)?$|^arbeitszeit$|^prep( time)?$/, "prep"],
   [/^(koch|back|gar)(zeit)?( ?\/ ?(koch|back)(zeit)?)?$|^koch- ?\/ ?backzeit$|^kochen$|^cook( time)?$/, "cook"],
   [/^(gesamt|zubereitungs)zeit$|^dauer$|^total( time)?$/, "total"],
@@ -179,7 +238,7 @@ const PROPERTY_KEYS: [RegExp, PropertyKind][] = [
   [/^tags?$|^schlagworte?$/, "tags"],
   [/^kuche$|^cuisine$/, "kitchen"],
   [/^quelle$|^source$|^url$|^link$|^original$/, "source"],
-  [/(kcal|kalorien|eiweiss|protein|fett|kohlenhydrate|ballaststoffe|nahrwerte).*$|^pro portion$/, "macro"],
+  [/(kcal|kalorien|eiweiss|protein|fett|kohlenhydrate|ballaststoffe|nahrwerte).*$|^pro portion$|^pro drink$/, "macro"],
   [/^(created|erstellt|zuletzt bearbeitet|last edited|exportiert am|bewertung|status)$/, "ignore"],
 ];
 
@@ -322,6 +381,8 @@ function parseRecipe(block: { title: string; lines: string[] }, fileName: string
     tags: [],
     isMealPrep: false,
     sourceUrl: "",
+    recipeType: "dish",
+    cocktail: { glass: null, method: null, ice: "", garnish: "" },
     ingredients: [],
     steps: [],
     reference: null,
@@ -386,26 +447,60 @@ function parseRecipe(block: { title: string; lines: string[] }, fileName: string
       case "macro": {
         // „Eiweiß pro Person: 46,9 g“ → „Eiweiß 46,9 g“; kcal-Angaben tragen ihre Einheit selbst und kommen nach vorn
         const label = plainText(key).replace(/\s*pro (person|portion)\s*/i, " ").trim();
-        if (/kcal|kalorien|^pro portion$|^nährwerte$|^$/i.test(label)) references.unshift(v);
+        if (/kcal|kalorien|^pro (portion|drink)$|^nährwerte$|^$/i.test(label)) references.unshift(v);
         else references.push(`${label} ${v}`);
         break;
       }
+      case "glass":
+        recipe.recipeType = "cocktail";
+        recipe.cocktail.glass ??= glassFor(v) ?? "other";
+        break;
+      case "method":
+        recipe.recipeType = "cocktail";
+        recipe.cocktail.method ??= methodFor(v);
+        break;
+      case "ice":
+        recipe.recipeType = "cocktail";
+        recipe.cocktail.ice ||= v.slice(0, 100);
+        break;
+      case "garnish":
+        recipe.recipeType = "cocktail";
+        recipe.cocktail.garnish ||= v.slice(0, 200);
+        break;
       case "ignore":
         break;
     }
   }
 
-  /** Meta-Zeile aus dem eigenen Export: „*Pasta* · 4 Portionen · Vorbereitung 10 Min. · Kochen 25 Min. · Meal-Prep“ */
+  /**
+   * Meta-Zeile aus dem eigenen Export: „*Pasta* · 4 Portionen · Vorbereitung 10 Min. · Kochen 25 Min. · Meal-Prep“,
+   * bei Cocktails „*Cocktail* · 1 Drink · geshaked · Glas Coupette · Zubereitung 5 Min.“
+   */
   function applyMetaLine(line: string): boolean {
-    if (!line.includes(" · ") && !/^\d+ Portion(en)?$/.test(plainText(line))) return false;
+    if (!line.includes(" · ") && !/^\d+ (Portion(en)?|Drinks?)$/.test(plainText(line))) return false;
     const parts = line.split(" · ").map((p) => p.trim());
     let recognized = 0;
     for (const part of parts) {
       const text = plainText(part);
       const servings = /^(\d+) Portion(en)?$/.exec(text);
-      const prep = /^Vorbereitung (.+)$/.exec(text);
+      const drinks = /^(\d+) Drinks?$/.exec(text);
+      const prep = /^(?:Vorbereitung|Zubereitung) (.+)$/.exec(text);
       const cook = /^Kochen (.+)$/.exec(text);
+      const glass = /^Glas (.+)$/.exec(text);
       if (servings) recipe.servings ??= Number(servings[1]);
+      else if (drinks) {
+        recipe.servings ??= Number(drinks[1]);
+        recipe.recipeType = "cocktail";
+      } else if (/^\*Cocktail\*$/.test(part)) {
+        recipe.recipeType = "cocktail";
+        recipe.category ??= "drink";
+      } else if (glass && glassFor(glass[1])) {
+        recipe.recipeType = "cocktail";
+        recipe.cocktail.glass ??= glassFor(glass[1]);
+      } else if (methodFor(text)) {
+        recipe.recipeType = "cocktail";
+        recipe.cocktail.method ??= methodFor(text);
+      }
       else if (prep) recipe.prepMinutes ??= parseDuration(prep[1]);
       else if (cook) recipe.cookMinutes ??= parseDuration(cook[1]);
       else if (text === "Meal-Prep") recipe.isMealPrep = true;
@@ -568,16 +663,18 @@ function parseRecipe(block: { title: string; lines: string[] }, fileName: string
 
   // Kategorie: erst „Art“, dann „Kategorie“; was nicht passt, wird Tag
   for (const value of [...typeValues, ...categoryValues]) {
+    if (COCKTAIL_WORDS.has(norm(value))) recipe.recipeType = "cocktail";
     const category = categoryFor(value);
     if (category && !recipe.category) recipe.category = category;
     else if (!category && !IGNORED_VALUES.has(norm(value))) addTag(value);
   }
   if (recipe.prepMinutes == null && recipe.cookMinutes == null && totalMinutes != null) recipe.prepMinutes = totalMinutes;
+  if (recipe.recipeType === "cocktail") recipe.category ??= "drink";
 
   recipe.description = description.join("\n").slice(0, 2000);
   recipe.reference = references.length > 0 ? references.join(" · ").slice(0, 300) : null;
 
-  if (recipe.servings == null) recipe.warnings.push("Portionen fehlen");
+  if (recipe.servings == null) recipe.warnings.push(recipe.recipeType === "cocktail" ? "Anzahl Drinks fehlt" : "Portionen fehlen");
   else if (servingsRange) recipe.warnings.push("Portionen als Spanne angegeben");
   if (recipe.ingredients.length === 0) recipe.warnings.push("Keine Zutaten erkannt");
   if (recipe.steps.length === 0) recipe.warnings.push("Keine Schritte erkannt");

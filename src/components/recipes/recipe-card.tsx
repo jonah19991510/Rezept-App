@@ -1,12 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BookCheck, Clock, Globe, Heart } from "lucide-react";
+import { BookCheck, Clock, Globe, Heart, Martini } from "lucide-react";
 import { authorLabel } from "@/lib/domain/community";
 import { photoUrl } from "@/lib/domain/photo";
 import { autoTagsFor, totalMinutes, type RecipeListItem } from "@/lib/domain/recipe-filter";
 import { formatEuro, formatNumber } from "@/lib/format";
 import { formatMinutes } from "@/lib/format-quantity";
-import { CATEGORY_LABELS } from "@/lib/labels";
+import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS } from "@/lib/labels";
 import { MacroDot } from "./macro-dot";
 import { RecipeTags } from "./recipe-tags";
 import { StarValue } from "./star-rating";
@@ -14,6 +14,15 @@ import { StarValue } from "./star-rating";
 export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
   const minutes = formatMinutes(totalMinutes(recipe));
   const n = recipe.nutrition;
+  const c = recipe.cocktail;
+  // Phase 15: bei Cocktails Basisspirituose · Methode statt Kategorie
+  const kicker = c
+    ? [c.baseSpirit ?? "alkoholfrei", c.method ? METHOD_LABELS[c.method] : null, c.glass && c.glass !== "other" ? GLASS_LABELS[c.glass] : null]
+        .filter(Boolean)
+        .join(" · ")
+    : recipe.category
+      ? CATEGORY_LABELS[recipe.category]
+      : null;
   const hasFooter = minutes || recipe.copied || recipe.avgRating != null || recipe.costPerServing != null;
 
   return (
@@ -35,9 +44,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
       ) : null}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-1">
-          {recipe.category ? (
-            <p className="text-xs font-medium tracking-wide text-primary uppercase">{CATEGORY_LABELS[recipe.category]}</p>
-          ) : null}
+          {kicker ? <p className="text-xs font-medium tracking-wide text-primary uppercase">{kicker}</p> : null}
           <h2 className="text-lg leading-snug font-semibold group-hover:text-primary">{recipe.title}</h2>
           {recipe.author ? <p className="text-sm text-muted-foreground">{authorLabel(recipe.author)}</p> : null}
         </div>
@@ -50,7 +57,32 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
         </div>
       </div>
 
-      {n && n.kcal_per_serving != null ? (
+      {c ? (
+        <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <div className="flex items-center gap-1">
+            <dt className="sr-only">Alkoholgehalt</dt>
+            <dd className="flex items-center gap-1 font-semibold tabular-nums">
+              <Martini className="size-4 text-primary" aria-hidden />
+              {formatNumber(c.abvPercent ?? 0, 1)} % vol
+            </dd>
+          </div>
+          {c.alcoholGrams != null && c.alcoholGrams > 0 ? (
+            <div className="flex items-center gap-1">
+              <dt className="sr-only">Alkohol pro Drink</dt>
+              <dd className="font-medium tabular-nums">{formatNumber(c.alcoholGrams, 0)} g Alkohol</dd>
+            </div>
+          ) : null}
+          {n?.kcal_per_serving != null ? (
+            <div className="flex items-center gap-1">
+              <dt className="sr-only">Kalorien pro Drink</dt>
+              <dd className="flex items-center gap-1 font-medium tabular-nums">
+                <MacroDot macro="kcal" />
+                {formatNumber(Math.round(n.kcal_per_serving), 0)} kcal
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : n && n.kcal_per_serving != null ? (
         <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
           <div className="flex items-center gap-1">
             <dt className="sr-only">Kalorien pro Portion</dt>
@@ -83,7 +115,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
         </dl>
       ) : null}
 
-      <RecipeTags autoTags={autoTagsFor(recipe)} tags={recipe.tags.slice(0, 3)} />
+      <RecipeTags autoTags={c ? [] : autoTagsFor(recipe)} tags={recipe.tags.slice(0, 3)} />
 
       {hasFooter ? (
         <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -98,7 +130,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeListItem }) {
             <p className="tabular-nums">
               {recipe.costComplete === false ? "ab " : ""}
               {formatEuro(recipe.costPerServing)}
-              <span className="sr-only"> pro Portion</span>
+              <span className="sr-only"> {c ? "pro Drink" : "pro Portion"}</span>
             </p>
           ) : null}
           {recipe.copied ? (

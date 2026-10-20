@@ -16,12 +16,14 @@ const SECTIONS: { status: CookOption["status"]; title: string }[] = [
 ];
 
 /** Rezepte nach Abdeckung durch den Vorrat; fehlende Zutaten mit einem Tipp auf die Einkaufsliste. */
-export function CookOptions({ options }: { options: CookOption[] }) {
+export function CookOptions({ options, kind = "dish" }: { options: CookOption[]; kind?: "dish" | "cocktail" }) {
   const [showMany, setShowMany] = useState(false);
   const many = options.filter((o) => o.status === "many");
+  // Phase 15: dieselbe Ansicht für „Was kann ich mixen?“
+  const word = kind === "cocktail" ? { many: "Cocktails", one: "weiterer Cocktail" } : { many: "Rezepte", one: "weiteres Rezept" };
 
   if (options.length === 0) {
-    return <p className="text-sm text-muted-foreground">Du hast noch keine Rezepte mit Zutaten.</p>;
+    return <p className="text-sm text-muted-foreground">Du hast noch keine {word.many} mit Zutaten.</p>;
   }
 
   return (
@@ -35,7 +37,7 @@ export function CookOptions({ options }: { options: CookOption[] }) {
               {title} <span className="text-sm font-normal text-muted-foreground">({list.length})</span>
             </h2>
             {list.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Keine Rezepte.</p>
+              <p className="text-sm text-muted-foreground">Keine {word.many}.</p>
             ) : (
               <ul className="grid gap-3">
                 {list.map((o) => (
@@ -53,8 +55,8 @@ export function CookOptions({ options }: { options: CookOption[] }) {
             {showMany
               ? "Ausblenden"
               : many.length === 1
-                ? "1 weiteres Rezept, bei dem mehr fehlt"
-                : `${many.length} weitere Rezepte, bei denen mehr fehlt`}
+                ? `1 ${word.one}, bei dem mehr fehlt`
+                : `${many.length} weitere ${word.many}, bei denen mehr fehlt`}
           </Button>
           {showMany ? (
             <ul className="grid gap-3">

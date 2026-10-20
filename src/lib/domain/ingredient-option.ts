@@ -15,12 +15,13 @@ export type IngredientOption = Pick<
   | "diet"
   | "piece_weight_g"
   | "density_g_per_ml"
+  | "abv"
   | "source"
   | "is_staple"
 >;
 
 export const INGREDIENT_OPTION_COLUMNS =
-  "id, name, kcal, protein, carbs, fat, fiber, sugar, food_group, diet, piece_weight_g, density_g_per_ml, source, is_staple" as const;
+  "id, name, kcal, protein, carbs, fat, fiber, sugar, food_group, diet, piece_weight_g, density_g_per_ml, abv, source, is_staple" as const;
 
 export function toIngredientOption(row: IngredientOption): IngredientOption {
   return {
@@ -36,6 +37,7 @@ export function toIngredientOption(row: IngredientOption): IngredientOption {
     diet: row.diet,
     piece_weight_g: row.piece_weight_g,
     density_g_per_ml: row.density_g_per_ml,
+    abv: row.abv,
     source: row.source,
     is_staple: row.is_staple,
   };

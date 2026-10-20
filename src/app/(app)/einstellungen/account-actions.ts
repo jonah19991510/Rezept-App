@@ -123,6 +123,7 @@ export async function importRecipeBackupAction(input: BackupFile): Promise<Impor
             diet: i.diet as NonNullable<typeof i.diet>,
             piece_weight_g: i.piece_weight_g,
             density_g_per_ml: i.density_g_per_ml,
+            abv: i.abv,
             source: "user",
             created_by: user.id,
           };
@@ -161,6 +162,9 @@ export async function importRecipeBackupAction(input: BackupFile): Promise<Impor
     const { error } = await supabase.rpc("save_recipe", {
       p_recipe: {
         id: null,
+        // Phase 15: Version 2 enthält Cocktails, Version 1 nur Gerichte (Standard „dish“)
+        recipe_type: recipe.recipe_type,
+        ...(recipe.recipe_type === "cocktail" && recipe.cocktail ? { cocktail: recipe.cocktail } : {}),
         title: recipe.title,
         description: recipe.description ?? "",
         servings: recipe.servings,

@@ -1,12 +1,14 @@
 import { formatDate, formatNumber } from "@/lib/format";
 import { formatMinutes, formatQuantity } from "@/lib/format-quantity";
-import { CATEGORY_LABELS } from "@/lib/labels";
+import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS } from "@/lib/labels";
 import type { Enums } from "@/lib/supabase/database.types";
 
 // Markdown-Export (Phase 13): ein einzelnes Rezept oder das ganze Buch als .md-Datei.
 // Aufbau je Rezept: Überschrift (##), Zeile mit Kategorie/Portionen/Zeit, Beschreibung, Tags, Nährwerte,
 // „### Zutaten“ als Liste („400 g Spaghetti, Notiz“ wie auf der Rezeptseite), „### Zubereitung“ nummeriert.
 // Das Buch bekommt oben ein Inhaltsverzeichnis mit Sprungmarken (nach Kategorie gruppiert).
+// Phase 15: Cocktails mit „*Cocktail* · 1 Drink · geshaked · Glas Coupette“, Eis, Garnitur und Alkoholgehalt pro Drink;
+// im Buch als eigene Gruppe „Cocktails“ am Ende. Der Markdown-Import liest das wieder ein.
 
 export type MarkdownRecipe = {
   title: string;
@@ -22,7 +24,15 @@ export type MarkdownRecipe = {
   perServing: { kcal: number; protein: number; carbs: number; fat: number; fiber: number } | null;
   ingredients: { amount: number | null; unit: Enums<"unit"> | null; name: string; note: string | null }[];
   steps: { text: string; timer_seconds: number | null }[];
+  /** Phase 15: ohne Angabe Gericht */
+  recipe_type?: Enums<"recipe_type">;
+  cocktail?: { glass: Enums<"glass"> | null; method: Enums<"cocktail_method"> | null; ice: string | null; garnish: string | null } | null;
+  /** Alkoholgehalt pro Drink (View recipe_alcohol) */
+  alcohol?: { abvPercent: number; alcoholGrams: number } | null;
 };
+
+const COCKTAIL_GROUP = "Cocktails";
+const isCocktail = (r: MarkdownRecipe) => r.recipe_type === "cocktail";
 
 const NO_CATEGORY = "Ohne Kategorie";
 const CATEGORY_ORDER = Object.keys(CATEGORY_LABELS) as Enums<"recipe_category">[];
@@ -63,6 +73,14 @@ export function createSlugger() {
 
 function metaLine(r: MarkdownRecipe): string {
   const parts: string[] = [];
+  if (isCocktail(r)) {
+    parts.push("*Cocktail*", `${r.servings} ${r.servings === 1 ? "Drink" : "Drinks"}`);
+    if (r.cocktail?.method) parts.push(METHOD_LABELS[r.cocktail.method]);
+    if (r.cocktail?.glass) parts.push(`Glas ${GLASS_LABELS[r.cocktail.glass]}`);
+    const prep = formatMinutes(r.prep_minutes);
+    if (prep) parts.push(`Zubereitung ${prep}`);
+    return parts.join(" · ");
+  }
   if (r.category) parts.push(`*${CATEGORY_LABELS[r.category]}*`);
   parts.push(`${r.servings} ${r.servings === 1 ? "Portion" : "Portionen"}`);
   const prep = formatMinutes(r.prep_minutes);
@@ -71,6 +89,14 @@ function metaLine(r: MarkdownRecipe): string {
   if (cook) parts.push(`Kochen ${cook}`);
   if (r.is_meal_prep) parts.push("Meal-Prep");
   return parts.join(" · ");
+}
+
+/** „**Pro Drink:** 17,5 % vol · 18,9 g Alkohol · 152 kcal“ */
+function drinkLine(r: MarkdownRecipe): string | null {
+  const parts: string[] = [];
+  if (r.alcohol) parts.push(`${formatNumber(r.alcohol.abvPercent, 1)} % vol`, `${formatNumber(r.alcohol.alcoholGrams, 1)} g Alkohol`);
+  if (r.perServing) parts.push(`${formatNumber(Math.round(r.perServing.kcal), 0)} kcal`);
+  return parts.length ? `**Pro Drink:** ${parts.join(" · ")}` : null;
 }
 
 function macroLine(m: NonNullable<MarkdownRecipe["perServing"]>): string {
@@ -98,7 +124,12 @@ function recipeSection(r: MarkdownRecipe, level: number): string {
   const blocks: string[] = [`${h(level)} ${inline(r.title)}`, metaLine(r)];
   if (r.description?.trim()) blocks.push(escapeMarkdown(r.description.trim()));
   if (r.tags.length > 0) blocks.push(`**Tags:** ${r.tags.map(inline).join(", ")}`);
-  if (r.perServing) blocks.push(macroLine(r.perServing));
+  if (isCocktail(r)) {
+    if (r.cocktail?.ice?.trim()) blocks.push(`**Eis:** ${inline(r.cocktail.ice)}`);
+    if (r.cocktail?.garnish?.trim()) blocks.push(`**Garnitur:** ${inline(r.cocktail.garnish)}`);
+    const drink = drinkLine(r);
+    if (drink) blocks.push(drink);
+  } else if (r.perServing) blocks.push(macroLine(r.perServing));
 
   blocks.push(`${h(level + 1)} Zutaten`);
   blocks.push(r.ingredients.length > 0 ? r.ingredients.map(ingredientLine).join("\n") : "*Keine Zutaten eingetragen.*");
@@ -117,13 +148,14 @@ export function recipeToMarkdown(recipe: MarkdownRecipe): string {
 
 const collator = new Intl.Collator("de-DE", { sensitivity: "base", numeric: true });
 
-/** Rezepte nach Kategorie (Reihenfolge wie im Filter, ohne Kategorie zuletzt), darin alphabetisch. */
+/** Rezepte nach Kategorie (Reihenfolge wie im Filter, ohne Kategorie danach, Cocktails zuletzt), darin alphabetisch. */
 export function groupByCategory(recipes: MarkdownRecipe[]): { label: string; recipes: MarkdownRecipe[] }[] {
-  const rank = (c: MarkdownRecipe["category"]) => (c ? CATEGORY_ORDER.indexOf(c) : CATEGORY_ORDER.length);
-  const sorted = [...recipes].sort((a, b) => rank(a.category) - rank(b.category) || collator.compare(a.title, b.title));
+  const rank = (r: MarkdownRecipe) =>
+    isCocktail(r) ? CATEGORY_ORDER.length + 1 : r.category ? CATEGORY_ORDER.indexOf(r.category) : CATEGORY_ORDER.length;
+  const sorted = [...recipes].sort((a, b) => rank(a) - rank(b) || collator.compare(a.title, b.title));
   const groups: { label: string; recipes: MarkdownRecipe[] }[] = [];
   for (const r of sorted) {
-    const label = r.category ? CATEGORY_LABELS[r.category] : NO_CATEGORY;
+    const label = isCocktail(r) ? COCKTAIL_GROUP : r.category ? CATEGORY_LABELS[r.category] : NO_CATEGORY;
     const last = groups.at(-1);
     if (last?.label === label) last.recipes.push(r);
     else groups.push({ label, recipes: [r] });

@@ -43,7 +43,7 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   const currentMonday = mondayOf(todayInBerlin());
   const mondays = Array.from({ length: STATS_WEEKS }, (_, i) => addDays(currentMonday, (i - STATS_WEEKS + 1) * 7));
 
-  const [recipes, nutrition, plan, goals, training, cookLogs, costs, longNotCookedWeeks] = await Promise.all([
+  const [recipes, nutrition, plan, goals, training, allCookLogs, costs, longNotCookedWeeks, cocktails] = await Promise.all([
     supabase.from("recipes").select("id, title, category, servings, is_meal_prep").eq("owner_id", userId).eq("recipe_type", "dish"),
     supabase
       .from("recipe_nutrition")
@@ -61,10 +61,14 @@ export async function getStatsData(userId: string): Promise<StatsData> {
     getCookLogs(userId),
     getRecipeCosts(),
     getLongNotCookedWeeks(userId),
+    // Phase 15: Gemixtes zählt in der Bar-Statistik, nicht bei den gekochten Gerichten
+    supabase.from("recipes").select("id").eq("owner_id", userId).eq("recipe_type", "cocktail"),
   ]);
   if (recipes.error || nutrition.error || plan.error) throw new Error("Statistiken konnten nicht geladen werden.");
 
   const nutritionById = new Map(nutrition.data.map((n) => [n.recipe_id, n]));
+  const cocktailIds = new Set((cocktails.data ?? []).map((c) => c.id));
+  const cookLogs = allCookLogs.filter((l) => !cocktailIds.has(l.recipeId));
 
   const statsRecipes: StatsRecipe[] = recipes.data.map((r) => {
     const n = nutritionById.get(r.id);

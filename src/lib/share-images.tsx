@@ -5,7 +5,7 @@ import { BRAND_BACKGROUND, BRAND_TERRACOTTA } from "@/lib/app-icon";
 import { sharedMacros, type SharedRecipe } from "@/lib/domain/shared-recipe";
 import { formatNumber } from "@/lib/format";
 import { formatMinutes, formatQuantity } from "@/lib/format-quantity";
-import { CATEGORY_LABELS } from "@/lib/labels";
+import { CATEGORY_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
 
 // Bilder zur geteilten Rezeptkarte (Phase 14), gerendert mit ImageResponse (Satori → PNG):
 // Link-Vorschau (Open Graph, 1200×630) und Story-Bild (1080×1920, z. B. für Instagram).
@@ -16,6 +16,16 @@ const MUTED = "#6e6058";
 const CARD = "#fffcf7";
 const BORDER = "#e4ddd3";
 const MACRO = { protein: "#3067b8", carbs: "#da950b", fat: "#4e822c" } as const;
+/** Phase 15: Bernstein und Grün der Bar-Stimmung */
+const BAR = { amber: "#d79a2b", green: "#1f5a45" } as const;
+
+/** Oberzeile: Kategorie, bei Cocktails „Cocktail · geshaked“ */
+function kicker(recipe: SharedRecipe): string | null {
+  if (recipe.recipe_type === "cocktail") {
+    return ["Cocktail", recipe.cocktail?.method ? METHOD_LABELS[recipe.cocktail.method] : null].filter(Boolean).join(" · ");
+  }
+  return recipe.category ? CATEGORY_LABELS[recipe.category] : null;
+}
 
 /**
  * ImageResponse liefert PNG; mit Foto wird das schnell 1–2 MB groß. Messenger zeigen große Vorschaubilder
@@ -37,13 +47,23 @@ function timeLabel(recipe: SharedRecipe): string | null {
 
 function Macros({ recipe, scale }: { recipe: SharedRecipe; scale: number }) {
   const m = sharedMacros(recipe);
-  if (!m) return null;
-  const items = [
-    { label: "kcal", value: formatNumber(Math.round(m.kcal), 0), color: BRAND_TERRACOTTA },
-    { label: "Eiweiß", value: `${formatNumber(m.protein, 0)} g`, color: MACRO.protein },
-    { label: "Kohlenh.", value: `${formatNumber(m.carbs, 0)} g`, color: MACRO.carbs },
-    { label: "Fett", value: `${formatNumber(m.fat, 0)} g`, color: MACRO.fat },
-  ];
+  const a = recipe.recipe_type === "cocktail" ? recipe.alcohol : null;
+  if (!m && !a) return null;
+  // Cocktails: Alkoholgehalt, Gramm Alkohol und kcal pro Drink statt Makros
+  const items = a
+    ? [
+        { label: "% vol", value: formatNumber(a.abv_percent, 1), color: BAR.amber },
+        { label: "Alkohol", value: `${formatNumber(a.alcohol_g, 0)} g`, color: BAR.green },
+        ...(m ? [{ label: "kcal", value: formatNumber(Math.round(m.kcal), 0), color: BRAND_TERRACOTTA }] : []),
+      ]
+    : m
+      ? [
+          { label: "kcal", value: formatNumber(Math.round(m.kcal), 0), color: BRAND_TERRACOTTA },
+          { label: "Eiweiß", value: `${formatNumber(m.protein, 0)} g`, color: MACRO.protein },
+          { label: "Kohlenh.", value: `${formatNumber(m.carbs, 0)} g`, color: MACRO.carbs },
+          { label: "Fett", value: `${formatNumber(m.fat, 0)} g`, color: MACRO.fat },
+        ]
+      : [];
   return (
     <div style={{ display: "flex", gap: 14 * scale }}>
       {items.map((item) => (
@@ -79,7 +99,7 @@ function Brand({ scale }: { scale: number }) {
 /** Link-Vorschau für Messenger: Foto links (falls vorhanden), rechts Titel, Autor und Makros. */
 export function sharedOgImage(recipe: SharedRecipe, photo: string | null, size: { width: number; height: number }) {
   const meta = [
-    `${recipe.servings} ${recipe.servings === 1 ? "Portion" : "Portionen"}`,
+    `${recipe.servings} ${servingsLabel(recipe.servings, recipe.recipe_type)}`,
     timeLabel(recipe),
     recipe.author ? `von ${recipe.author}` : null,
   ].filter(Boolean);
@@ -95,9 +115,9 @@ export function sharedOgImage(recipe: SharedRecipe, photo: string | null, size: 
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flex: 1, padding: 56 }}>
           <Brand scale={1} />
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            {recipe.category ? (
+            {kicker(recipe) ? (
               <span style={{ fontSize: 24, color: BRAND_TERRACOTTA, textTransform: "uppercase", letterSpacing: 2 }}>
-                {CATEGORY_LABELS[recipe.category]}
+                {kicker(recipe)}
               </span>
             ) : null}
             <span style={{ fontSize: photo ? 56 : 68, lineHeight: 1.1, color: FG }}>{clip(recipe.title, photo ? 60 : 80)}</span>
@@ -121,7 +141,7 @@ export function sharedStoryImage(recipe: SharedRecipe, photo: string | null) {
   const photoHeight = photo ? STORY_PHOTO.height : 0;
   const shown = recipe.ingredients.slice(0, STORY_INGREDIENTS);
   const more = recipe.ingredients.length - shown.length;
-  const meta = [`${recipe.servings} ${recipe.servings === 1 ? "Portion" : "Portionen"}`, timeLabel(recipe)].filter(Boolean);
+  const meta = [`${recipe.servings} ${servingsLabel(recipe.servings, recipe.recipe_type)}`, timeLabel(recipe)].filter(Boolean);
 
   return new ImageResponse(
     (
@@ -146,9 +166,9 @@ export function sharedStoryImage(recipe: SharedRecipe, photo: string | null) {
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {recipe.category ? (
+            {kicker(recipe) ? (
               <span style={{ fontSize: 30, color: BRAND_TERRACOTTA, textTransform: "uppercase", letterSpacing: 3 }}>
-                {CATEGORY_LABELS[recipe.category]}
+                {kicker(recipe)}
               </span>
             ) : null}
             <span style={{ fontSize: 72, lineHeight: 1.08, color: FG }}>{clip(recipe.title, 70)}</span>

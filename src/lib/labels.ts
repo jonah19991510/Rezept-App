@@ -48,8 +48,27 @@ export const UNIT_LABELS: Record<Enums<"unit">, string> = {
   barspoon: "Barlöffel",
 };
 
-/** Einheiten in der Auswahl beim Bearbeiten (Küche). Dash und Barlöffel kommen mit dem Bar-Bereich. */
+/** Einheiten in der Auswahl beim Bearbeiten (Küche). */
 export const KITCHEN_UNITS: Enums<"unit">[] = ["g", "ml", "piece", "tbsp", "tsp", "pinch", "cl", "dash", "barspoon"];
+
+/** Einheiten im Cocktail-Editor: Bar-Maße zuerst. */
+export const BAR_UNITS: Enums<"unit">[] = ["cl", "ml", "dash", "barspoon", "tsp", "piece", "g", "tbsp", "pinch"];
+
+export const GLASS_LABELS: Record<Enums<"glass">, string> = {
+  tumbler: "Tumbler",
+  coupette: "Coupette",
+  highball: "Highball",
+  martini: "Martini",
+  tiki: "Tiki",
+  other: "Sonstiges",
+};
+
+export const METHOD_LABELS: Record<Enums<"cocktail_method">, string> = {
+  shaken: "geshaked",
+  stirred: "gerührt",
+  built: "gebaut",
+  blended: "geblendet",
+};
 
 export const DIET_LABELS: Record<Enums<"ingredient_diet">, string> = {
   vegan: "vegan",
@@ -66,3 +85,31 @@ export const AUTO_TAG_LABELS = {
 } as const;
 
 export type AutoTag = keyof typeof AUTO_TAG_LABELS;
+
+/** Phase 15: Wörter, die sich zwischen Gericht und Cocktail unterscheiden (Rezeptseite, Koch-/Mix-Modus, Koch-Log). */
+export const KIND_WORDS = {
+  dish: {
+    one: "Portion",
+    many: "Portionen",
+    done: "Gekocht",
+    past: "gekocht",
+    mode: "Kochmodus",
+    start: "Kochen starten",
+    doing: "kochen",
+  },
+  cocktail: {
+    one: "Drink",
+    many: "Drinks",
+    done: "Gemixt",
+    past: "gemixt",
+    mode: "Mix-Modus",
+    start: "Mixen starten",
+    doing: "mixen",
+  },
+} as const satisfies Record<Enums<"recipe_type">, Record<string, string>>;
+
+export type KindWords = (typeof KIND_WORDS)[Enums<"recipe_type">];
+
+export function servingsLabel(n: number, kind: Enums<"recipe_type"> = "dish"): string {
+  return n === 1 ? KIND_WORDS[kind].one : KIND_WORDS[kind].many;
+}

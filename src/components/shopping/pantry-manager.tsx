@@ -41,8 +41,17 @@ function defaultUnit(group: FoodGroup): PantryUnit {
 }
 
 /** Vorratsschrank mit den Bereichen Küche und Bar. Menge und Ablaufdatum sind freiwillig. */
-export function PantryManager({ entries, today }: { entries: PantryRow[]; today: string }) {
-  const [area, setArea] = useState<PantryLocation>("kitchen");
+export function PantryManager({
+  entries,
+  today,
+  initialArea = "kitchen",
+}: {
+  entries: PantryRow[];
+  today: string;
+  /** Phase 15: /einkauf/vorrat?bereich=bar öffnet direkt die Bar */
+  initialArea?: PantryLocation;
+}) {
+  const [area, setArea] = useState<PantryLocation>(initialArea);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draft, setDraft] = useState<Draft | null>(null);
 

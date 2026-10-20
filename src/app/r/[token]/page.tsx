@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Clock, ExternalLink, Users } from "lucide-react";
+import { Clock, ExternalLink, GlassWater, Snowflake, Sparkles, Users } from "lucide-react";
+import { BarMood } from "@/components/bar/bar-mood";
 import { Brand } from "@/components/layout/brand";
 import { RecipeTags } from "@/components/recipes/recipe-tags";
 import { ScaledRecipeContent } from "@/components/recipes/scaled-recipe-content";
 import { SharedActions } from "@/components/recipes/shared-actions";
 import { getCurrentUser } from "@/lib/auth";
+import { dilutionNote } from "@/lib/domain/cocktail";
 import { missingGramNames, shareDescription, sharedMacros } from "@/lib/domain/shared-recipe";
 import { formatDate } from "@/lib/format";
 import { formatMinutes } from "@/lib/format-quantity";
-import { CATEGORY_LABELS } from "@/lib/labels";
+import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
 import { getSharedRecipe } from "@/lib/server/shared-recipes";
 import { createClient } from "@/lib/supabase/server";
 
@@ -50,9 +52,18 @@ export default async function SharedRecipePage({ params }: PageProps<"/r/[token]
   const prep = formatMinutes(recipe.prep_minutes);
   const cook = formatMinutes(recipe.cook_minutes);
   const total = formatMinutes((recipe.prep_minutes ?? 0) + (recipe.cook_minutes ?? 0));
+  // Phase 15: Cocktails mit Bar-Stimmung, Glas/Methode/Eis/Garnitur und Alkoholgehalt pro Drink
+  const isCocktail = recipe.recipe_type === "cocktail";
+  const cocktail = recipe.cocktail;
+  const kicker = isCocktail
+    ? ["Cocktail", cocktail?.method ? METHOD_LABELS[cocktail.method] : null].filter(Boolean).join(" · ")
+    : recipe.category
+      ? CATEGORY_LABELS[recipe.category]
+      : null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 print:max-w-none print:p-0">
+      {isCocktail ? <BarMood /> : null}
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Brand href="/" />
       </header>
@@ -69,17 +80,33 @@ export default async function SharedRecipePage({ params }: PageProps<"/r/[token]
 
         <div className="space-y-8 p-5 md:p-8 print:space-y-5 print:p-0 print:pt-4">
           <header className="space-y-3">
-            {recipe.category ? (
-              <p className="text-sm font-medium tracking-wide text-primary uppercase">{CATEGORY_LABELS[recipe.category]}</p>
-            ) : null}
+            {kicker ? <p className="text-sm font-medium tracking-wide text-primary uppercase">{kicker}</p> : null}
             <h1 className="text-3xl font-semibold text-balance md:text-4xl">{recipe.title}</h1>
             {recipe.author ? <p className="text-sm text-muted-foreground">von {recipe.author}</p> : null}
             {recipe.description ? <p className="max-w-prose whitespace-pre-line text-muted-foreground">{recipe.description}</p> : null}
             <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
               <li className="flex items-center gap-1.5">
                 <Users className="size-4" aria-hidden />
-                {recipe.servings} {recipe.servings === 1 ? "Portion" : "Portionen"}
+                {recipe.servings} {servingsLabel(recipe.servings, recipe.recipe_type)}
               </li>
+              {cocktail?.glass ? (
+                <li className="flex items-center gap-1.5">
+                  <GlassWater className="size-4" aria-hidden />
+                  {GLASS_LABELS[cocktail.glass]}
+                </li>
+              ) : null}
+              {cocktail?.ice ? (
+                <li className="flex items-center gap-1.5">
+                  <Snowflake className="size-4" aria-hidden />
+                  Eis: {cocktail.ice}
+                </li>
+              ) : null}
+              {cocktail?.garnish ? (
+                <li className="flex items-center gap-1.5">
+                  <Sparkles className="size-4" aria-hidden />
+                  Garnitur: {cocktail.garnish}
+                </li>
+              ) : null}
               {total ? (
                 <li className="flex items-center gap-1.5">
                   <Clock className="size-4" aria-hidden />
@@ -88,7 +115,7 @@ export default async function SharedRecipePage({ params }: PageProps<"/r/[token]
                 </li>
               ) : null}
             </ul>
-            <RecipeTags autoTags={recipe.is_meal_prep ? ["meal_prep"] : []} tags={recipe.tags} />
+            <RecipeTags autoTags={recipe.is_meal_prep && !isCocktail ? ["meal_prep"] : []} tags={recipe.tags} />
           </header>
 
           <SharedActions token={token} viewer={viewer} />
@@ -97,6 +124,17 @@ export default async function SharedRecipePage({ params }: PageProps<"/r/[token]
             recipeId=""
             showCookButton={false}
             servings={recipe.servings}
+            kind={recipe.recipe_type}
+            cocktail={
+              isCocktail && recipe.alcohol
+                ? {
+                    abvPercent: recipe.alcohol.abv_percent,
+                    alcoholGrams: recipe.alcohol.alcohol_g,
+                    volumeMl: recipe.alcohol.volume_ml,
+                    dilutionNote: dilutionNote(cocktail?.method ?? null, recipe.alcohol.dilution),
+                  }
+                : null
+            }
             perServing={macros}
             lines={recipe.ingredients.map((l) => ({
               id: String(l.position),

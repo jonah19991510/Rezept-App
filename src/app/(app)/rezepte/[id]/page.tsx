@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CircleCheck, Clock, ExternalLink, GitFork, Users } from "lucide-react";
+import { ArrowLeft, CircleCheck, Clock, ExternalLink, GitFork, GlassWater, Snowflake, Sparkles, Users } from "lucide-react";
+import { BarMood } from "@/components/bar/bar-mood";
 import { CookLogSection } from "@/components/recipes/cook-log-section";
 import { FavoriteButton } from "@/components/recipes/favorite-button";
 import { PublishToggle } from "@/components/recipes/publish-toggle";
@@ -13,12 +14,13 @@ import { ScaledRecipeContent } from "@/components/recipes/scaled-recipe-content"
 import { ShareLink } from "@/components/recipes/share-link";
 import { VersionHistory } from "@/components/recipes/version-history";
 import { requireUser } from "@/lib/auth";
+import { baseSpirit, dilutionNote } from "@/lib/domain/cocktail";
 import { authorName } from "@/lib/domain/community";
 import { autoTagsFor } from "@/lib/domain/recipe-filter";
 import { snapshotMacros } from "@/lib/domain/versions";
 import { todayInBerlin } from "@/lib/domain/week";
 import { formatMinutes } from "@/lib/format-quantity";
-import { CATEGORY_LABELS } from "@/lib/labels";
+import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
 import { getCookLogs, getIngredientNutrition, getRecipeCost, getRecipeVersions } from "@/lib/server/kitchen-log";
 import { getRecipeDetail } from "@/lib/server/recipes";
 import { getSiteUrl } from "@/lib/site-url";
@@ -40,7 +42,20 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const detail = await getRecipeDetail(id, user.id);
   if (!detail) notFound();
 
-  const { recipe, nutrition, ingredients, steps } = detail;
+  const { recipe, nutrition, ingredients, steps, cocktail, alcohol } = detail;
+  // Phase 15: Cocktails mit Bar-Stimmung, Drinks und Alkoholgehalt
+  const isCocktail = recipe.recipe_type === "cocktail";
+  const kicker = isCocktail
+    ? [
+        baseSpirit(ingredients.map((l) => ({ name: l.ingredient.name, amount: l.amount, unit: l.unit, ingredient: l.ingredient }))) ??
+          "alkoholfrei",
+        cocktail?.method ? METHOD_LABELS[cocktail.method] : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : recipe.category
+      ? CATEGORY_LABELS[recipe.category]
+      : null;
   // Phase 12: Kosten nach eigenen Preisen, eigenes Koch-Log, Versionen (nur Owner)
   const [cost, logs, versions] = await Promise.all([
     getRecipeCost(recipe.id),
@@ -56,10 +71,15 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const missingGrams = ingredients.filter((l) => l.amount != null && l.grams == null);
   // Direkt nach „In mein Rezeptbuch übernehmen“ (Weiterleitung mit ?uebernommen=1)
   const justForked = detail.isOwner && query.uebernommen === "1" && recipe.forked_from_id != null;
-  const back = detail.isOwner ? { href: "/rezepte", label: "Alle Rezepte" } : { href: "/entdecken", label: "Entdecken" };
+  const back = !detail.isOwner
+    ? { href: isCocktail ? "/entdecken/bar" : "/entdecken", label: "Entdecken" }
+    : isCocktail
+      ? { href: "/rezepte/bar", label: "Alle Cocktails" }
+      : { href: "/rezepte", label: "Alle Rezepte" };
 
   return (
     <article className="space-y-8">
+      {isCocktail ? <BarMood /> : null}
       <div className="space-y-4">
         <Link
           href={back.href}
@@ -82,9 +102,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
         <RecipePhoto recipeId={recipe.id} imagePath={recipe.image_url} title={recipe.title} isOwner={detail.isOwner} />
 
         <header className="space-y-3">
-          {recipe.category ? (
-            <p className="text-sm font-medium tracking-wide text-primary uppercase">{CATEGORY_LABELS[recipe.category]}</p>
-          ) : null}
+          {kicker ? <p className="text-sm font-medium tracking-wide text-primary uppercase">{kicker}</p> : null}
           <h1 className="text-3xl font-semibold text-balance md:text-4xl">{recipe.title}</h1>
           {!detail.isOwner ? <p className="text-sm text-muted-foreground">von {authorName(detail.authorName)}</p> : null}
           {detail.isOwner && detail.forkedFrom ? (
@@ -103,8 +121,26 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
             <li className="flex items-center gap-1.5">
               <Users className="size-4" aria-hidden />
-              {recipe.servings} {recipe.servings === 1 ? "Portion" : "Portionen"}
+              {recipe.servings} {servingsLabel(recipe.servings, recipe.recipe_type)}
             </li>
+            {cocktail?.glass ? (
+              <li className="flex items-center gap-1.5">
+                <GlassWater className="size-4" aria-hidden />
+                {GLASS_LABELS[cocktail.glass]}
+              </li>
+            ) : null}
+            {cocktail?.ice ? (
+              <li className="flex items-center gap-1.5">
+                <Snowflake className="size-4" aria-hidden />
+                Eis: {cocktail.ice}
+              </li>
+            ) : null}
+            {cocktail?.garnish ? (
+              <li className="flex items-center gap-1.5">
+                <Sparkles className="size-4" aria-hidden />
+                Garnitur: {cocktail.garnish}
+              </li>
+            ) : null}
             {total ? (
               <li className="flex items-center gap-1.5">
                 <Clock className="size-4" aria-hidden />
@@ -115,7 +151,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           </ul>
 
           <RecipeTags
-            autoTags={autoTagsFor({ is_meal_prep: recipe.is_meal_prep, nutrition })}
+            autoTags={isCocktail ? [] : autoTagsFor({ is_meal_prep: recipe.is_meal_prep, nutrition })}
             tags={recipe.tags}
           />
         </header>
@@ -134,6 +170,17 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
       <ScaledRecipeContent
         recipeId={recipe.id}
         servings={recipe.servings}
+        kind={recipe.recipe_type}
+        cocktail={
+          isCocktail && alcohol
+            ? {
+                abvPercent: alcohol.abv_percent ?? 0,
+                alcoholGrams: alcohol.alcohol_g_per_drink ?? 0,
+                volumeMl: alcohol.drink_volume_ml ?? 0,
+                dilutionNote: dilutionNote(cocktail?.method ?? null, alcohol.dilution ?? 0),
+              }
+            : null
+        }
         perServing={
           nutrition && nutrition.kcal_per_serving != null
             ? {
@@ -177,9 +224,9 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
         }
       />
 
-      <RecipeCost cost={cost} />
+      <RecipeCost cost={cost} unit={isCocktail ? "Drink" : "Portion"} />
 
-      <CookLogSection recipeId={recipe.id} logs={logs} today={todayInBerlin()} servings={recipe.servings} />
+      <CookLogSection recipeId={recipe.id} logs={logs} today={todayInBerlin()} servings={recipe.servings} kind={recipe.recipe_type} />
 
       {detail.isOwner ? (
         <VersionHistory

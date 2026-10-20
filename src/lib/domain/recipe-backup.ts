@@ -4,9 +4,12 @@ import { Constants } from "@/lib/supabase/database.types";
 // Rezept-Sicherung (Phase 8): alle eigenen Rezepte als JSON-Datei, die sich wieder importieren lässt.
 // Zutaten stehen mit ID UND Nährwerten drin: Gibt es die ID beim Import nicht (mehr), wird nach dem Namen
 // gesucht und sonst eine eigene Zutat mit diesen Werten angelegt. Fotos sind nicht enthalten.
+// Version 2 (Phase 15): auch Cocktails (recipe_type, Glas, Methode, Eis, Garnitur) und der Alkoholgehalt der
+// Zutaten. Dateien der Version 1 lassen sich weiter importieren (alles Gerichte, Alkoholgehalt unbekannt).
 
 export const BACKUP_FORMAT = "rezeptbuch-rezepte";
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
+export const SUPPORTED_BACKUP_VERSIONS = [1, 2] as const;
 export const MAX_BACKUP_RECIPES = 300;
 
 const n = (max: number) => z.number().min(0).max(max);
@@ -24,9 +27,22 @@ export const backupIngredientSchema = z.object({
   diet: z.enum(Constants.public.Enums.ingredient_diet).nullable(),
   piece_weight_g: z.number().positive().max(10000).nullable(),
   density_g_per_ml: z.number().positive().max(5).nullable(),
+  /** ab Version 2 */
+  abv: z.number().min(0).max(100).nullable().default(null),
+});
+
+/** ab Version 2: Cocktail-Felder */
+export const backupCocktailSchema = z.object({
+  glass: z.enum(Constants.public.Enums.glass).nullable(),
+  method: z.enum(Constants.public.Enums.cocktail_method).nullable(),
+  ice: z.string().max(100).nullable(),
+  garnish: z.string().max(200).nullable(),
 });
 
 export const backupRecipeSchema = z.object({
+  /** ab Version 2; Version 1 kennt nur Gerichte */
+  recipe_type: z.enum(Constants.public.Enums.recipe_type).default("dish"),
+  cocktail: backupCocktailSchema.nullable().default(null),
   title: z.string().trim().min(1).max(200),
   description: z.string().max(2000).nullable(),
   servings: z.number().int().min(1).max(100),
@@ -53,7 +69,7 @@ export const backupRecipeSchema = z.object({
 
 export const backupFileSchema = z.object({
   format: z.literal(BACKUP_FORMAT, { error: "Das ist keine Rezept-Sicherung aus dieser App." }),
-  version: z.literal(BACKUP_VERSION, { error: "Diese Sicherung stammt aus einer anderen Version der App." }),
+  version: z.literal(SUPPORTED_BACKUP_VERSIONS, { error: "Diese Sicherung stammt aus einer anderen Version der App." }),
   exported_at: z.string().max(40),
   recipes: z.array(backupRecipeSchema).min(1, "Die Sicherung enthält keine Rezepte.").max(MAX_BACKUP_RECIPES, `Höchstens ${MAX_BACKUP_RECIPES} Rezepte auf einmal.`),
 });
@@ -61,9 +77,12 @@ export const backupFileSchema = z.object({
 export type BackupIngredient = z.infer<typeof backupIngredientSchema>;
 export type BackupRecipe = z.infer<typeof backupRecipeSchema>;
 export type BackupFile = z.infer<typeof backupFileSchema>;
+/** Was der Server-Import entgegennimmt (vor dem Auffüllen der Standardwerte, z. B. aus Version 1) */
+export type BackupFileInput = z.input<typeof backupFileSchema>;
 
-/** Datenbankzeile eines eigenen Rezepts mit Zutaten (inkl. Zutat) und Schritten. */
-export type RecipeRowForBackup = Omit<BackupRecipe, "ingredients" | "steps"> & {
+/** Datenbankzeile eines eigenen Rezepts mit Zutaten (inkl. Zutat), Schritten und Cocktail-Feldern. */
+export type RecipeRowForBackup = Omit<BackupRecipe, "ingredients" | "steps" | "cocktail"> & {
+  cocktail_details: BackupRecipe["cocktail"];
   recipe_ingredients: (Omit<BackupRecipe["ingredients"][number], "ingredient"> & { position: number; ingredient: BackupIngredient })[];
   recipe_steps: { position: number; text: string; timer_seconds: number | null }[];
 };
@@ -73,8 +92,9 @@ export function toBackupFile(rows: RecipeRowForBackup[], now: Date): BackupFile 
     format: BACKUP_FORMAT,
     version: BACKUP_VERSION,
     exported_at: now.toISOString(),
-    recipes: rows.map(({ recipe_ingredients, recipe_steps, ...r }) => ({
+    recipes: rows.map(({ recipe_ingredients, recipe_steps, cocktail_details, ...r }) => ({
       ...r,
+      cocktail: r.recipe_type === "cocktail" ? cocktail_details : null,
       ingredients: [...recipe_ingredients]
         .sort((a, b) => a.position - b.position)
         .map((l) => ({

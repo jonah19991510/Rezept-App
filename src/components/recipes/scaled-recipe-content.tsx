@@ -2,15 +2,26 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { ChefHat, RotateCcw, TriangleAlert } from "lucide-react";
+import { ChefHat, Martini, RotateCcw, TriangleAlert } from "lucide-react";
 import { MacroSummary, type MacroValues } from "@/components/recipes/macro-summary";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { scaleAmount, scaleFactor } from "@/lib/domain/scaling";
 import type { Unit } from "@/lib/domain/units";
-import { formatGrams } from "@/lib/format";
+import { formatGrams, formatNumber } from "@/lib/format";
 import { formatScaledQuantity } from "@/lib/format-quantity";
+import { KIND_WORDS, servingsLabel } from "@/lib/labels";
+import type { Enums } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
 import { PortionStepper } from "./portion-stepper";
+
+/** Phase 15: Alkoholgehalt pro Drink (aus der View recipe_alcohol) */
+export type CocktailFacts = {
+  abvPercent: number;
+  alcoholGrams: number;
+  volumeMl: number;
+  /** z. B. „geshaked: +25 % Schmelzwasser eingerechnet“ */
+  dilutionNote: string;
+};
 
 export type ScalableLine = {
   id: string;
@@ -33,6 +44,8 @@ export function ScaledRecipeContent({
   missingGramsNames,
   steps,
   showCookButton = true,
+  kind = "dish",
+  cocktail = null,
 }: {
   recipeId: string;
   servings: number;
@@ -42,24 +55,65 @@ export function ScaledRecipeContent({
   steps: ReactNode;
   /** Geteilte Rezeptkarte: ohne Kochmodus (braucht Login und ein lesbares Rezept) */
   showCookButton?: boolean;
+  /** Phase 15: Cocktail mit Drinks, Mix-Modus und Alkoholgehalt */
+  kind?: Enums<"recipe_type">;
+  cocktail?: CocktailFacts | null;
 }) {
+  const w = KIND_WORDS[kind];
+  const isCocktail = kind === "cocktail";
   const [target, setTarget] = useState(servings);
   const factor = scaleFactor(target, servings);
   const changed = target !== servings;
-  const portionsLabel = `für ${String(target).replace(".", ",")} ${target === 1 ? "Portion" : "Portionen"}`;
+  const portionsLabel = `für ${String(target).replace(".", ",")} ${servingsLabel(target, kind)}`;
 
   return (
     <>
       {showCookButton ? (
         <div className="flex flex-wrap items-center gap-3">
           <Link href={`/kochen/${recipeId}?portionen=${target}`} className={buttonVariants({ size: "lg" })}>
-            <ChefHat aria-hidden />
-            Kochen starten
+            {isCocktail ? <Martini aria-hidden /> : <ChefHat aria-hidden />}
+            {w.start}
           </Link>
         </div>
       ) : null}
 
-      {perServing ? (
+      {cocktail ? (
+        <section aria-labelledby="alkohol" className="rounded-3xl border bg-card p-4 md:p-5">
+          <h2 id="alkohol" className="mb-3 text-xl font-semibold">
+            Pro Drink
+          </h2>
+          <dl className="grid grid-cols-3 gap-3">
+            <div>
+              <dt className="text-xs text-muted-foreground">Alkoholgehalt</dt>
+              <dd className="font-heading text-xl font-semibold whitespace-nowrap tabular-nums sm:text-2xl">{formatNumber(cocktail.abvPercent, 1)} % vol</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Alkohol</dt>
+              <dd className="font-heading text-xl font-semibold whitespace-nowrap tabular-nums sm:text-2xl">{formatNumber(cocktail.alcoholGrams, 1)} g</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Im Glas</dt>
+              <dd className="font-heading text-xl font-semibold whitespace-nowrap tabular-nums sm:text-2xl">≈ {formatNumber(Math.round(cocktail.volumeMl), 0)} ml</dd>
+            </div>
+          </dl>
+          <p className="mt-2 text-xs text-muted-foreground">{cocktail.dilutionNote}</p>
+          {perServing ? (
+            <div className="mt-4 border-t pt-4">
+              <MacroSummary
+                values={perServing}
+                caption="pro Drink"
+                total={{
+                  kcal: perServing.kcal * target,
+                  protein: perServing.protein * target,
+                  carbs: perServing.carbs * target,
+                  fat: perServing.fat * target,
+                }}
+                totalLabel={portionsLabel}
+              />
+            </div>
+          ) : null}
+        </section>
+      ) : perServing ? (
         <section aria-labelledby="makros" className="rounded-3xl border bg-card p-4 md:p-5">
           <h2 id="makros" className="mb-3 text-xl font-semibold">
             Nährwerte
@@ -91,7 +145,7 @@ export function ScaledRecipeContent({
             ) : null}
           </div>
           <div className="print:hidden">
-            <PortionStepper value={target} onChange={setTarget} />
+            <PortionStepper value={target} onChange={setTarget} kind={kind} />
           </div>
           {lines.length === 0 ? (
             <p className="text-sm text-muted-foreground">Noch keine Zutaten eingetragen.</p>
@@ -108,7 +162,7 @@ export function ScaledRecipeContent({
                     <span className="min-w-0">
                       {line.name}
                       {line.note ? <span className="text-muted-foreground">, {line.note}</span> : null}
-                      {grams != null && grams >= 1 && line.unit !== "g" ? (
+                      {!isCocktail && grams != null && grams >= 1 && line.unit !== "g" ? (
                         <span className="block text-xs text-muted-foreground">≈ {formatGrams(grams, 0)}</span>
                       ) : null}
                     </span>
@@ -125,7 +179,7 @@ export function ScaledRecipeContent({
           {missingGramsNames.length > 0 ? (
             <p className="flex gap-2 text-sm text-muted-foreground">
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-              Für {missingGramsNames.join(", ")} fehlt das Gewicht. Diese Zutaten zählen in den Nährwerten nicht mit.
+              Für {missingGramsNames.join(", ")} fehlt das Gewicht. {missingGramsNames.length === 1 ? "Diese Zutat zählt" : "Diese Zutaten zählen"} in den Nährwerten nicht mit.
             </p>
           ) : null}
         </section>

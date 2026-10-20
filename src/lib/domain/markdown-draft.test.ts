@@ -9,7 +9,7 @@ import { parseMarkdownFiles } from "./markdown-import";
 
 const ing = (id: string, name: string, extra: Partial<IngredientOption> = {}): IngredientOption => ({
   id, name, kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, food_group: "other", diet: "none",
-  piece_weight_g: null, density_g_per_ml: null, source: "seed", is_staple: false, ...extra,
+  piece_weight_g: null, density_g_per_ml: null, abv: null, source: "seed", is_staple: false, ...extra,
 });
 
 const MEHL = ing("11111111-1111-4111-8111-111111111111", "Mehl");

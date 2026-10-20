@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Refrigerator } from "lucide-react";
+import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { CookOptions } from "@/components/shopping/cook-options";
@@ -48,6 +49,7 @@ export default async function WhatToCookPage() {
     <div className="mx-auto max-w-2xl">
       <PageHeader title="Einkauf" description="Was kann ich mit meinem Vorrat kochen?" />
       <ShoppingTabs active="/einkauf/was-kochen" />
+      <KitchenBarSwitch active="kitchen" kitchenHref="/einkauf/was-kochen" barHref="/einkauf/was-mixen" />
       {pantry.length === 0 ? (
         <EmptyState
           icon={Refrigerator}

@@ -92,6 +92,9 @@ async function persistRecipe(input: RecipeInput): Promise<SaveRecipeStayResult> 
       tags: recipe.tags,
       is_meal_prep: recipe.is_meal_prep,
       source_url: recipe.source_url,
+      // Phase 15: ohne Angabe behält die Datenbank den Typ; Cocktail-Felder nur bei Cocktails
+      ...(recipe.recipe_type ? { recipe_type: recipe.recipe_type } : {}),
+      ...(recipe.recipe_type === "cocktail" && recipe.cocktail ? { cocktail: recipe.cocktail } : {}),
     },
     p_ingredients: ingredients,
     p_steps: recipe.steps,
@@ -152,7 +155,13 @@ export async function restoreVersionAction(input: { recipeId: string; version: n
   const dropped = snapshot.ingredients.length - ingredients.length;
 
   const { error } = await supabase.rpc("save_recipe", {
-    p_recipe: { ...recipe, title: snapshot.title || "Rezept", servings: Math.max(1, Math.round(snapshot.servings)) },
+    p_recipe: {
+      ...recipe,
+      title: snapshot.title || "Rezept",
+      servings: Math.max(1, Math.round(snapshot.servings)),
+      // Phase 15: Cocktail-Felder der Version (ältere Versionen haben keine, dann bleiben die aktuellen)
+      ...(snapshot.cocktail ? { cocktail: snapshot.cocktail } : {}),
+    },
     p_ingredients: ingredients,
     p_steps: snapshot.steps,
     p_change_note: `Version ${version} wiederhergestellt`,

@@ -43,6 +43,20 @@ export const sharedRecipeSchema = z.object({
     }),
   ),
   steps: z.array(z.object({ position: z.number(), text: z.string(), timer_seconds: num })),
+  /** Phase 15: nur bei Cocktails gesetzt */
+  cocktail: z
+    .object({
+      glass: z.enum(Constants.public.Enums.glass).nullable(),
+      method: z.enum(Constants.public.Enums.cocktail_method).nullable(),
+      ice: z.string().nullable(),
+      garnish: z.string().nullable(),
+    })
+    .nullable()
+    .default(null),
+  alcohol: z
+    .object({ abv_percent: z.number(), alcohol_g: z.number(), volume_ml: z.number(), dilution: z.number() })
+    .nullable()
+    .default(null),
 });
 
 export type SharedRecipe = z.infer<typeof sharedRecipeSchema>;
@@ -71,13 +85,22 @@ export function shareUrl(origin: string, token: string): string {
   return `${origin.replace(/\/+$/, "")}/r/${token}`;
 }
 
-/** Kurztext für Link-Vorschauen: Beschreibung oder Eckdaten. */
+const de1 = (v: number) => v.toLocaleString("de-DE", { maximumFractionDigits: 1 });
+
+/** Kurztext für Link-Vorschauen: Beschreibung oder Eckdaten (bei Cocktails Alkoholgehalt und kcal pro Drink). */
 export function shareDescription(recipe: SharedRecipe): string {
   const macros = sharedMacros(recipe);
-  const facts = [
-    `${recipe.servings} ${recipe.servings === 1 ? "Portion" : "Portionen"}`,
-    macros ? `${Math.round(macros.kcal)} kcal und ${Math.round(macros.protein)} g Eiweiß pro Portion` : null,
-  ].filter(Boolean);
+  const facts =
+    recipe.recipe_type === "cocktail"
+      ? [
+          `${recipe.servings} ${recipe.servings === 1 ? "Drink" : "Drinks"}`,
+          recipe.alcohol ? `${de1(recipe.alcohol.abv_percent)} % vol` : null,
+          macros ? `${Math.round(macros.kcal)} kcal pro Drink` : null,
+        ].filter(Boolean)
+      : [
+          `${recipe.servings} ${recipe.servings === 1 ? "Portion" : "Portionen"}`,
+          macros ? `${Math.round(macros.kcal)} kcal und ${Math.round(macros.protein)} g Eiweiß pro Portion` : null,
+        ].filter(Boolean);
   const description = recipe.description?.replace(/\s+/g, " ").trim();
   const text = description ? `${description} · ${facts.join(" · ")}` : facts.join(" · ");
   return text.length > 200 ? `${text.slice(0, 197).trimEnd()}…` : text;

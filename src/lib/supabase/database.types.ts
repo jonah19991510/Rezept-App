@@ -922,6 +922,19 @@ export type Database = {
       }
     }
     Views: {
+      recipe_alcohol: {
+        Row: {
+          abv_percent: number | null
+          alcohol_g_per_drink: number | null
+          alcohol_ml_per_drink: number | null
+          dilution: number | null
+          drink_volume_ml: number | null
+          method: Database["public"]["Enums"]["cocktail_method"] | null
+          recipe_id: string | null
+          servings: number | null
+        }
+        Relationships: []
+      }
       recipe_costs: {
         Row: {
           cost_per_serving: number | null

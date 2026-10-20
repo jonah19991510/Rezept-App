@@ -5,7 +5,7 @@ import { formatEuro } from "@/lib/format";
 import type { RecipeCost as Cost } from "@/lib/server/kitchen-log";
 
 /** Kosten gesamt und pro Portion nach den eigenen Preisen; fehlende Preise werden offen genannt. */
-export function RecipeCost({ cost }: { cost: Cost | null }) {
+export function RecipeCost({ cost, unit = "Portion" }: { cost: Cost | null; unit?: "Portion" | "Drink" }) {
   if (!cost || cost.count === 0) return null;
   const missing = missingPricesText(cost.priced, cost.count);
 
@@ -26,7 +26,7 @@ export function RecipeCost({ cost }: { cost: Cost | null }) {
         <>
           <p className="text-sm">
             {missing ? "mindestens " : "ca. "}
-            <span className="font-heading text-2xl font-semibold">{formatEuro(cost.perServing)}</span> pro Portion ·{" "}
+            <span className="font-heading text-2xl font-semibold">{formatEuro(cost.perServing)}</span> pro {unit} ·{" "}
             {formatEuro(cost.total)} gesamt
           </p>
           {missing ? (

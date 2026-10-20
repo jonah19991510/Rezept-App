@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { ArrowDown, ArrowUp, Martini, Plus, Trash2, TriangleAlert } from "lucide-react";
 import { saveRecipeAction } from "@/app/(app)/rezepte/actions";
 import { FormField } from "@/components/forms/form-field";
 import { FormMessage } from "@/components/forms/form-message";
@@ -14,21 +14,25 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { MacroSummary } from "@/components/recipes/macro-summary";
 import { RecipeTags } from "@/components/recipes/recipe-tags";
+import { computeAlcohol, DEFAULT_DILUTION, isBarGroup, type DilutionConfig } from "@/lib/domain/cocktail";
 import { formatDecimalInput, parseDecimal } from "@/lib/domain/decimal";
 import type { IngredientOption } from "@/lib/domain/ingredient-option";
 import { computeRecipeNutrition, type NutritionThresholds } from "@/lib/domain/nutrition";
 import { detectTimers } from "@/lib/domain/timers";
 import { needsManualGrams, resolveLineGrams, type Unit } from "@/lib/domain/units";
 import { formatGrams, formatNumber } from "@/lib/format";
-import { CATEGORY_LABELS, KITCHEN_UNITS, UNIT_LABELS, type AutoTag } from "@/lib/labels";
+import { BAR_UNITS, CATEGORY_LABELS, GLASS_LABELS, KITCHEN_UNITS, METHOD_LABELS, UNIT_LABELS, type AutoTag } from "@/lib/labels";
 import type { Enums } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
-import { recipeInputSchema, flattenIssues, type RecipeInput } from "@/lib/validation/recipe";
+import { recipeInputSchema, flattenIssues, type CocktailInput, type RecipeInput } from "@/lib/validation/recipe";
 import { IngredientPicker } from "./ingredient-picker";
 import { TagInput } from "./tag-input";
 
 export type EditorInitial = {
   id?: string;
+  /** Phase 15: Cocktail (Bar) oder Gericht; ohne Angabe Gericht */
+  recipe_type?: Enums<"recipe_type">;
+  cocktail?: CocktailInput | null;
   title: string;
   description: string;
   servings: number;
@@ -68,7 +72,8 @@ const nextKey = () => ++keySequence;
 
 const PIECE_GROUPS: Enums<"food_group">[] = ["egg", "fruit", "vegetables"];
 
-function defaultUnit(ingredient: IngredientOption): Unit {
+function defaultUnit(ingredient: IngredientOption, cocktail: boolean): Unit {
+  if (cocktail && (isBarGroup(ingredient.food_group) || ingredient.abv != null)) return "cl";
   return ingredient.piece_weight_g && PIECE_GROUPS.includes(ingredient.food_group) ? "piece" : "g";
 }
 
@@ -89,12 +94,15 @@ function move<T>(list: T[], index: number, delta: number): T[] {
 export function RecipeEditor({
   initial,
   thresholds,
+  dilution = DEFAULT_DILUTION,
   tagSuggestions,
   onSaved,
   cancel,
 }: {
   initial: EditorInitial;
   thresholds: NutritionThresholds;
+  /** Phase 15: Verdünnung je Methode (app_config), für die Live-Anzeige des Alkoholgehalts */
+  dilution?: DilutionConfig;
   tagSuggestions: string[];
   /** Markdown-Import: nach dem Speichern hier weitermachen statt zur Rezeptseite zu wechseln */
   onSaved?: (recipeId: string) => void;
@@ -110,6 +118,12 @@ export function RecipeEditor({
   const [tags, setTags] = useState(initial.tags);
   const [isMealPrep, setIsMealPrep] = useState(initial.is_meal_prep);
   const [sourceUrl, setSourceUrl] = useState(initial.source_url);
+  // Phase 15: Cocktail-Felder
+  const isCocktail = initial.recipe_type === "cocktail";
+  const [glass, setGlass] = useState<Enums<"glass"> | "">(initial.cocktail?.glass ?? "");
+  const [method, setMethod] = useState<Enums<"cocktail_method"> | "">(initial.cocktail?.method ?? "");
+  const [ice, setIce] = useState(initial.cocktail?.ice ?? "");
+  const [garnish, setGarnish] = useState(initial.cocktail?.garnish ?? "");
   // Phase 12: Notiz zur neuen Version (nur beim Bearbeiten)
   const [changeNote, setChangeNote] = useState("");
   const [initialState] = useState(() => {
@@ -166,7 +180,7 @@ export function RecipeEditor({
       setReplaceKey(null);
       return;
     }
-    const unit = defaultUnit(ingredient);
+    const unit = defaultUnit(ingredient, isCocktail);
     setLines((prev) => [
       ...prev,
       { key: nextKey(), ingredient, amount: unit === "piece" ? "1" : "", unit, manualGrams: "", note: "", stepKey: null },
@@ -192,7 +206,31 @@ export function RecipeEditor({
     () => computeRecipeNutrition(resolved, servingsNumber, thresholds),
     [resolved, servingsNumber, thresholds],
   );
-  const autoTags: AutoTag[] = [
+  const alcohol = useMemo(
+    () =>
+      isCocktail
+        ? computeAlcohol(
+            lines.map((l) => ({ amount: parseDecimal(l.amount), unit: l.unit || null, ingredient: l.ingredient })),
+            method || null,
+            servingsNumber,
+            dilution,
+          )
+        : null,
+    [isCocktail, lines, method, servingsNumber, dilution],
+  );
+  // Spirituosen/Liköre ohne Alkoholgehalt zählen als alkoholfrei: darauf hinweisen
+  const missingAbv = isCocktail
+    ? [
+        ...new Set(
+          lines
+            .filter((l) => l.ingredient.abv == null && (l.ingredient.food_group === "spirits" || l.ingredient.food_group === "liqueurs_wine"))
+            .map((l) => l.ingredient.name),
+        ),
+      ]
+    : [];
+  const units = isCocktail ? BAR_UNITS : KITCHEN_UNITS;
+  const servingWord = (n: number) => (isCocktail ? (n === 1 ? "Drink" : "Drinks") : n === 1 ? "Portion" : "Portionen");
+  const autoTags: AutoTag[] = isCocktail ? [] : [
     ...(nutrition.isHighProtein ? (["high_protein"] as const) : []),
     ...(nutrition.isVegan ? (["vegan"] as const) : nutrition.isVegetarian ? (["vegetarian"] as const) : []),
     ...(nutrition.isLowCarb ? (["low_carb"] as const) : []),
@@ -215,14 +253,16 @@ export function RecipeEditor({
   function buildInput(): RecipeInput {
     return {
       id: initial.id,
+      recipe_type: initial.recipe_type,
+      cocktail: isCocktail ? { glass: glass || null, method: method || null, ice, garnish } : null,
       title,
       description,
       servings: parseDecimal(servings) ?? Number.NaN,
       prep_minutes: intOrNull(prep),
-      cook_minutes: intOrNull(cook),
-      category: category || null,
+      cook_minutes: isCocktail ? null : intOrNull(cook),
+      category: isCocktail ? category || "drink" : category || null,
       tags,
-      is_meal_prep: isMealPrep,
+      is_meal_prep: isCocktail ? false : isMealPrep,
       source_url: sourceUrl.trim(),
       ingredients: lines.map((l) => ({
         ingredient_id: l.ingredient.id,
@@ -264,7 +304,7 @@ export function RecipeEditor({
   }
 
   const err = (key: string) => errors[key];
-  const cancelHref = initial.id ? `/rezepte/${initial.id}` : "/rezepte";
+  const cancelHref = initial.id ? `/rezepte/${initial.id}` : isCocktail ? "/rezepte/bar" : "/rezepte";
 
   return (
     <div className="space-y-6">
@@ -287,12 +327,30 @@ export function RecipeEditor({
             className="rounded-xl bg-card"
           />
         </div>
-        <div className="grid grid-cols-3 gap-3">
-          <FormField label="Portionen" name="servings" inputMode="numeric" value={servings} onChange={(e) => changed(setServings)(e.target.value)} errors={err("servings")} />
-          <FormField label="Vorbereitung (Min.)" name="prep" inputMode="numeric" value={prep} onChange={(e) => changed(setPrep)(e.target.value)} errors={err("prep_minutes")} />
-          <FormField label="Kochen (Min.)" name="cook" inputMode="numeric" value={cook} onChange={(e) => changed(setCook)(e.target.value)} errors={err("cook_minutes")} />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
+        {isCocktail ? (
+          <CocktailFields
+            servings={servings}
+            prep={prep}
+            glass={glass}
+            method={method}
+            ice={ice}
+            garnish={garnish}
+            errors={errors}
+            onServings={changed(setServings)}
+            onPrep={changed(setPrep)}
+            onGlass={changed(setGlass)}
+            onMethod={changed(setMethod)}
+            onIce={changed(setIce)}
+            onGarnish={changed(setGarnish)}
+          />
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            <FormField label="Portionen" name="servings" inputMode="numeric" value={servings} onChange={(e) => changed(setServings)(e.target.value)} errors={err("servings")} />
+            <FormField label="Vorbereitung (Min.)" name="prep" inputMode="numeric" value={prep} onChange={(e) => changed(setPrep)(e.target.value)} errors={err("prep_minutes")} />
+            <FormField label="Kochen (Min.)" name="cook" inputMode="numeric" value={cook} onChange={(e) => changed(setCook)(e.target.value)} errors={err("cook_minutes")} />
+          </div>
+        )}
+        <div className={cn("grid gap-4 sm:grid-cols-2", isCocktail && "hidden")}>
           <div className="grid gap-1.5">
             <Label htmlFor="category">Kategorie</Label>
             <NativeSelect id="category" value={category} onChange={(e) => changed(setCategory)(e.target.value as Enums<"recipe_category"> | "")}>
@@ -381,7 +439,7 @@ export function RecipeEditor({
                       aria-invalid={Boolean(err(`${prefix}.unit`)) || undefined}
                     >
                       <option value="">–</option>
-                      {KITCHEN_UNITS.map((u) => (
+                      {units.map((u) => (
                         <option key={u} value={u}>
                           {UNIT_LABELS[u]}
                         </option>
@@ -459,10 +517,34 @@ export function RecipeEditor({
         </Button>
 
         <div className="rounded-2xl bg-muted/40 p-3">
+          {alcohol ? (
+            <div className="mb-3 space-y-1" aria-live="polite">
+              <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="flex items-center gap-1.5 text-lg font-semibold tabular-nums">
+                  <Martini className="size-4 text-primary" aria-hidden />
+                  {formatNumber(alcohol.abvPercent, 1)} % vol
+                </span>
+                <span className="text-sm tabular-nums">{formatNumber(alcohol.alcoholGramsPerDrink, 1)} g Alkohol</span>
+                <span className="text-sm tabular-nums">≈ {formatNumber(Math.round(alcohol.drinkVolumeMl), 0)} ml im Glas</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                pro Drink,{" "}
+                {method
+                  ? `${METHOD_LABELS[method]}: +${formatNumber(alcohol.dilution * 100, 0)} % Schmelzwasser eingerechnet`
+                  : "ohne Methode ohne Schmelzwasser gerechnet"}
+              </p>
+              {missingAbv.length > 0 ? (
+                <p className="flex gap-1.5 text-xs text-muted-foreground">
+                  <TriangleAlert className="size-3.5 shrink-0 text-primary" aria-hidden />
+                  Für {missingAbv.join(", ")} fehlt der Alkoholgehalt, zählt als alkoholfrei.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <MacroSummary
             values={nutrition.perServing}
             total={nutrition.total}
-            caption={`pro Portion (${formatNumber(servingsNumber > 0 ? servingsNumber : 1, 0)} ${servingsNumber === 1 ? "Portion" : "Portionen"})`}
+            caption={`pro ${isCocktail ? "Drink" : "Portion"} (${formatNumber(servingsNumber > 0 ? servingsNumber : 1, 0)} ${servingWord(servingsNumber)})`}
           />
           {nutrition.linesWithoutGrams > 0 ? (
             <p className="mt-2 flex gap-1.5 text-xs text-muted-foreground">
@@ -576,10 +658,20 @@ export function RecipeEditor({
       {/* Speicherleiste: bleibt sichtbar, auf dem Handy über der Navigation */}
       <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-3 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur md:bottom-4">
         <p className="text-sm tabular-nums">
-          <span className="font-semibold">{formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal</span>
-          <span className="text-muted-foreground"> · </span>
-          <span className="font-medium">{formatNumber(nutrition.perServing.protein, 0)} g P</span>
-          <span className="block text-xs text-muted-foreground">pro Portion</span>
+          {alcohol ? (
+            <>
+              <span className="font-semibold">{formatNumber(alcohol.abvPercent, 1)} % vol</span>
+              <span className="text-muted-foreground"> · </span>
+              <span className="font-medium">{formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal</span>
+            </>
+          ) : (
+            <>
+              <span className="font-semibold">{formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal</span>
+              <span className="text-muted-foreground"> · </span>
+              <span className="font-medium">{formatNumber(nutrition.perServing.protein, 0)} g P</span>
+            </>
+          )}
+          <span className="block text-xs text-muted-foreground">pro {isCocktail ? "Drink" : "Portion"}</span>
         </p>
         <div className="flex gap-2">
           {cancel ? (
@@ -606,6 +698,61 @@ export function RecipeEditor({
         onSelect={onPick}
       />
     </div>
+  );
+}
+
+/** Phase 15: Drinks, Zeit, Glas, Methode, Eis und Garnitur statt Portionen/Kochzeit/Kategorie. */
+function CocktailFields(props: {
+  servings: string;
+  prep: string;
+  glass: Enums<"glass"> | "";
+  method: Enums<"cocktail_method"> | "";
+  ice: string;
+  garnish: string;
+  errors: Record<string, string[]>;
+  onServings: (v: string) => void;
+  onPrep: (v: string) => void;
+  onGlass: (v: Enums<"glass"> | "") => void;
+  onMethod: (v: Enums<"cocktail_method"> | "") => void;
+  onIce: (v: string) => void;
+  onGarnish: (v: string) => void;
+}) {
+  const { errors } = props;
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="Drinks" name="servings" inputMode="numeric" value={props.servings} onChange={(e) => props.onServings(e.target.value)} errors={errors.servings} />
+        <FormField label="Zubereitung (Min.)" name="prep" inputMode="numeric" value={props.prep} onChange={(e) => props.onPrep(e.target.value)} errors={errors.prep_minutes} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="glass">Glas</Label>
+          <NativeSelect id="glass" value={props.glass} onChange={(e) => props.onGlass(e.target.value as Enums<"glass"> | "")}>
+            <option value="">Keine Angabe</option>
+            {Object.entries(GLASS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="method">Methode</Label>
+          <NativeSelect id="method" value={props.method} onChange={(e) => props.onMethod(e.target.value as Enums<"cocktail_method"> | "")}>
+            <option value="">Keine Angabe</option>
+            {Object.entries(METHOD_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField label="Eis (optional)" name="ice" placeholder="z. B. Würfel, crushed, ohne" value={props.ice} maxLength={100} onChange={(e) => props.onIce(e.target.value)} errors={errors["cocktail.ice"]} />
+        <FormField label="Garnitur (optional)" name="garnish" placeholder="z. B. Limettenrad" value={props.garnish} maxLength={200} onChange={(e) => props.onGarnish(e.target.value)} errors={errors["cocktail.garnish"]} />
+      </div>
+    </>
   );
 }
 

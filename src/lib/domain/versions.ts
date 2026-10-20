@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Constants } from "@/lib/supabase/database.types";
 import type { DayMacros } from "./plan";
 
 // Phase 12: Rezept-Versionen. Die Datenbank legt beim Speichern einer inhaltlichen Änderung einen Snapshot an
@@ -21,6 +22,17 @@ const snapshotSchema = z.object({
     )
     .catch([]),
   steps: z.array(z.object({ text: z.string(), timer_seconds: z.number().nullable().catch(null) })).catch([]),
+  /** Phase 15: Cocktail-Felder (Gerichte und ältere Versionen: null) */
+  cocktail: z
+    .object({
+      glass: z.enum(Constants.public.Enums.glass).nullable().catch(null),
+      method: z.enum(Constants.public.Enums.cocktail_method).nullable().catch(null),
+      ice: z.string().nullable().catch(null),
+      garnish: z.string().nullable().catch(null),
+    })
+    .nullable()
+    .catch(null)
+    .default(null),
 });
 
 export type RecipeSnapshot = z.infer<typeof snapshotSchema>;

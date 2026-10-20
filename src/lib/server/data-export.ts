@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 // Alles läuft mit dem Client des Nutzers: RLS stellt zusätzlich sicher, dass nur eigene Daten kommen.
 
 const BACKUP_INGREDIENT_COLUMNS =
-  "id, name, kcal, protein, carbs, fat, fiber, sugar, food_group, diet, piece_weight_g, density_g_per_ml";
+  "id, name, kcal, protein, carbs, fat, fiber, sugar, food_group, diet, piece_weight_g, density_g_per_ml, abv";
 
 function must<T>(result: { data: T | null; error: { code?: string } | null }, what: string): T {
   if (result.error || result.data == null) throw new Error(`${what} konnte nicht gelesen werden (${result.error?.code ?? "leer"})`);
@@ -78,29 +78,31 @@ export async function buildPersonalDataExport(user: CurrentUser) {
   };
 }
 
-/** Alle eigenen Rezepte (Küche) als wieder importierbare Sicherung. */
+/** Alle eigenen Rezepte (Küche und Bar) als wieder importierbare Sicherung (Format-Version 2). */
 export async function buildRecipeBackup(userId: string): Promise<BackupFile> {
   const supabase = await createClient();
   const result = await supabase
     .from("recipes")
     .select(
-      `title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url,
+      `recipe_type, title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url,
        recipe_ingredients!recipe_ingredients_recipe_id_fkey(position, amount, unit, grams, note, step_position, ingredient:ingredients!recipe_ingredients_ingredient_id_fkey(${BACKUP_INGREDIENT_COLUMNS})),
-       recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds)`,
+       recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds),
+       cocktail_details!cocktail_details_recipe_id_fkey(glass, method, ice, garnish)`,
     )
     .eq("owner_id", userId)
-    .eq("recipe_type", "dish")
     .order("created_at");
   const rows = must(result, "Rezepte") as RecipeRowForBackup[];
   return toBackupFile(rows, new Date());
 }
 
-const MARKDOWN_SELECT = `id, title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url,
+const MARKDOWN_SELECT = `id, recipe_type, title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url,
   recipe_ingredients!recipe_ingredients_recipe_id_fkey(position, amount, unit, note, ingredient:ingredients!recipe_ingredients_ingredient_id_fkey(name)),
-  recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds)`;
+  recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds),
+  cocktail_details!cocktail_details_recipe_id_fkey(glass, method, ice, garnish)`;
 
-type MarkdownRow = Omit<MarkdownRecipe, "perServing" | "ingredients" | "steps"> & {
+type MarkdownRow = Omit<MarkdownRecipe, "perServing" | "ingredients" | "steps" | "cocktail" | "alcohol"> & {
   id: string;
+  cocktail_details: MarkdownRecipe["cocktail"];
   recipe_ingredients: { position: number; amount: number | null; unit: MarkdownRecipe["ingredients"][number]["unit"]; note: string | null; ingredient: { name: string } }[];
   recipe_steps: { position: number; text: string; timer_seconds: number | null }[];
 };
@@ -115,10 +117,19 @@ async function toMarkdownRecipes(supabase: Awaited<ReturnType<typeof createClien
     "Nährwerte",
   );
   const byId = new Map(nutrition.map((n) => [n.recipe_id, n]));
-  return rows.map(({ id, recipe_ingredients, recipe_steps, ...r }) => {
+  // Phase 15: Alkoholgehalt der Cocktails
+  const cocktailIds = rows.filter((r) => r.recipe_type === "cocktail").map((r) => r.id);
+  const alcohol = cocktailIds.length
+    ? must(await supabase.from("recipe_alcohol").select("recipe_id, abv_percent, alcohol_g_per_drink").in("recipe_id", cocktailIds), "Alkoholgehalt")
+    : [];
+  const alcoholById = new Map(alcohol.map((a) => [a.recipe_id, a]));
+  return rows.map(({ id, recipe_ingredients, recipe_steps, cocktail_details, ...r }) => {
     const n = byId.get(id);
+    const a = alcoholById.get(id);
     return {
       ...r,
+      cocktail: r.recipe_type === "cocktail" ? cocktail_details : null,
+      alcohol: a ? { abvPercent: a.abv_percent ?? 0, alcoholGrams: a.alcohol_g_per_drink ?? 0 } : null,
       perServing:
         n && n.kcal_per_serving != null
           ? {
@@ -147,9 +158,9 @@ export async function getRecipeForMarkdown(recipeId: string): Promise<MarkdownRe
   return recipe ?? null;
 }
 
-/** Alle eigenen Rezepte (Küche) für das Buch als Markdown. */
+/** Alle eigenen Rezepte (Küche und Bar) für das Buch als Markdown. */
 export async function getOwnRecipesForMarkdown(userId: string): Promise<MarkdownRecipe[]> {
   const supabase = await createClient();
-  const result = await supabase.from("recipes").select(MARKDOWN_SELECT).eq("owner_id", userId).eq("recipe_type", "dish");
+  const result = await supabase.from("recipes").select(MARKDOWN_SELECT).eq("owner_id", userId);
   return toMarkdownRecipes(supabase, must(result, "Rezepte"));
 }

@@ -30,6 +30,14 @@ Geprüft wird unter anderem:
 
 Letzter Lauf: 19.10.2026 (Phase 7, Storage-Teil einzeln), alle Werte wie erwartet.
 
+**Bar (Phase 15):** [`supabase/tests/bar_check.sql`](../supabase/tests/bar_check.sql) genauso ausführen (rollt sich
+ebenfalls selbst zurück). Geprüft: Cocktail speichern mit Glas/Methode/Eis/Garnitur, Alkoholgehalt der View
+`recipe_alcohol` (Daiquiri geshaked 17,5 % vol, 18,9 g), neue Version beim Methodenwechsel, Aufrufe ohne Typ (ältere
+App-Version, Wiederherstellen) lassen Typ und Cocktail-Felder stehen, Gerichte bekommen keine Cocktail-Felder,
+B sieht weder `cocktail_details` noch `recipe_alcohol` von A's privatem Cocktail, ohne Login liest
+`recipe_alcohol` niemand (`anon` ohne Recht), die geteilte Karte liefert Cocktail-Felder und Alkoholgehalt, nach dem
+Löschen von A ist alles weg. Letzter Lauf: 20.10.2026, alle Werte wie erwartet.
+
 ## 2. Prüfung in der App
 
 Du brauchst zwei Accounts (dein Admin-Account und einen eingeladenen Test-Account) und zwei Browser
@@ -79,4 +87,15 @@ Du brauchst zwei Accounts (dein Admin-Account und einen eingeladenen Test-Accoun
    ```sql
    -- ohne gültigen Token kommt nichts zurück
    select public.get_shared_recipe('AAAAAAAAAAAAAAAAAAAAAA');
+   ```
+11. **Bar (Phase 15):** Admin legt unter Rezepte → „Bar“ einen **privaten** Cocktail an. Der Test-Account sieht ihn
+   weder unter Rezepte → Bar noch unter Entdecken → Bar; die Adresse `/rezepte/<id>` zeigt „Seite nicht gefunden“.
+   Nach „Öffentlich“ erscheint er bei Entdecken → Bar mit Anzeigenamen; „In mein Rezeptbuch übernehmen“ legt eine
+   private Kopie (wieder als Cocktail) an. Der Bar-Bestand im Vorrat und „Was kann ich mixen?“ zeigen nur eigene
+   Einträge. „Meine Daten herunterladen“ enthält den Cocktail bei `rezepte` (mit `cocktail_details`) und den
+   Bar-Bestand bei `vorrat` (`location: bar`); nach „Account löschen“ wie in Punkt 5 prüfen, zusätzlich:
+
+   ```sql
+   select count(*) from public.cocktail_details cd
+   left join public.recipes r on r.id = cd.recipe_id where r.id is null; -- 0
    ```

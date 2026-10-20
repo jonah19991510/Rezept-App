@@ -17,6 +17,15 @@ export type RecipeListNutrition = {
   is_vegan: boolean | null;
 };
 
+/** Phase 15: Kurzinfo eines Cocktails für Karte, Filter und Sortierung (Bar). */
+export type CocktailSummary = {
+  method: Enums<"cocktail_method"> | null;
+  glass: Enums<"glass"> | null;
+  abvPercent: number | null;
+  alcoholGrams: number | null;
+  baseSpirit: string | null;
+};
+
 export type RecipeListItem = {
   id: string;
   title: string;
@@ -44,6 +53,8 @@ export type RecipeListItem = {
   /** Phase 12: Ø-Bewertung aus dem Koch-Log und letztes Kochen (YYYY-MM-DD) */
   avgRating?: number | null;
   lastCooked?: string | null;
+  /** Phase 15: nur bei Cocktails */
+  cocktail?: CocktailSummary;
 };
 
 export function autoTagsFor(item: Pick<RecipeListItem, "is_meal_prep" | "nutrition">): AutoTag[] {
@@ -62,7 +73,7 @@ export function totalMinutes(item: Pick<RecipeListItem, "prep_minutes" | "cook_m
   return (item.prep_minutes ?? 0) + (item.cook_minutes ?? 0);
 }
 
-const SORTS = ["neu", "name", "protein", "kcal", "zeit"] as const;
+const SORTS = ["neu", "name", "protein", "kcal", "zeit", "stark", "leicht"] as const;
 export type RecipeSort = (typeof SORTS)[number];
 
 const optionalNumber = z
@@ -89,6 +100,9 @@ export const recipeFilterSchema = z.object({
     .transform((v) => v === "1")
     .catch(false),
   sortierung: z.enum(SORTS).optional().catch(undefined),
+  /** Phase 15 (Bar): Basisspirituose und Methode */
+  basis: z.string().trim().max(60).optional().catch(undefined),
+  methode: z.enum(["shaken", "stirred", "built", "blended"]).optional().catch(undefined),
   /** Phase 12: höchstens so viel € pro Portion */
   kosten: optionalNumber.catch(undefined),
   /** Phase 12: Ø-Bewertung mindestens (1–5) */
@@ -145,6 +159,8 @@ export function filterRecipes(items: RecipeListItem[], filter: RecipeFilter, con
   const result = items.filter((item) => {
     if (filter.favoriten && !item.isFavorite) return false;
     if (filter.kategorie && item.category !== filter.kategorie) return false;
+    if (filter.basis && (item.cocktail?.baseSpirit ?? "") !== filter.basis) return false;
+    if (filter.methode && item.cocktail?.method !== filter.methode) return false;
     if (filter.tag && !matchesTag(item, filter.tag)) return false;
     if (filter.protein != null && (item.nutrition?.protein_per_serving ?? 0) < filter.protein) return false;
     if (filter.zeit != null) {
@@ -176,11 +192,21 @@ export function filterRecipes(items: RecipeListItem[], filter: RecipeFilter, con
         return (a.nutrition?.kcal_per_serving ?? Infinity) - (b.nutrition?.kcal_per_serving ?? Infinity) || byTitle(a, b);
       case "zeit":
         return (totalMinutes(a) ?? Infinity) - (totalMinutes(b) ?? Infinity) || byTitle(a, b);
+      case "stark":
+        return (b.cocktail?.abvPercent ?? -1) - (a.cocktail?.abvPercent ?? -1) || byTitle(a, b);
+      case "leicht":
+        return (a.cocktail?.abvPercent ?? Infinity) - (b.cocktail?.abvPercent ?? Infinity) || byTitle(a, b);
       default:
         return b.updated_at.localeCompare(a.updated_at) || byTitle(a, b);
     }
   });
   return result;
+}
+
+/** Phase 15: alle Basisspirituosen der Liste (für die Filterauswahl), alphabetisch. */
+export function collectBaseSpirits(items: RecipeListItem[]): string[] {
+  const set = new Set(items.flatMap((i) => (i.cocktail?.baseSpirit ? [i.cocktail.baseSpirit] : [])));
+  return [...set].sort((a, b) => a.localeCompare(b, "de"));
 }
 
 /** Alle eigenen Tags (für die Filterauswahl), alphabetisch und ohne Doppelte. */
@@ -194,6 +220,8 @@ export function hasActiveFilter(filter: RecipeFilter) {
   return Boolean(
     filter.q ||
       filter.kategorie ||
+      filter.basis ||
+      filter.methode ||
       filter.tag ||
       filter.protein != null ||
       filter.zeit != null ||

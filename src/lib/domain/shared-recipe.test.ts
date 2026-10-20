@@ -70,3 +70,31 @@ describe("Hilfsfunktionen", () => {
     expect(shareImageFileName("Käsespätzle mit Röstzwiebeln")).toBe("kaesespaetzle-mit-roestzwiebeln.jpg");
   });
 });
+
+describe("Cocktails (Phase 15)", () => {
+  const COCKTAIL = {
+    ...ROW,
+    title: "Daiquiri",
+    description: null,
+    recipe_type: "cocktail",
+    servings: 1,
+    category: "drink",
+    nutrition: { kcal: 152.4, protein: 0.1, carbs: 15, fat: 0, fiber: 0 },
+    cocktail: { glass: "coupette", method: "shaken", ice: null, garnish: "Limettenrad" },
+    alcohol: { abv_percent: 17.5, alcohol_g: 18.9, volume_ml: 137.5, dilution: 0.25 },
+  };
+
+  it("liest Cocktail-Felder und Alkoholgehalt", () => {
+    const recipe = parseSharedRecipe(COCKTAIL);
+    expect(recipe?.cocktail).toEqual({ glass: "coupette", method: "shaken", ice: null, garnish: "Limettenrad" });
+    expect(recipe?.alcohol?.abv_percent).toBe(17.5);
+  });
+
+  it("ältere Antwort ohne die neuen Felder bleibt gültig", () => {
+    expect(parseSharedRecipe(ROW)).toMatchObject({ cocktail: null, alcohol: null });
+  });
+
+  it("Vorschautext mit Drinks, % vol und kcal pro Drink", () => {
+    expect(shareDescription(parseSharedRecipe(COCKTAIL)!)).toBe("1 Drink · 17,5 % vol · 152 kcal pro Drink");
+  });
+});

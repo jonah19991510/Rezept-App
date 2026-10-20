@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cookSummary, sinceText, type CookLog } from "@/lib/domain/cooklog";
 import { formatDate, formatNumber } from "@/lib/format";
+import { KIND_WORDS, servingsLabel } from "@/lib/labels";
+import type { Enums } from "@/lib/supabase/database.types";
 import { manualCookLogSchema } from "@/lib/validation/kitchen-log";
 
 /** Koch-Log auf der Rezeptseite: zuletzt gekocht, Anzahl, Ø-Bewertung, Notizen, Eintrag von Hand. */
@@ -20,37 +22,41 @@ export function CookLogSection({
   logs,
   today,
   servings,
+  kind = "dish",
 }: {
   recipeId: string;
   /** neueste zuerst */
   logs: CookLog[];
   today: string;
   servings: number;
+  /** Phase 15: bei Cocktails „Gemixt“ und Drinks */
+  kind?: Enums<"recipe_type">;
 }) {
   const [open, setOpen] = useState(false);
   const summary = cookSummary(logs);
+  const w = KIND_WORDS[kind];
 
   return (
     <section aria-labelledby="koch-log" className="space-y-4 rounded-3xl border bg-card p-4 md:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id="koch-log" className="flex items-center gap-2 text-xl font-semibold">
           <CalendarCheck className="size-5 text-primary" aria-hidden />
-          Gekocht
+          {w.done}
         </h2>
         <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
           <Plus aria-hidden />
-          Gekocht eintragen
+          {w.done} eintragen
         </Button>
       </div>
 
       {summary.count === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Noch nie gekocht. Am Ende des Kochmodus („Gekocht!“) oder hier kannst du Datum, Bewertung und eine Notiz festhalten.
+          Noch nie {w.past}. Am Ende des {w.mode} („{w.done}!“) oder hier kannst du Datum, Bewertung und eine Notiz festhalten.
         </p>
       ) : (
         <>
           <p className="text-sm">
-            Zuletzt gekocht <span className="font-medium">{sinceText(summary.lastDate!, today)}</span> ·{" "}
+            Zuletzt {w.past} <span className="font-medium">{sinceText(summary.lastDate!, today)}</span> ·{" "}
             {summary.count === 1 ? "einmal" : `${summary.count}-mal`}
             {summary.avgRating != null ? (
               <>
@@ -61,7 +67,7 @@ export function CookLogSection({
           </p>
           <ol className="divide-y rounded-2xl border">
             {logs.map((log) => (
-              <LogRow key={log.id} log={log} />
+              <LogRow key={log.id} log={log} kind={kind} />
             ))}
           </ol>
         </>
@@ -69,14 +75,14 @@ export function CookLogSection({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
-          {open ? <CookLogForm recipeId={recipeId} today={today} servings={servings} onDone={() => setOpen(false)} /> : null}
+          {open ? <CookLogForm recipeId={recipeId} today={today} servings={servings} kind={kind} onDone={() => setOpen(false)} /> : null}
         </DialogContent>
       </Dialog>
     </section>
   );
 }
 
-function LogRow({ log }: { log: CookLog }) {
+function LogRow({ log, kind }: { log: CookLog; kind: Enums<"recipe_type"> }) {
   const [pending, startTransition] = useTransition();
 
   function remove() {
@@ -95,7 +101,7 @@ function LogRow({ log }: { log: CookLog }) {
           {log.rating != null ? <StarValue value={log.rating} /> : null}
           {log.servings != null ? (
             <span className="text-muted-foreground">
-              {formatNumber(log.servings, 2)} {log.servings === 1 ? "Portion" : "Portionen"}
+              {formatNumber(log.servings, 2)} {servingsLabel(log.servings, kind)}
             </span>
           ) : null}
           {log.version != null ? <span className="text-xs text-muted-foreground">Version {log.version}</span> : null}
@@ -109,7 +115,20 @@ function LogRow({ log }: { log: CookLog }) {
   );
 }
 
-function CookLogForm({ recipeId, today, servings, onDone }: { recipeId: string; today: string; servings: number; onDone: () => void }) {
+function CookLogForm({
+  recipeId,
+  today,
+  servings,
+  kind,
+  onDone,
+}: {
+  recipeId: string;
+  today: string;
+  servings: number;
+  kind: Enums<"recipe_type">;
+  onDone: () => void;
+}) {
+  const w = KIND_WORDS[kind];
   const [date, setDate] = useState(today);
   const [rating, setRating] = useState<number | null>(null);
   const [note, setNote] = useState("");
@@ -131,8 +150,8 @@ function CookLogForm({ recipeId, today, servings, onDone }: { recipeId: string; 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Gekocht eintragen</DialogTitle>
-        <DialogDescription>Bewertung und Notiz sind freiwillig. Die Notiz siehst du beim nächsten Kochen.</DialogDescription>
+        <DialogTitle>{w.done} eintragen</DialogTitle>
+        <DialogDescription>Bewertung und Notiz sind freiwillig. Die Notiz siehst du beim nächsten {kind === "cocktail" ? "Mixen" : "Kochen"}.</DialogDescription>
       </DialogHeader>
       <div className="grid gap-4">
         <div className="grid gap-1.5">

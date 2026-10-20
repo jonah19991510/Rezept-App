@@ -18,9 +18,10 @@
 | 12 – Preise und Kosten, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 13 – Markdown-Import und -Export | **fertig** (20.10.2026), vom Nutzer an PC und Handy getestet, live |
 | 14 – Teilen per Link, Rezeptkarte, Open-Graph-Bild, Druck- und Bildexport | **fertig** (20.10.2026), live (vom Nutzer bestätigt); Bugfix Handy-Zoom gepusht |
-| 15 | offen |
+| 15 – Cocktail-Bereich (Bar), Abschluss-Prüfung Export/Löschen | **fertig** (20.10.2026), lokal committet, Migration schon in der DB; wartet auf den Test des Nutzers (LAN) und die Push-Freigabe |
 
-**Nächster Schritt:** Phase 15 (Cocktail-Bereich und Abschluss), sobald der Nutzer es sagt.
+**Nächster Schritt:** Nutzer testet Phase 15 und den Gesamttest am Handy (Anleitung unten), dann Push auf `master`
+(= live) und Deployment per Vercel-Connector prüfen. Danach sind alle Phasen der SPEC fertig.
 
 **WhatsApp-Vorschau (20.10.2026):** Funktioniert (über mobile Daten getestet). Im Heim-WLAN fehlte sie, weil Vercel
 die IP des Heimnetzes mit dem „Security Checkpoint“ belegt hatte (403, `X-Vercel-Mitigated: challenge`) – sehr
@@ -95,6 +96,96 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
 - **Tests:** Vitest (Zahlen-/Datumsformat, sichere Weiterleitung), SQL-Test `supabase/tests/rls_check.sql`
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
+
+## Was in Phase 15 entstanden ist
+
+- **Migration** `…20261020150000_cocktails` (schon in der Datenbank; nur additiv, die Live-Version läuft unverändert):
+  `app_config.cocktail_dilution` = gerührt +20 %, geshaked +25 %, gebaut +10 %, geblendet +30 % (ohne Methode keine
+  Verdünnung), View `recipe_alcohol` (Security Invoker: % vol, ml und g Alkohol, Volumen im Glas pro Drink),
+  `save_recipe` mit gleicher Signatur, aber `recipe_type` und `cocktail` im JSON (fehlt der Typ, bleibt der
+  gespeicherte; so speichern die ältere App und „Version wiederherstellen“ weiter richtig), Versions-Snapshot mit
+  Cocktail-Feldern (Methodenwechsel = neue Version), `get_shared_recipe` mit `cocktail` und `alcohol`, 25 Bar-Zutaten
+  im Grundbestand (Wodka, Tequila, Whisky, Bourbon, Rum braun, Cachaça, Angostura, Triple Sec, Campari, Aperol,
+  Wermut rot/trocken, Kaffeelikör, Prosecco, Säfte, Grenadine, Soda, Tonic, Ginger Beer, Cola, Minze, Eiweiß).
+  Gegen die echte DB mit `supabase/tests/bar_check.sql` geprüft (rollt sich selbst zurück, alle Werte wie erwartet).
+  Security-Advisor: keine neuen Hinweise.
+- **Alkoholberechnung** `src/lib/domain/cocktail.ts` (gleiche Formel wie die View, 19 Unit-Tests): Volumen aus
+  cl/ml/Dash (0,6 ml)/Barlöffel (5 ml)/TL/EL, Gramm nur bei Getränkezutaten über die Dichte, Stück/Prise zählen nicht;
+  Alkohol = Volumen × abv; % vol = Alkohol / (Volumen × (1 + Verdünnung)); Gramm = ml × 0,789. Dazu Basisspirituose
+  (Spirituose mit dem größten Volumen, sonst Likör/Wein; „Rum, weiß“ → „Rum“) und `bottleHints` für „die eine Flasche“.
+- **Umschalter Küche | Bar** oben auf Rezepte (`/rezepte/bar`), „Was kann ich kochen/mixen?“, Statistik
+  (`/statistik/bar`) und Entdecken (`/entdecken/bar`). Bar-Ansichten in der Bar-Stimmung (grün/Bernstein, über einen
+  Marker und `:root:has([data-bar-mood])`, schon beim ersten Bild, gedruckt hell). Cocktail-Karten zeigen
+  Basisspirituose · Methode · Glas, % vol, g Alkohol, kcal; Filter Basisspirituose, Methode (unter „Mehr“), Sortierung
+  „Stärkste/Leichteste zuerst“.
+- **Editor** (`/rezepte/neu?typ=cocktail`): Drinks, Zubereitungszeit, Glas, Methode, Eis, Garnitur; Einheiten mit cl,
+  ml, Dash, Barlöffel zuerst (Getränkezutaten starten mit cl); live % vol, g Alkohol, ml im Glas und kcal, Hinweis bei
+  Spirituosen ohne Alkoholgehalt. Neue Zutaten: Feld „Alkoholgehalt (% vol)“ bei Spirituosen und Likören/Wein.
+- **Rezeptseite** für Cocktails: Glas, Eis, Garnitur, Karte „Pro Drink“ (% vol, g Alkohol, ml im Glas, Verdünnung,
+  darunter Nährwerte), Drinks statt Portionen, „Mixen starten“, Koch-Log heißt „Gemixt“, Kosten pro Drink.
+- **Mix-Modus:** Kochmodus mit Bar-Stimmung, „Wie viele Drinks mixt du?“, „Gemixt!“ am Ende (Bewertung, Notiz,
+  Vorrat abziehen wie beim Kochen).
+- **Bar-Bestand / „Was kann ich mixen?“** (`/einkauf/was-mixen`): wie „Was kann ich kochen?“ (ganzer Vorrat, Küche
+  und Bar), oben „Die eine Flasche: X“ mit den Cocktails, die sie freischaltet, und den nächstbesten. Ohne Bar-Bestand
+  Hinweis mit Link `/einkauf/vorrat?bereich=bar` (öffnet direkt den Bereich Bar).
+- **Bar-Statistik:** Anzahl, Ø % vol, Ø g Alkohol, Ø kcal; Donuts nach Basisspirituose und Methode (Tipp → gefilterte
+  Bar-Liste), Balken nach Alkoholgehalt (alkoholfrei, bis 10, 10–20, 20–30, über 30 %), die stärksten und die am
+  häufigsten gemixten. Gemixtes zählt nicht mehr bei den gekochten Gerichten der Küchen-Statistik.
+- **Rezept-Sicherung Version 2:** enthält Cocktails (Typ, Cocktail-Felder) und den Alkoholgehalt der Zutaten;
+  Dateien der Version 1 werden weiter importiert (als Gerichte). **Markdown:** Cocktails mit
+  „*Cocktail* · 1 Drink · geshaked · Glas Coupette“, Eis, Garnitur, „Pro Drink: 17,5 % vol · 18,9 g Alkohol · kcal“;
+  im Buch als Gruppe „Cocktails“ am Ende. Der Import erkennt das wieder (auch „Art: Cocktail“, „Glas:“, „Methode:“,
+  „Garnitur:“ aus anderen Quellen). **Geteilte Karte** `/r/[token]`: Cocktail · Methode, Glas, Eis, Garnitur, „Pro
+  Drink“, Vorschau- und Story-Bild mit % vol, g Alkohol und kcal, Vorschautext „1 Drink · 17,5 % vol · … kcal“.
+- **Abschluss-Prüfung:** „Meine Daten herunterladen“ enthält Cocktails samt `cocktail_details` und Versionen sowie den
+  Bar-Bestand (keine neuen Tabellen nötig); Account-Löschung entfernt Cocktails und Cocktail-Felder per Cascade
+  (SQL-Test). Doku: `DATENVERARBEITUNG.md` (Abschnitt „Bar“, Änderungsverlauf), `docs/RLS-PRUEFUNG.md` (Bar-Test,
+  Punkt 11).
+- 292 Tests, Typecheck, Lint und Build grün. Browser-Check über eine temporäre Seite `/r/vorschau-bar` (Beispieldaten,
+  ohne Login, wieder gelöscht) am PC und bei 375 px: Karten, Filter, „Pro Drink“, Mix-Modus (2 Drinks → 12 cl),
+  „die eine Flasche“, Bar-Statistik, Editor (Methode „gebaut“ → live 19,8 % vol); kein waagrechtes Scrollen, kein
+  Eingabefeld unter 16 px. Dazu die echte Karte `/r/<token>` mit einem kurz angelegten Test-Cocktail (Seite,
+  Vorschau- und Story-Bild angesehen, danach gelöscht, Link → 404). Nicht im Browser geprüft (braucht Login): Seiten
+  unter `/rezepte/bar`, `/einkauf/was-mixen`, `/statistik/bar`, `/entdecken/bar`, Speichern eines Cocktails
+  (Datenbankteil per SQL-Test geprüft).
+
+## Wie der Nutzer Phase 15 testet
+
+Am PC <http://localhost:3000>, am Handy <http://192.168.178.47:3000> (LAN-Server läuft).
+
+1. Rezepte → oben „Bar“ → „Neuer Cocktail“: Daiquiri, 1 Drink, Coupette, geshaked, Garnitur Limettenrad; Zutaten
+   6 cl Rum weiß, 3 cl Limettensaft, 2 cl Zuckersirup. Unten steht live ca. 17,5 % vol, 18,9 g Alkohol, ≈ 138 ml.
+   Methode auf „gerührt“ stellen → 18,2 % vol. Speichern.
+2. Rezeptseite: grüne Bar-Stimmung, „Pro Drink“-Karte, Drinks-Schalter (2 Drinks → 12 cl Rum), „Mixen starten“ →
+   Mix-Modus bis „Gemixt!“, Bewertung speichern → Abschnitt „Gemixt“ auf der Rezeptseite.
+3. Zwei, drei weitere Cocktails (z. B. Negroni gerührt, Gin Tonic gebaut, ein alkoholfreier). Bar-Liste: Filter
+   „Alle Spirituosen“, Sortierung „Stärkste zuerst“, unter „Mehr“ die Methode.
+4. Einkauf → Vorrat → Bereich „Bar“: Gin, Limettensaft, Tonic eintragen. Einkauf → „Was kochen?“ → „Bar“: was sofort
+   geht, was fehlt, oben „Die eine Flasche“.
+5. Statistik → „Bar“: Donuts antippen (springt in die gefilterte Bar-Liste), Balken nach Alkoholgehalt.
+6. Einen Cocktail „Öffentlich“ schalten → Entdecken → „Bar“. „Teilen per Link“ → Link abgemeldet öffnen: Karte mit
+   % vol, „Als Bild“, „Drucken“ (hell).
+7. Einstellungen: „Rezepte sichern“ (Datei enthält `"version": 2` und die Cocktails), „Rezeptbuch als Markdown“
+   (Cocktails am Ende), eine alte Sicherung aus Phase 8–14 importieren geht weiterhin.
+
+### Gesamttest am Handy (alle Phasen, Abschluss)
+
+Am Handy im WLAN, einmal durch alles; was hakt, bitte mit Seite und Schritt notieren:
+
+1. **Anmelden**, Navigation unten (Rezepte, Wochenplan, Einkauf, Statistik, Entdecken), Profilmenü oben, Dark Mode.
+2. **Rezepte:** neues Rezept mit Zutatensuche (auch Open Food Facts), Foto hochladen, Import per Link, Markdown-Import;
+   Filter und Suche; Kochmodus mit Timer und Portionen; Koch-Log; Version ändern und vergleichen.
+3. **Bar:** Punkte 1–5 von oben.
+4. **Wochenplan:** Rezept einplanen, Trainingstag, Meal Prep mit Resten, Woche kopieren, Tagesziele.
+5. **Einkauf:** Liste aus dem Wochenplan erzeugen, abhaken mit Preis, in den Vorrat übernehmen, Text teilen.
+6. **Statistik** Küche und Bar, **Entdecken** Küche und Bar, ein Rezept übernehmen.
+7. **Teilen per Link** und **Als Bild** (Story), Link in WhatsApp (nach dem Deployment).
+8. **Einstellungen:** Ziele, „Lange nicht gekocht“, „Meine Daten herunterladen“ (Datei öffnet sich, enthält Rezepte,
+   Cocktails, Vorrat mit Bar …), Rezepte sichern.
+9. **Account löschen** nur mit einem Test-Account (vorher einladen): danach Anmeldung unmöglich, Prüfung wie in
+   `docs/RLS-PRUEFUNG.md` Punkt 5, 8 und 11.
+10. **PWA:** „Zum Home-Bildschirm“, App öffnen, ohne Netz die Offline-Seite.
+11. Eingabefelder: Beim Antippen darf das Handy nirgends hineinzoomen; die untere Navigation bleibt unten.
 
 ## Was in Phase 14 entstanden ist
 
@@ -830,6 +921,18 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 64. **Phase 12 – „Gut bewertet“ = Ø ab 4 Sternen;** nie bewertete Rezepte erscheinen nicht unter „Lange nicht
     gekocht“. Im Wochenplan höchstens 5 Vorschläge, ohne Rezepte, die in der Woche schon geplant sind.
 
+65. **Phase 15 – Alkoholgehalt:** Verdünnung als Anteil des Volumens (gerührt +20 %, geshaked +25 %, gebaut +10 %,
+    geblendet +30 %, ohne Methode 0), zentral in `app_config.cocktail_dilution`. Volumen zählt nur bei Volumen-
+    Einheiten und bei Getränkezutaten in Gramm; Stück (Limettenspalte) und Kräuter in Gramm nicht. kcal pro Drink
+    kommen wie bei Gerichten aus den Zutaten (Spirituosen-kcal enthalten den Alkohol).
+66. **Phase 15 – Cocktails sind eigene Rezepte (recipe_type):** nicht im Wochenplan, nicht in der Küchen-Liste und
+    -Statistik, aber im Koch-Log („Gemixt“), in Preisen/Kosten, Sicherung, Markdown, Teilen und Entdecken (Bar).
+67. **Phase 15 – „Die eine Flasche“** zählt Cocktails, denen genau diese eine Zutat fehlt, und nur Spirituosen,
+    Liköre/Wein und Sirupe/Säfte (Minze oder Limetten sind keine Flasche, stehen aber unter „Fehlt 1 Zutat“).
+    Abgeglichen wird der ganze Vorrat (Küche und Bar).
+68. **Phase 15 – Bar-Stimmung** per Marker-Element und `:root:has(...)` statt per JavaScript: kein Aufblitzen,
+    Kopfzeile und Navigation ziehen mit; nur am Bildschirm (Druck bleibt hell).
+
 ## Offene Punkte
 
 - Meal Prep: „Woche kopieren“ übernimmt Kochtag und Reste als normale Einträge (ohne Batch), d. h. in der Zielwoche
@@ -848,7 +951,10 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 - Die Konsole meldet in der Entwicklung „Encountered a script tag while rendering React component“ (kommt von
   next-themes, harmlos).
 - Datenexport enthält die Fotos nur als Liste. Ein ZIP mit allen Fotos wäre eine Ergänzung für später.
-- Rezept-Sicherung kennt nur Küchenrezepte; Cocktail-Felder mit Phase 15 ergänzen (Format-Version 2).
+- Editor: Die internen Schlüssel für Zutaten/Schritte kommen aus einem Zähler auf Modulebene; Server und Browser
+  zählen verschieden, daher meldet die Entwicklungskonsole eine Hydration-Abweichung bei `id="step-…"` (seit Phase 9,
+  harmlos, nur die `for`/`id`-Verknüpfung der „Gebraucht in“-Auswahl). Bei Gelegenheit auf `useId` umstellen.
+- Bar: Die geteilte Karte nennt keine Basisspirituose (die Funktion liefert keine Zutatengruppen). Reicht so.
 - Service-Worker-Version (`VERSION` in `public/sw.js`) bei Änderungen am Caching hochzählen.
 - GitHub-Zweig `main` (nur die automatische README) kann jetzt gelöscht werden (Vercel nutzt `master`).
 - Import: Seiten, die Bots sperren (z. B. Allrecipes, Simply Recipes: Antwort 402), lassen sich nicht laden; die App
@@ -867,7 +973,8 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 
 - **Turbopack-Cache:** Am 19.10. lieferte der Entwicklungsserver nach einer Änderung an `globals.css` selbst nach
   Neustart die alte CSS aus. Abhilfe: Server stoppen, Ordner `.next/dev` löschen, neu starten. In Phase 6 nochmal
-  passiert (alte `recipe-card.tsx` trotz Änderung); gleiche Abhilfe, danach lief es.
+  passiert (alte `recipe-card.tsx` trotz Änderung); gleiche Abhilfe, danach lief es. In Phase 15 wieder (erst
+  `recipe-card.tsx`/`recipe-filters.tsx`, dann `globals.css`); zweimal neu gestartet, danach aktuell.
 
 - Security-Advisor meldet `public.rls_auto_enable()` als für `anon` ausführbar. Das ist eine von Supabase
   selbst angelegte Event-Trigger-Funktion (Einstellung „RLS automatisch aktivieren“), nicht aus unseren

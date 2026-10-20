@@ -14,7 +14,8 @@ export async function generateMetadata({ params }: PageProps<"/kochen/[id]">): P
   if (!UUID.test(id)) return { title: "Kochmodus" };
   const user = await requireUser();
   const detail = await getRecipeDetail(id, user.id);
-  return { title: detail ? `Kochen: ${detail.recipe.title}` : "Kochmodus" };
+  if (!detail) return { title: "Kochmodus" };
+  return { title: `${detail.recipe.recipe_type === "cocktail" ? "Mixen" : "Kochen"}: ${detail.recipe.title}` };
 }
 
 /** Kochmodus als eigene Seite ohne Navigation (Vollbild über allem). */
@@ -47,6 +48,7 @@ export default async function CookPage({ params, searchParams }: PageProps<"/koc
       }))}
       steps={steps.map((s) => ({ position: s.position, text: s.text, timerSeconds: s.timer_seconds }))}
       lastNote={lastNote?.note ? { text: lastNote.note, date: lastNote.date } : null}
+      kind={recipe.recipe_type}
     />
   );
 }

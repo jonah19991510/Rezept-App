@@ -5,6 +5,8 @@ const unitEnum = z.enum(Constants.public.Enums.unit);
 const categoryEnum = z.enum(Constants.public.Enums.recipe_category);
 const foodGroupEnum = z.enum(Constants.public.Enums.food_group);
 const dietEnum = z.enum(Constants.public.Enums.ingredient_diet);
+const glassEnum = z.enum(Constants.public.Enums.glass);
+const methodEnum = z.enum(Constants.public.Enums.cocktail_method);
 
 const minutes = z
   .number({ error: "Bitte eine Zahl eingeben." })
@@ -30,10 +32,23 @@ export const recipeStepInputSchema = z.object({
   timer_seconds: z.number().int().positive().max(86400).nullable().default(null),
 });
 
+/** Phase 15: Cocktail-Felder (nur bei recipe_type „cocktail“). */
+export const cocktailInputSchema = z.object({
+  glass: glassEnum.nullable(),
+  method: methodEnum.nullable(),
+  ice: z.string().trim().max(100, "Höchstens 100 Zeichen.").default(""),
+  garnish: z.string().trim().max(200, "Höchstens 200 Zeichen.").default(""),
+});
+
+export type CocktailInput = z.input<typeof cocktailInputSchema>;
+
 const tagSchema = z.string().trim().min(1).max(30, "Ein Tag darf höchstens 30 Zeichen haben.");
 
 export const recipeInputSchema = z.object({
   id: z.uuid().optional(),
+  /** Phase 15: fehlt die Angabe, bleibt der gespeicherte Typ (neu: Gericht) */
+  recipe_type: z.enum(Constants.public.Enums.recipe_type).optional(),
+  cocktail: cocktailInputSchema.nullable().default(null),
   title: z.string().trim().min(1, "Bitte gib einen Titel ein.").max(200, "Der Titel ist zu lang."),
   description: z.string().trim().max(2000, "Höchstens 2000 Zeichen.").default(""),
   servings: z
@@ -86,6 +101,8 @@ export const ingredientInputSchema = z
     diet: dietEnum.nullable(),
     piece_weight_g: z.number().positive("Muss größer als 0 sein.").max(10000).nullable(),
     density_g_per_ml: z.number().positive("Muss größer als 0 sein.").max(5, "Unrealistisch hohe Dichte.").nullable(),
+    /** Phase 15: Alkoholgehalt in % vol (Spirituosen, Liköre, Wein) */
+    abv: z.number({ error: "Bitte eine Zahl eingeben." }).min(0, "Nicht negativ.").max(100, "Höchstens 100 % vol.").nullable().default(null),
     is_staple: z.boolean().default(false),
     /** Barcode bei Open Food Facts; leer bei manuell angelegten Zutaten */
     external_id: z.string().trim().regex(/^\d{4,20}$/, "Ungültiger Barcode.").nullable().default(null),

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChartPie } from "lucide-react";
+import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatsDashboard } from "@/components/stats/stats-dashboard";
@@ -16,6 +17,7 @@ export default async function StatsPage() {
 
   return (
     <>
+      <KitchenBarSwitch active="kitchen" kitchenHref="/statistik" barHref="/statistik/bar" />
       <PageHeader title="Statistik" description="Was in deinem Rezeptbuch und auf deinem Teller steckt." />
       {data.recipes.length === 0 ? (
         <EmptyState

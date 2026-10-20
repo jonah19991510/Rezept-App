@@ -161,16 +161,17 @@ export function DataSection() {
       <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
         <li>
           <strong className="font-medium text-foreground">Meine Daten</strong>: alles, was die App über dich speichert
-          (Profil, Rezepte mit Versionen, Wochenpläne, Ziele, Einkaufsliste, Vorrat, Preise, Koch-Log, Favoriten,
-          Liste deiner Fotos).
+          (Profil, Rezepte und Cocktails mit Versionen, Wochenpläne, Ziele, Einkaufsliste, Vorrat mit Bar, Preise,
+          Koch-Log, Favoriten, Liste deiner Fotos).
         </li>
         <li>
-          <strong className="font-medium text-foreground">Rezepte sichern</strong>: deine Rezepte in einem Format, das du
-          hier wieder importieren kannst. Fotos sind nicht enthalten.
+          <strong className="font-medium text-foreground">Rezepte sichern</strong>: deine Rezepte und Cocktails in einem
+          Format, das du hier wieder importieren kannst. Ältere Sicherungen (nur Rezepte) gehen weiterhin. Fotos sind
+          nicht enthalten.
         </li>
         <li>
-          <strong className="font-medium text-foreground">Rezeptbuch als Markdown</strong>: alle Rezepte als lesbare
-          .md-Datei mit Inhaltsverzeichnis, z. B. für Obsidian oder zum Ausdrucken. Ein einzelnes Rezept gibt es auf der
+          <strong className="font-medium text-foreground">Rezeptbuch als Markdown</strong>: alle Rezepte und Cocktails als
+          lesbare .md-Datei mit Inhaltsverzeichnis, z. B. für Obsidian oder zum Ausdrucken. Ein einzelnes Rezept gibt es auf der
           Rezeptseite unter „⋮“ → „Als Markdown“.
         </li>
         <li>
