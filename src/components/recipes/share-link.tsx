@@ -96,7 +96,7 @@ export function ShareLink({
             value={url}
             aria-label="Link zur Rezeptkarte"
             onFocus={(e) => e.currentTarget.select()}
-            className="font-mono text-xs"
+            className="font-mono md:text-xs"
           />
           <div className="flex flex-wrap gap-2">
             <Button type="button" onClick={copy}>

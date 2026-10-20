@@ -17,16 +17,19 @@
 | 11 – Trainingstage, Lücken-Hinweis, Meal Prep, Reste-Vorschläge | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 12 – Preise und Kosten, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken | **fertig** (19.10.2026), live, vom Nutzer abgenommen |
 | 13 – Markdown-Import und -Export | **fertig** (20.10.2026), vom Nutzer an PC und Handy getestet, live |
-| 14 – Teilen per Link, Rezeptkarte, Open-Graph-Bild, Druck- und Bildexport | **fertig** (20.10.2026), gepusht (`b5aec04`); live von außen nicht prüfbar (Vercel Security Checkpoint), Test durch den Nutzer steht aus |
+| 14 – Teilen per Link, Rezeptkarte, Open-Graph-Bild, Druck- und Bildexport | **fertig** (20.10.2026), live (vom Nutzer bestätigt); Bugfix Handy-Zoom gepusht |
 | 15 | offen |
 
-**Nächster Schritt:** Phase 14 ist gepusht (20.10.2026, 08:15). Seitdem antwortet die Live-Adresse auf jede
-Anfrage von außen (curl, auch mit Browser-Kennung, auch `/login`) mit 403 `X-Vercel-Mitigated: challenge`
-(„Vercel Security Checkpoint“). Vor dem Push ging dieselbe Prüfung noch. Ursache unklar: Bot-Schutz/Firewall in
-Vercel oder durch die Abfragen ausgelöst (40 Anfragen in 400 s). Folge: Ob das Deployment fertig ist, sieht nur der
-Nutzer im Dashboard, und Vorschau-Bots (WhatsApp) könnten ebenfalls die Challenge bekommen. Der Nutzer prüft im
-Vercel-Dashboard Deployment und Firewall (Attack Challenge Mode, Bot Protection; ggf. `/r/` für Vorschau-Bots
-freigeben) und testet dann die WhatsApp-Vorschau. Claude umgeht die Challenge nicht.
+**Nächster Schritt:** Nutzer prüft den Bugfix am Handy und die WhatsApp-Vorschau. Danach Phase 15 (Cocktail-Bereich).
+Von außen antwortet die Live-Adresse Claude weiterhin mit dem „Vercel Security Checkpoint“ (403,
+`X-Vercel-Mitigated: challenge`); der Vercel-Connector sieht das Projekt, darf Deployments und Firewall aber nicht
+lesen (403). Falls die WhatsApp-Vorschau fehlt: in Vercel unter Firewall Challenge/Bot-Schutz für `/r/` lockern.
+
+**Bugfix 20.10.2026 (nach Phase 14):** Am Handy hing die untere Navigation beim Scrollen mitten im Bild, auf allen
+Seiten, bis zum Neuladen. Ursache: Das Link-Feld in „Teilen per Link“ hatte 12 px Schrift (`text-xs`); iPhones
+zoomen bei Eingabefeldern unter 16 px automatisch hinein und bleiben gezoomt, fest positionierte Leisten hängen
+dann im Bild. Jetzt am Handy 16 px wie alle anderen Felder (`md:text-xs` nur ab Desktop). Andere Felder geprüft:
+keines setzt eine kleinere Schrift. Regel für später: Eingabefelder am Handy nie unter 16 px.
 
 **Stand Deployment (19.10.2026):** Live unter <https://unser-rezeptbuch.vercel.app>, Vercel-Projekt `unser-rezeptbuch`
 (Hobby, Konto jonah19991510), verbunden mit GitHub `jonah19991510/Rezept-App`, Produktionszweig `master`
