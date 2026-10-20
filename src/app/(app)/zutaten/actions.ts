@@ -50,10 +50,45 @@ export async function updateIngredientAction(id: string, input: IngredientInput)
   if (error) return { ok: false, message: "Die Zutat konnte nicht gespeichert werden. Bitte versuche es noch einmal." };
   if (!data) return { ok: false, message: "Diese Zutat kannst du nicht bearbeiten." };
 
+  revalidateIngredientPages();
+  return { ok: true, ingredient: toIngredientOption(data) };
+}
+
+function revalidateIngredientPages() {
   revalidatePath("/zutaten");
   revalidatePath("/rezepte", "layout");
   revalidatePath("/wochenplan");
   revalidatePath("/statistik");
   revalidatePath("/einkauf");
-  return { ok: true, ingredient: toIngredientOption(data) };
+  revalidatePath("/preise");
+}
+
+/**
+ * Selbst angelegte Zutat löschen. Eigener Preis und Vorrats-Eintrag gehen mit (Cascade), Einkaufslisten behalten den
+ * Namen. Die Datenbank lehnt ab, wenn die Zutat noch in einem Rezept steckt (auch bei anderen, Fremdschlüssel) oder
+ * andere sie im Vorrat bzw. mit Preis haben (Trigger ingredients_protect_shared_delete).
+ */
+export async function deleteIngredientAction(id: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireUser();
+  if (!z.uuid().safeParse(id).success) return { ok: false, message: "Ungültige Zutat." };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ingredients")
+    .delete()
+    .eq("id", id)
+    .eq("created_by", user.id)
+    .eq("source", "user")
+    .select("id");
+  if (error?.code === "23503") {
+    return { ok: false, message: "Die Zutat steckt noch in einem Rezept. Entferne sie dort zuerst." };
+  }
+  if (error?.code === "P0001") {
+    return { ok: false, message: "Andere nutzen diese Zutat noch (im Vorrat oder mit Preis). Sie bleibt deshalb bestehen." };
+  }
+  if (error) return { ok: false, message: "Die Zutat konnte nicht gelöscht werden. Bitte versuche es noch einmal." };
+  if (!data?.length) return { ok: false, message: "Diese Zutat kannst du nicht löschen." };
+
+  revalidateIngredientPages();
+  return { ok: true };
 }

@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Carrot, Pencil, Search, SearchX } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Carrot, Pencil, Search, SearchX, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { deleteIngredientAction } from "@/app/(app)/zutaten/actions";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PriceForm, type PriceDraft } from "@/components/prices/price-manager";
 import { IngredientForm } from "@/components/recipes/editor/ingredient-form";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { pricePer100, type IngredientWeights } from "@/lib/domain/costs";
@@ -215,6 +218,7 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
                       onSaved={done}
                       onCancel={() => setOpenId(null)}
                     />
+                    <DeleteIngredient key={`del-${open.ingredient.id}`} item={open} onDeleted={done} />
                   </div>
                 ) : (
                   <ReadOnlyDetails item={open} />
@@ -242,6 +246,63 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * Selbst angelegte Zutat löschen, mit Rückfrage. Steckt sie noch in eigenen Rezepten, geht es erst nach dem
+ * Entfernen dort; Rezepte anderer und deren Vorrat/Preise prüft die Datenbank.
+ */
+function DeleteIngredient({ item, onDeleted }: { item: MyIngredient; onDeleted: () => void }) {
+  const [confirm, setConfirm] = useState(false);
+  const [error, setError] = useState<string>();
+  const [pending, startTransition] = useTransition();
+  const inRecipes = item.recipes.length;
+
+  function remove() {
+    startTransition(async () => {
+      const result = await deleteIngredientAction(item.ingredient.id);
+      if (result.ok) {
+        toast.success(`${item.ingredient.name} gelöscht.`);
+        onDeleted();
+      } else {
+        setError(result.message);
+        setConfirm(false);
+      }
+    });
+  }
+
+  return (
+    <section className="space-y-2 border-t pt-4" aria-label="Zutat löschen">
+      {inRecipes > 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Löschen geht erst, wenn die Zutat in keinem Rezept mehr steckt (gerade in {recipeWord(inRecipes)}, siehe
+          „Rezepte“).
+        </p>
+      ) : confirm ? (
+        <div className="space-y-2 rounded-2xl border border-destructive/40 bg-destructive/5 p-3">
+          <p className="text-sm">
+            <span className="font-medium">{item.ingredient.name}</span> wirklich löschen? Dein Preis und ein Vorrats-Eintrag
+            dazu werden mitgelöscht. Auf Einkaufslisten bleibt der Name stehen.
+          </p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setConfirm(false)} disabled={pending}>
+              Abbrechen
+            </Button>
+            <Button type="button" variant="destructive" onClick={remove} disabled={pending}>
+              <Trash2 aria-hidden />
+              {pending ? "Wird gelöscht …" : "Endgültig löschen"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button type="button" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirm(true)}>
+          <Trash2 aria-hidden />
+          Zutat löschen
+        </Button>
+      )}
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+    </section>
   );
 }
 
