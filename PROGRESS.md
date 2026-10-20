@@ -26,9 +26,14 @@
 die IP des Heimnetzes mit dem „Security Checkpoint“ belegt hatte (403, `X-Vercel-Mitigated: challenge`) – sehr
 wahrscheinlich ausgelöst durch Claudes Abfrage-Schleife nach dem Push (40 Anfragen in 400 s). Der Browser löst die
 Challenge selbst, die Vorschau (wird auf dem Handy erzeugt) nicht. Läuft normalerweise von allein ab. Künftig die
-Live-Seite nicht in Schleifen abfragen. Der Vercel-Connector sieht das Projekt, darf Deployments/Firewall aber noch
-nicht lesen (403, Account `jonah19991510` nicht in der Freigabe); dazu den Connector neu verbinden und dabei den
-Account auswählen.
+Live-Seite nicht in Schleifen abfragen. Der Vercel-Connector hat seit 20.10.2026 Zugriff auf den Account
+`jonah19991510` (Deployments lesen geht).
+
+**Production-Branch (20.10.2026):** Laut Vercel-API entsteht bei einem Push auf `master` nur ein Preview-Deployment;
+die Production-Deployments haben `source: "redeploy"`, kamen also durch Klick des Nutzers. Daher früher „Deployment
+hängt“ und „nach 400 s nicht live“. Abhilfe: im Vercel-Dashboard den Production-Branch auf `master` stellen (über
+die API/den Connector nicht änderbar). Danach prüfen: nächster Push → Deployment mit `target: production`,
+`source` nicht „redeploy“.
 
 **Bugfix 20.10.2026 (nach Phase 14):** Am Handy hing die untere Navigation beim Scrollen mitten im Bild, auf allen
 Seiten, bis zum Neuladen. Ursache: Das Link-Feld in „Teilen per Link“ hatte 12 px Schrift (`text-xs`); iPhones
@@ -845,10 +850,8 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 - Datenexport enthält die Fotos nur als Liste. Ein ZIP mit allen Fotos wäre eine Ergänzung für später.
 - Rezept-Sicherung kennt nur Küchenrezepte; Cocktail-Felder mit Phase 15 ergänzen (Format-Version 2).
 - Service-Worker-Version (`VERSION` in `public/sw.js`) bei Änderungen am Caching hochzählen.
-- GitHub-Zweig `main` (nur die automatische README) kann gelöscht werden, sobald Vercel sicher von `master` baut
-  (siehe „Deployment hängt“ oben).
-- Optional: Vercel-Connector für Claude auf das Konto jonah19991510 berechtigen, dann kann Claude Deployments und
-  Laufzeitfehler selbst ansehen.
+- GitHub-Zweig `main` (nur die automatische README) kann gelöscht werden, sobald Vercel `master` als
+  Production-Branch nutzt (siehe „Production-Branch“ oben).
 - Import: Seiten, die Bots sperren (z. B. Allrecipes, Simply Recipes: Antwort 402), lassen sich nicht laden; die App
   sagt das und verweist auf „von Hand anlegen“.
 - Statistik „Meistgeplant“: Ein Tipp auf ein fremdes (öffentliches) Rezept filtert die eigene Liste darunter auf
