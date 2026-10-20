@@ -221,7 +221,10 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
                     <DeleteIngredient key={`del-${open.ingredient.id}`} item={open} onDeleted={done} />
                   </div>
                 ) : (
-                  <ReadOnlyDetails item={open} />
+                  <div className="space-y-3">
+                    <ReadOnlyDetails item={open} />
+                    {open.canDelete ? <DeleteIngredient key={`del-${open.ingredient.id}`} item={open} onDeleted={done} /> : null}
+                  </div>
                 )
               ) : null}
 
@@ -250,7 +253,7 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
 }
 
 /**
- * Selbst angelegte Zutat löschen, mit Rückfrage. Steckt sie noch in eigenen Rezepten, geht es erst nach dem
+ * Eigene Zutat löschen (selbst erstellt oder aus Open Food Facts übernommen), mit Rückfrage. Steckt sie noch in eigenen Rezepten, geht es erst nach dem
  * Entfernen dort; Rezepte anderer und deren Vorrat/Preise prüft die Datenbank.
  */
 function DeleteIngredient({ item, onDeleted }: { item: MyIngredient; onDeleted: () => void }) {
@@ -337,7 +340,7 @@ function ReadOnlyDetails({ item }: { item: MyIngredient }) {
         {i.source === "seed"
           ? "Zutaten aus dem Grundbestand sind für alle gleich und lassen sich nicht ändern."
           : i.source === "openfoodfacts"
-            ? "Werte aus Open Food Facts lassen sich nicht ändern, weil andere dieselbe Zutat (gleicher Barcode) nutzen."
+            ? "Werte aus Open Food Facts lassen sich nicht ändern, weil andere dieselbe Zutat (gleicher Barcode) nutzen können."
             : "Diese Zutat hat jemand anderes angelegt; nur diese Person kann sie ändern."}{" "}
         Stimmt etwas nicht, leg im Rezept über „Zutat austauschen“ eine eigene Zutat an.
       </p>

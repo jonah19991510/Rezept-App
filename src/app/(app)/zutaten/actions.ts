@@ -64,8 +64,8 @@ function revalidateIngredientPages() {
 }
 
 /**
- * Selbst angelegte Zutat löschen. Eigener Preis und Vorrats-Eintrag gehen mit (Cascade), Einkaufslisten behalten den
- * Namen. Die Datenbank lehnt ab, wenn die Zutat noch in einem Rezept steckt (auch bei anderen, Fremdschlüssel) oder
+ * Eigene Zutat löschen (selbst erstellt oder aus Open Food Facts übernommen). Eigener Preis und Vorrats-Eintrag
+ * gehen mit (Cascade), Einkaufslisten behalten den Namen. Die Datenbank lehnt ab, wenn die Zutat noch in einem Rezept steckt (auch bei anderen, Fremdschlüssel) oder
  * andere sie im Vorrat bzw. mit Preis haben (Trigger ingredients_protect_shared_delete).
  */
 export async function deleteIngredientAction(id: string): Promise<{ ok: true } | { ok: false; message: string }> {
@@ -78,10 +78,13 @@ export async function deleteIngredientAction(id: string): Promise<{ ok: true } |
     .delete()
     .eq("id", id)
     .eq("created_by", user.id)
-    .eq("source", "user")
+    .in("source", ["user", "openfoodfacts"])
     .select("id");
   if (error?.code === "23503") {
-    return { ok: false, message: "Die Zutat steckt noch in einem Rezept. Entferne sie dort zuerst." };
+    return {
+      ok: false,
+      message: "Die Zutat steckt noch in einem Rezept (bei dir oder bei jemand anderem) und kann deshalb nicht gelöscht werden.",
+    };
   }
   if (error?.code === "P0001") {
     return { ok: false, message: "Andere nutzen diese Zutat noch (im Vorrat oder mit Preis). Sie bleibt deshalb bestehen." };

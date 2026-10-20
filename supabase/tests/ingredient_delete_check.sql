@@ -65,3 +65,45 @@ begin
   execute 'reset role';
   raise exception 'TESTERGEBNIS %', out;
 end $$;
+
+-- Zweiter Block (ab Migration …190000): aus Open Food Facts übernommene Zutaten darf der Nutzer löschen, nicht ändern.
+-- Erwartet: B_deletes_A_off=0 | A_updates_off=0 | A_deletes_off_free=1 | off_used=blocked(23503)
+do $$
+declare
+  a uuid := gen_random_uuid();
+  b uuid := gen_random_uuid();
+  off_free uuid; off_used uuid; rb uuid;
+  out text := '';
+  n int;
+begin
+  insert into auth.users (id, instance_id, aud, role, email, raw_user_meta_data, created_at, updated_at)
+  values (a, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'off-test-a@example.invalid', '{"display_name":"Off A"}', now(), now()),
+         (b, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'off-test-b@example.invalid', '{}', now(), now());
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  insert into public.ingredients (name, kcal, food_group, diet, created_by, source, external_id) values ('OFF frei', 1, 'other', 'vegan', a, 'openfoodfacts', '4000000000101') returning id into off_free;
+  insert into public.ingredients (name, kcal, food_group, diet, created_by, source, external_id) values ('OFF bei B', 1, 'other', 'vegan', a, 'openfoodfacts', '4000000000102') returning id into off_used;
+
+  -- B nutzt eine davon im eigenen Rezept und darf A's Zutaten nicht löschen
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated')::text, true);
+  insert into public.recipes (owner_id, title, servings) values (b, 'R B', 1) returning id into rb;
+  insert into public.recipe_ingredients (recipe_id, ingredient_id, grams) values (rb, off_used, 10);
+  delete from public.ingredients where id = off_free;
+  get diagnostics n = row_count;
+  out := 'B_deletes_A_off=' || n;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated')::text, true);
+  update public.ingredients set kcal = 2 where id = off_free;
+  get diagnostics n = row_count;
+  out := out || ' | A_updates_off=' || n;
+  delete from public.ingredients where id = off_free;
+  get diagnostics n = row_count;
+  out := out || ' | A_deletes_off_free=' || n;
+  begin
+    delete from public.ingredients where id = off_used;
+    out := out || ' | off_used=deleted?!';
+  exception when foreign_key_violation then out := out || ' | off_used=blocked(23503)';
+  end;
+  execute 'reset role';
+  raise exception 'TESTERGEBNIS %', out;
+end $$;

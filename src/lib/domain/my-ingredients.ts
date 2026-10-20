@@ -24,6 +24,8 @@ export type MyIngredient = {
    * nur hinzugefügt, nicht erstellt. Selbst erstellte sind auch die einzigen, die er ändern darf (RLS).
    */
   isOwn: boolean;
+  /** Löschen erlaubt: selbst erstellt oder selbst aus Open Food Facts übernommen (die Datenbank prüft die Nutzung) */
+  canDelete: boolean;
   /** eigene Rezepte und Cocktails, in denen die Zutat vorkommt (alphabetisch, ohne Doppelte) */
   recipes: { id: string; title: string; type: Enums<"recipe_type"> }[];
   price: MyIngredientPrice | null;
@@ -31,6 +33,11 @@ export type MyIngredient = {
 
 export function canEditIngredient(row: { created_by: string | null; source: Enums<"ingredient_source"> }, userId: string): boolean {
   return row.created_by === userId && row.source === "user";
+}
+
+/** Wie die Policy ingredients_delete_own: eigene, selbst erstellt oder aus Open Food Facts übernommen. */
+export function canDeleteIngredient(row: { created_by: string | null; source: Enums<"ingredient_source"> }, userId: string): boolean {
+  return row.created_by === userId && (row.source === "user" || row.source === "openfoodfacts");
 }
 
 const collator = new Intl.Collator("de-DE", { sensitivity: "base", numeric: true });
@@ -50,6 +57,7 @@ export function collectMyIngredients(input: {
       item = {
         ingredient,
         isOwn: canEditIngredient({ created_by, source: row.source }, input.userId),
+        canDelete: canDeleteIngredient({ created_by, source: row.source }, input.userId),
         recipes: [],
         price: input.prices.get(row.id) ?? null,
       };

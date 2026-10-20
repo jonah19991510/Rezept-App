@@ -125,7 +125,7 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 ## Änderungsverlauf
 
 - **Nach Phase 15:** Seite „Zutaten“ zeigt Zutaten aus eigenen Rezepten und selbst angelegte, mit eigenem Preis;
-  selbst angelegte Zutaten lassen sich ändern und löschen (wie schon von der RLS erlaubt). Neu nur zwei Trigger: einer
+  selbst angelegte Zutaten lassen sich ändern und löschen, selbst aus Open Food Facts übernommene löschen. Neu nur zwei Trigger: einer
   rechnet bei Änderung von Dichte oder Stückgewicht die gespeicherten Gramm in Rezeptzeilen neu, einer verhindert das
   Löschen, solange andere die Zutat im Vorrat oder mit Preis haben. Beim Löschen gehen der eigene Preis und Vorrat zur
   Zutat mit. Keine neuen Tabellen, keine neuen

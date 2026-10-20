@@ -118,7 +118,10 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
   gelöscht) bei 375 px: Liste, Ansichten, Dialog mit Preis/Bearbeiten/Angaben, keine Felder unter 16 px. Speichern
   nicht im Browser geprüft (braucht Login; Datenbankteil per SQL-Test).
 
-- **Löschen** (unter „Bearbeiten“, mit Rückfrage): nur selbst angelegte Zutaten, die in keinem Rezept mehr stecken.
+- **Löschen** (mit Rückfrage; bei selbst erstellten unter „Bearbeiten“, bei aus Open Food Facts übernommenen unter
+  „Angaben“): nur eigene Zutaten, die in keinem Rezept mehr stecken. Nicht automatisch, nur von Hand. Migration
+  `…20261020190000_delete_own_off_ingredients`: Policy `ingredients_delete_own` erlaubt jetzt auch selbst übernommene
+  Open-Food-Facts-Zutaten (ändern bleibt gesperrt).
   Eigener Preis und Vorrats-Eintrag gehen mit, Einkaufslisten behalten den Namen. Migration
   `…20261020180000_protect_shared_ingredient_delete`: Trigger lehnt ab, wenn andere Nutzer die Zutat im Vorrat oder mit
   Preis haben (sonst würden deren Einträge per Cascade still verschwinden); Rezepte sperrt schon der Fremdschlüssel.
@@ -129,6 +132,7 @@ erscheint in der Liste und unter „Preise“, die Kosten im Rezept stimmen. Ein
 → „Bearbeiten“ → z. B. Stückgewicht ändern → im Rezept ändern sich Gramm und Nährwerte. Eine Zutat aus dem
 Grundbestand zeigt nur „Angaben“. Löschen: eine selbst angelegte Zutat, die in keinem Rezept steckt → „Bearbeiten“ →
 „Zutat löschen“ → „Endgültig löschen“; steckt sie noch in einem Rezept, steht dort ein Hinweis statt des Knopfs.
+Eine aus Open Food Facts übernommene Zutat ohne Rezept (unter „Alle“) → „Angaben“ → „Zutat löschen“.
 
 ## Was in Phase 15 entstanden ist
 

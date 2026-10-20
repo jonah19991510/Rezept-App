@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canDeleteIngredient,
   canEditIngredient,
   collectMyIngredients,
   defaultDiet,
@@ -50,6 +51,13 @@ describe("collectMyIngredients", () => {
     expect(items[0].ingredient).not.toHaveProperty("created_by");
     expect(canEditIngredient({ created_by: ME, source: "user" }, ME)).toBe(true);
     expect(canEditIngredient({ created_by: ME, source: "seed" }, ME)).toBe(false);
+  });
+
+  it("löschen auch selbst übernommene aus Open Food Facts, nie Grundbestand oder fremde", () => {
+    expect(Object.fromEntries(items.map((i) => [i.ingredient.id, i.canDelete]))).toEqual({ z: false, o: true, m: true, f: false });
+    expect(canDeleteIngredient({ created_by: ME, source: "openfoodfacts" }, ME)).toBe(true);
+    expect(canDeleteIngredient({ created_by: OTHER, source: "openfoodfacts" }, ME)).toBe(false);
+    expect(canDeleteIngredient({ created_by: null, source: "seed" }, ME)).toBe(false);
   });
 
   it("Ansichten und Suche", () => {

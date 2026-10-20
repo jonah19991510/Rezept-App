@@ -38,6 +38,12 @@ B sieht weder `cocktail_details` noch `recipe_alcohol` von A's privatem Cocktail
 `recipe_alcohol` niemand (`anon` ohne Recht), die geteilte Karte liefert Cocktail-Felder und Alkoholgehalt, nach dem
 Löschen von A ist alles weg. Letzter Lauf: 20.10.2026, alle Werte wie erwartet.
 
+**Zutaten bearbeiten und löschen:** [`supabase/tests/ingredient_edit_check.sql`](../supabase/tests/ingredient_edit_check.sql)
+(Gramm-Neuberechnung, nur eigene selbst erstellte Zutaten änderbar) und
+[`supabase/tests/ingredient_delete_check.sql`](../supabase/tests/ingredient_delete_check.sql) (zwei Blöcke einzeln
+ausführen: Löschen nur eigener Zutaten, gesperrt bei Nutzung in Rezepten oder bei anderen im Vorrat/mit Preis).
+Letzter Lauf: 20.10.2026, alle Werte wie erwartet.
+
 ## 2. Prüfung in der App
 
 Du brauchst zwei Accounts (dein Admin-Account und einen eingeladenen Test-Account) und zwei Browser
