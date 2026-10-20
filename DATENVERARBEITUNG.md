@@ -124,6 +124,11 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **Nach Phase 15:** Seite „Zutaten“ zeigt Zutaten aus eigenen Rezepten und selbst angelegte, mit eigenem Preis;
+  selbst angelegte Zutaten lassen sich ändern (wie schon von der RLS erlaubt). Neu nur ein Trigger, der bei Änderung
+  von Dichte oder Stückgewicht die gespeicherten Gramm in Rezeptzeilen neu rechnet. Keine neuen Tabellen, keine neuen
+  Daten, keine neuen Dienstleister.
+
 - **Phase 15:** Cocktail-Bereich (siehe „Bar“ oben). Genutzt werden die seit Phase 1 vorhandenen Felder
   `recipes.recipe_type`, `cocktail_details` und `pantry_items.location = bar`, dazu die Spalte `ingredients.abv`.
   Neu: View `recipe_alcohol` (Security Invoker, nur eingeloggt, RLS des Aufrufers), Eintrag `cocktail_dilution` in

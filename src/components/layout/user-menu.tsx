@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTransition } from "react";
 import { useTheme } from "next-themes";
-import { Euro, LogOut, Monitor, Moon, Scale, Settings, ShieldCheck, Sun } from "lucide-react";
+import { Carrot, Euro, LogOut, Monitor, Moon, Scale, Settings, ShieldCheck, Sun } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import { initials } from "@/lib/initials";
 
 const ITEM = "min-h-11 gap-2.5 px-2.5";
 
-/** Profilmenü oben rechts: Einstellungen, Preise, Umrechner, Admin (nur Admins), Darstellung, Abmelden. */
+/** Profilmenü oben rechts: Einstellungen, Zutaten, Preise, Umrechner, Admin (nur Admins), Darstellung, Abmelden. */
 export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmin: boolean }) {
   const { theme, setTheme } = useTheme();
   const [pending, startTransition] = useTransition();
@@ -44,6 +44,10 @@ export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmi
         <DropdownMenuItem className={ITEM} render={<Link href="/einstellungen" />}>
           <Settings aria-hidden />
           Einstellungen
+        </DropdownMenuItem>
+        <DropdownMenuItem className={ITEM} render={<Link href="/zutaten" />}>
+          <Carrot aria-hidden />
+          Zutaten
         </DropdownMenuItem>
         <DropdownMenuItem className={ITEM} render={<Link href="/preise" />}>
           <Euro aria-hidden />

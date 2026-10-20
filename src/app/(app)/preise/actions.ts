@@ -10,6 +10,7 @@ export type PriceResult = { ok: true; message?: string } | { ok: false; message:
 
 function revalidateCosts() {
   revalidatePath("/preise");
+  revalidatePath("/zutaten");
   revalidatePath("/einkauf");
   revalidatePath("/wochenplan");
   revalidatePath("/rezepte", "layout");

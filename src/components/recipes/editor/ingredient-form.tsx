@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createIngredientAction } from "@/app/(app)/rezepte/ingredient-actions";
+import { updateIngredientAction } from "@/app/(app)/zutaten/actions";
 import { FormField } from "@/components/forms/form-field";
 import { FormMessage } from "@/components/forms/form-message";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,10 @@ export type IngredientFormInitial = {
   diet?: Enums<"ingredient_diet"> | null;
   externalId?: string | null;
   sourceLabel?: string;
+  /** Bearbeiten (Seite „Zutaten“): vorhandene Werte */
+  pieceWeight?: number | null;
+  density?: number | null;
+  abv?: number | null;
 };
 
 const NUTRIENTS = [
@@ -38,16 +43,22 @@ const NUTRIENTS = [
 
 type NutrientKey = (typeof NUTRIENTS)[number]["key"];
 
-/** Neue Zutat anlegen: manuell oder als Vorschlag aus Open Food Facts (vorausgefüllt, prüfbar). */
+/**
+ * Neue Zutat anlegen: manuell oder als Vorschlag aus Open Food Facts (vorausgefüllt, prüfbar).
+ * Mit `ingredientId` wird eine selbst angelegte Zutat geändert (Seite „Zutaten“).
+ */
 export function IngredientForm({
   initial,
   onSaved,
   onCancel,
+  ingredientId,
 }: {
   initial: IngredientFormInitial;
   onSaved: (ingredient: IngredientOption) => void;
   onCancel: () => void;
+  ingredientId?: string;
 }) {
+  const editing = ingredientId != null;
   const [name, setName] = useState(initial.name ?? "");
   const [nutrients, setNutrients] = useState<Record<NutrientKey, string>>(() => ({
     kcal: formatDecimalInput(initial.kcal ?? null, 1),
@@ -59,9 +70,9 @@ export function IngredientForm({
   }));
   const [foodGroup, setFoodGroup] = useState<Enums<"food_group">>(initial.food_group ?? "other");
   const [diet, setDiet] = useState<Enums<"ingredient_diet"> | "">(initial.diet ?? "");
-  const [pieceWeight, setPieceWeight] = useState("");
-  const [density, setDensity] = useState("");
-  const [abv, setAbv] = useState("");
+  const [pieceWeight, setPieceWeight] = useState(formatDecimalInput(initial.pieceWeight ?? null));
+  const [density, setDensity] = useState(formatDecimalInput(initial.density ?? null, 3));
+  const [abv, setAbv] = useState(formatDecimalInput(initial.abv ?? null, 1));
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState<string>();
   const [pending, startTransition] = useTransition();
@@ -90,7 +101,7 @@ export function IngredientForm({
     }
     setErrors({});
     startTransition(async () => {
-      const result = await createIngredientAction(input);
+      const result = editing ? await updateIngredientAction(ingredientId, input) : await createIngredientAction(input);
       if (result.ok) onSaved(result.ingredient);
       else {
         setErrors(result.fieldErrors ?? {});
@@ -167,7 +178,7 @@ export function IngredientForm({
         />
       ) : null}
 
-      <details className="rounded-2xl border p-3">
+      <details className="rounded-2xl border p-3" open={editing && Boolean(initial.pieceWeight || initial.density) ? true : undefined}>
         <summary className="min-h-8 cursor-pointer text-sm font-medium">Für Stück- und ml-Angaben (optional)</summary>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <FormField
@@ -196,7 +207,7 @@ export function IngredientForm({
           Zurück
         </Button>
         <Button type="button" onClick={submit} disabled={pending}>
-          {pending ? "Wird gespeichert …" : "Zutat speichern und übernehmen"}
+          {pending ? "Wird gespeichert …" : editing ? "Änderungen speichern" : "Zutat speichern und übernehmen"}
         </Button>
       </div>
     </div>

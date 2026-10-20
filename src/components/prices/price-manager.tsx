@@ -17,7 +17,7 @@ import { formatDate, formatEuro, formatNumber } from "@/lib/format";
 import type { PriceRow } from "@/lib/server/kitchen-log";
 import { priceSchema } from "@/lib/validation/kitchen-log";
 
-type Draft = {
+export type PriceDraft = {
   ingredientId: string;
   name: string;
   info: IngredientWeights;
@@ -37,7 +37,7 @@ function per100Text(row: PriceRow): string {
 /** Eigene Preise pro Zutat: Packungspreis und -größe, optional Laden. Daraus rechnet die App Kosten pro Portion. */
 export function PriceManager({ prices }: { prices: PriceRow[] }) {
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [draft, setDraft] = useState<PriceDraft | null>(null);
 
   function edit(row: PriceRow) {
     setDraft({
@@ -125,7 +125,8 @@ export function PriceManager({ prices }: { prices: PriceRow[] }) {
   );
 }
 
-function PriceForm({ initial, onDone }: { initial: Draft; onDone: () => void }) {
+/** Preis einer Zutat eintragen, ändern oder löschen (auch auf der Seite „Zutaten“). */
+export function PriceForm({ initial, onDone, hideHeader = false }: { initial: PriceDraft; onDone: () => void; hideHeader?: boolean }) {
   const [d, setD] = useState(initial);
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
@@ -162,10 +163,14 @@ function PriceForm({ initial, onDone }: { initial: Draft; onDone: () => void }) 
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle className="pr-8">{d.name}</DialogTitle>
-        <DialogDescription>Was kostet eine Packung? Zum Beispiel 1,29 € für 500 g.</DialogDescription>
-      </DialogHeader>
+      {hideHeader ? (
+        <p className="text-sm text-muted-foreground">Was kostet eine Packung? Zum Beispiel 1,29 € für 500 g.</p>
+      ) : (
+        <DialogHeader>
+          <DialogTitle className="pr-8">{d.name}</DialogTitle>
+          <DialogDescription>Was kostet eine Packung? Zum Beispiel 1,29 € für 500 g.</DialogDescription>
+        </DialogHeader>
+      )}
       <div className="grid gap-4">
         <div className="grid grid-cols-[1fr_1fr_6rem] gap-2">
           <div className="grid gap-1.5">

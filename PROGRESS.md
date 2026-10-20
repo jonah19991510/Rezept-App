@@ -97,6 +97,31 @@ in der Rechteprüfung; Hinweis in `docs/RLS-PRUEFUNG.md` ergänzt.
   (am 18.10. gegen die echte DB gelaufen, alle Werte wie erwartet, rückstandsfrei zurückgerollt).
 - `vercel.json` mit Region `fra1` schon angelegt.
 
+## Ergänzung nach Phase 15: Seite „Zutaten“ (20.10.2026, Wunsch des Nutzers)
+
+- **Profilmenü → Zutaten** (`/zutaten`): alle Zutaten aus den eigenen Rezepten und Cocktails plus alle selbst
+  angelegten, mit Suche und Ansichten „Alle / In Rezepten / Selbst angelegt / Ohne Preis“. Je Zeile Zutatengruppe,
+  Herkunft (Grundbestand, Open Food Facts, selbst angelegt), Anzahl Rezepte und eigener Preis pro 100 g/ml.
+- Antippen öffnet **Preis** (eintragen, ändern, löschen; dasselbe Formular wie unter Preise), **Bearbeiten** (nur
+  selbst angelegte Zutaten: Name, Nährwerte, Gruppe, Ernährungsform, Stückgewicht, Dichte, Alkoholgehalt) bzw.
+  **Angaben** (nur lesen bei Grundbestand, Open Food Facts und Zutaten anderer) und **Rezepte** (Links).
+- **Migration** `…20261020170000_ingredient_grams_recompute` (schon in der DB, additiv): Trigger rechnet bei Änderung
+  von Dichte oder Stückgewicht die Gramm aller Rezeptzeilen mit dieser Zutat neu (gleiche Regeln wie `units.ts`;
+  g und Prise bleiben, Stück ohne Stückgewicht behält die letzte Angabe). Rechte unverändert (Policy
+  `ingredients_update_own`: nur eigene mit Quelle „user“). Geprüft mit `supabase/tests/ingredient_edit_check.sql`
+  (rollt sich zurück; auch das Rezept eines anderen Nutzers wird mitgerechnet, fremde/Grundbestand/OFF nicht änderbar).
+  Security-Advisor: keine neuen Hinweise.
+- Domain `src/lib/domain/my-ingredients.ts` (6 Tests), Server `src/lib/server/my-ingredients.ts`, Action
+  `zutaten/actions.ts`, Oberfläche `components/ingredients/ingredient-manager.tsx`; `IngredientForm` kann jetzt auch
+  bearbeiten. 298 Tests, Typecheck, Lint und Build grün. Browser-Check über eine temporäre Vorschauseite (wieder
+  gelöscht) bei 375 px: Liste, Ansichten, Dialog mit Preis/Bearbeiten/Angaben, keine Felder unter 16 px. Speichern
+  nicht im Browser geprüft (braucht Login; Datenbankteil per SQL-Test).
+
+**So testest du es:** Profilbild → „Zutaten“. Ansicht „Ohne Preis“ → eine Zutat antippen → Preis eintragen →
+erscheint in der Liste und unter „Preise“, die Kosten im Rezept stimmen. Eine selbst angelegte Zutat (Stift-Symbol)
+→ „Bearbeiten“ → z. B. Stückgewicht ändern → im Rezept ändern sich Gramm und Nährwerte. Eine Zutat aus dem
+Grundbestand zeigt nur „Angaben“.
+
 ## Was in Phase 15 entstanden ist
 
 - **Migration** `…20261020150000_cocktails` (schon in der Datenbank; nur additiv, die Live-Version läuft unverändert):
@@ -933,6 +958,11 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 68. **Phase 15 – Bar im selben Design wie die Küche:** Eine eigene, dunklere Bar-Stimmung (grün/Bernstein) war
     gebaut, der Nutzer wollte aber das Küchen-Design (20.10.2026); wieder entfernt. Der seit Phase 1 vorbereitete
     CSS-Block `[data-mood="bar"]` in `globals.css` bleibt ungenutzt stehen.
+
+69. **Zutaten bearbeiten:** Nur selbst angelegte Zutaten (wie die RLS seit Phase 1); Grundbestand und Open Food
+    Facts bleiben für alle gleich (gleicher Barcode wird von mehreren genutzt). Änderungen gelten in allen Rezepten
+    mit der Zutat, auch bei anderen Nutzern; die Gramm rechnet ein Trigger (Security Definer im privaten Schema, nicht
+    über die API aufrufbar) neu.
 
 ## Offene Punkte
 
