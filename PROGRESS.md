@@ -20,10 +20,15 @@
 | 14 – Teilen per Link, Rezeptkarte, Open-Graph-Bild, Druck- und Bildexport | **fertig** (20.10.2026), live (vom Nutzer bestätigt); Bugfix Handy-Zoom gepusht |
 | 15 | offen |
 
-**Nächster Schritt:** Nutzer prüft den Bugfix am Handy und die WhatsApp-Vorschau. Danach Phase 15 (Cocktail-Bereich).
-Von außen antwortet die Live-Adresse Claude weiterhin mit dem „Vercel Security Checkpoint“ (403,
-`X-Vercel-Mitigated: challenge`); der Vercel-Connector sieht das Projekt, darf Deployments und Firewall aber nicht
-lesen (403). Falls die WhatsApp-Vorschau fehlt: in Vercel unter Firewall Challenge/Bot-Schutz für `/r/` lockern.
+**Nächster Schritt:** Phase 15 (Cocktail-Bereich und Abschluss), sobald der Nutzer es sagt.
+
+**WhatsApp-Vorschau (20.10.2026):** Funktioniert (über mobile Daten getestet). Im Heim-WLAN fehlte sie, weil Vercel
+die IP des Heimnetzes mit dem „Security Checkpoint“ belegt hatte (403, `X-Vercel-Mitigated: challenge`) – sehr
+wahrscheinlich ausgelöst durch Claudes Abfrage-Schleife nach dem Push (40 Anfragen in 400 s). Der Browser löst die
+Challenge selbst, die Vorschau (wird auf dem Handy erzeugt) nicht. Läuft normalerweise von allein ab. Künftig die
+Live-Seite nicht in Schleifen abfragen. Der Vercel-Connector sieht das Projekt, darf Deployments/Firewall aber noch
+nicht lesen (403, Account `jonah19991510` nicht in der Freigabe); dazu den Connector neu verbinden und dabei den
+Account auswählen.
 
 **Bugfix 20.10.2026 (nach Phase 14):** Am Handy hing die untere Navigation beim Scrollen mitten im Bild, auf allen
 Seiten, bis zum Neuladen. Ursache: Das Link-Feld in „Teilen per Link“ hatte 12 px Schrift (`text-xs`); iPhones
