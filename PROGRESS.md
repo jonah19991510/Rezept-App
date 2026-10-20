@@ -29,11 +29,11 @@ Challenge selbst, die Vorschau (wird auf dem Handy erzeugt) nicht. Läuft normal
 Live-Seite nicht in Schleifen abfragen. Der Vercel-Connector hat seit 20.10.2026 Zugriff auf den Account
 `jonah19991510` (Deployments lesen geht).
 
-**Production-Branch (20.10.2026):** Laut Vercel-API entsteht bei einem Push auf `master` nur ein Preview-Deployment;
-die Production-Deployments haben `source: "redeploy"`, kamen also durch Klick des Nutzers. Daher früher „Deployment
-hängt“ und „nach 400 s nicht live“. Abhilfe: im Vercel-Dashboard den Production-Branch auf `master` stellen (über
-die API/den Connector nicht änderbar). Danach prüfen: nächster Push → Deployment mit `target: production`,
-`source` nicht „redeploy“.
+**Production-Branch (20.10.2026, erledigt):** Bis dahin erzeugte ein Push auf `master` nur ein Preview-Deployment;
+live ging es erst per „Redeploy“ des Nutzers (daher früher „Deployment hängt“). Der Nutzer hat den Production-Branch
+in Vercel auf `master` gestellt. Geprüft per Connector: Push `a0cdab6` → Deployment `source: git`,
+`target: production`, `fra1`, nach 26 s „READY“ und auf unser-rezeptbuch.vercel.app geschaltet. **Push = live.**
+Deployments prüft Claude ab jetzt über den Vercel-Connector (`list_deployments`), nicht über die Live-Seite.
 
 **Bugfix 20.10.2026 (nach Phase 14):** Am Handy hing die untere Navigation beim Scrollen mitten im Bild, auf allen
 Seiten, bis zum Neuladen. Ursache: Das Link-Feld in „Teilen per Link“ hatte 12 px Schrift (`text-xs`); iPhones
@@ -850,8 +850,7 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 - Datenexport enthält die Fotos nur als Liste. Ein ZIP mit allen Fotos wäre eine Ergänzung für später.
 - Rezept-Sicherung kennt nur Küchenrezepte; Cocktail-Felder mit Phase 15 ergänzen (Format-Version 2).
 - Service-Worker-Version (`VERSION` in `public/sw.js`) bei Änderungen am Caching hochzählen.
-- GitHub-Zweig `main` (nur die automatische README) kann gelöscht werden, sobald Vercel `master` als
-  Production-Branch nutzt (siehe „Production-Branch“ oben).
+- GitHub-Zweig `main` (nur die automatische README) kann jetzt gelöscht werden (Vercel nutzt `master`).
 - Import: Seiten, die Bots sperren (z. B. Allrecipes, Simply Recipes: Antwort 402), lassen sich nicht laden; die App
   sagt das und verweist auf „von Hand anlegen“.
 - Statistik „Meistgeplant“: Ein Tipp auf ein fremdes (öffentliches) Rezept filtert die eigene Liste darunter auf
