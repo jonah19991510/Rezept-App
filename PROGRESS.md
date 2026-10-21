@@ -982,6 +982,9 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 
 ## Wünsche vom 21.10.2026: Handy-Layout, Rezeptbild, optionale Zutaten, Beilagen, Keep-alive
 
+**Live** seit 21.10.2026: Push `1cb6514` → Deployment `dpl_FKRWRMkianMXBTcK3cqb8XaiDeWM` (`production`, `fra1`, nach ca. 60 s
+„READY“, per Vercel-Connector geprüft); `/api/keep-alive` live einmal aufgerufen: 200, `{"ok":true}`.
+
 - **Seitliches Scrollen behoben** (Wochenplan, Rezept-Editor): Raster ohne feste Spaltenbreite (`grid` ohne
   `grid-cols-1`) wurden von nicht umbrechenden Texten breiter als der Bildschirm (Vorschläge unter „Bis zum Ziel
   fehlen …“, „Gebraucht in“-Auswahl, Zutaten-Chips). Jetzt `grid-cols-1`/`minmax(0,1fr)`, lange Titel brechen um
