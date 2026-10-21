@@ -53,7 +53,7 @@ export async function generateFromPlanAction(input: { from: string; to: string }
   const { data: recipes, error: recipeError } = await supabase
     .from("recipes")
     .select(
-      "id, servings, recipe_ingredients!recipe_ingredients_recipe_id_fkey(amount, unit, grams, ingredient_id, ingredients(name, food_group, is_staple))",
+      "id, servings, recipe_ingredients!recipe_ingredients_recipe_id_fkey(amount, unit, grams, ingredient_id, is_optional, ingredients(name, food_group, is_staple))",
     )
     .in("id", recipeIds);
   if (recipeError) return { ok: false, message: "Die Rezepte konnten nicht gelesen werden." };
@@ -66,6 +66,8 @@ export async function generateFromPlanAction(input: { from: string; to: string }
     // Geplante Portionen im Verhältnis zu den Portionen des Rezepts
     const factor = entry.servings / (recipe.servings || 1);
     for (const ri of recipe.recipe_ingredients) {
+      // Optionale Zutaten kommen nicht automatisch auf die Liste
+      if (ri.is_optional) continue;
       lines.push({
         ingredientId: ri.ingredient_id,
         name: ri.ingredients.name,

@@ -12,6 +12,7 @@ const PUBLIC_PATHS = [
   "/impressum",
   "/datenschutz",
   "/r/", // geteilte Rezeptkarten (Phase 14)
+  "/api/keep-alive", // täglicher Aufruf von Vercel Cron, hält Supabase wach
 ];
 
 /** Seiten, die eingeloggte Nutzer nicht mehr sehen müssen. */

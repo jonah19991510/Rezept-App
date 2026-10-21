@@ -37,7 +37,11 @@ export function reviewReasons(recipe: MarkdownImportRecipe, lines: ImportLine[])
 }
 
 /** Editor-Startwerte aus dem Markdown-Import, mit Typ und Cocktail-Feldern (Phase 15). */
-export type MarkdownEditorInitial = DraftEditorInitial & { recipe_type: Enums<"recipe_type">; cocktail: CocktailInput | null };
+export type MarkdownEditorInitial = DraftEditorInitial & {
+  recipe_type: Enums<"recipe_type">;
+  cocktail: CocktailInput | null;
+  side_dishes: string[];
+};
 
 /** Startwerte für den Editor: wie beim Link-Import, dazu Tags, Meal-Prep, Timer und Cocktail-Felder aus der Datei. */
 export function markdownEditorInitial(
@@ -56,6 +60,7 @@ export function markdownEditorInitial(
       is_meal_prep: cocktail ? false : recipe.isMealPrep,
       servings: recipe.servings ?? initial.servings,
       tags: recipe.tags,
+      side_dishes: cocktail ? [] : recipe.sideDishes,
       steps: recipe.steps.map((s) => ({ text: s.text, timer_seconds: s.timer_seconds })),
     },
   };
@@ -75,6 +80,7 @@ export function toRecipeInput(initial: MarkdownEditorInitial): RecipeInput {
     tags: initial.tags,
     is_meal_prep: initial.is_meal_prep,
     source_url: initial.source_url,
+    side_dishes: initial.side_dishes,
     ingredients: initial.ingredients.map((l) => ({
       ingredient_id: l.ingredient.id,
       amount: l.amount,
@@ -82,6 +88,7 @@ export function toRecipeInput(initial: MarkdownEditorInitial): RecipeInput {
       manual_grams: null,
       note: l.note,
       step_position: l.step_position,
+      is_optional: l.is_optional,
     })),
     steps: initial.steps,
     change_note: "",

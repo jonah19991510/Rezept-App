@@ -29,6 +29,8 @@ export const sharedRecipeSchema = z.object({
   image_url: z.string().nullable(),
   updated_at: z.string(),
   author: z.string().nullable(),
+  /** Beilagen als Vorschläge (seit 21.10.2026) */
+  side_dishes: z.array(z.string()).default([]),
   nutrition: z
     .object({ kcal: z.number(), protein: num, carbs: num, fat: num, fiber: num })
     .nullable(),
@@ -40,6 +42,8 @@ export const sharedRecipeSchema = z.object({
       grams: num,
       note: z.string().nullable(),
       name: z.string(),
+      /** seit 21.10.2026 */
+      is_optional: z.boolean().default(false),
     }),
   ),
   steps: z.array(z.object({ position: z.number(), text: z.string(), timer_seconds: num })),
@@ -77,7 +81,7 @@ export function sharedMacros(recipe: SharedRecipe) {
 
 /** Zutaten, deren Gewicht fehlt (zählen in den Nährwerten nicht mit). */
 export function missingGramNames(recipe: SharedRecipe): string[] {
-  return recipe.ingredients.filter((l) => l.amount != null && l.grams == null).map((l) => l.name);
+  return recipe.ingredients.filter((l) => !l.is_optional && l.amount != null && l.grams == null).map((l) => l.name);
 }
 
 /** Absolute Adresse der Karte, z. B. für „Link kopieren“. */

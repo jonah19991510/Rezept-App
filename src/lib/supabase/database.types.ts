@@ -547,6 +547,7 @@ export type Database = {
           grams: number | null
           id: string
           ingredient_id: string
+          is_optional: boolean
           note: string | null
           position: number
           recipe_id: string
@@ -558,6 +559,7 @@ export type Database = {
           grams?: number | null
           id?: string
           ingredient_id: string
+          is_optional?: boolean
           note?: string | null
           position?: number
           recipe_id: string
@@ -569,6 +571,7 @@ export type Database = {
           grams?: number | null
           id?: string
           ingredient_id?: string
+          is_optional?: boolean
           note?: string | null
           position?: number
           recipe_id?: string
@@ -718,6 +721,7 @@ export type Database = {
           recipe_type: Database["public"]["Enums"]["recipe_type"]
           servings: number
           share_token: string | null
+          side_dishes: string[]
           source_url: string | null
           tags: string[]
           title: string
@@ -739,6 +743,7 @@ export type Database = {
           recipe_type?: Database["public"]["Enums"]["recipe_type"]
           servings?: number
           share_token?: string | null
+          side_dishes?: string[]
           source_url?: string | null
           tags?: string[]
           title: string
@@ -760,6 +765,7 @@ export type Database = {
           recipe_type?: Database["public"]["Enums"]["recipe_type"]
           servings?: number
           share_token?: string | null
+          side_dishes?: string[]
           source_url?: string | null
           tags?: string[]
           title?: string

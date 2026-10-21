@@ -302,6 +302,19 @@ describe("Rundreise mit dem eigenen Markdown-Export", () => {
     expect(r.reference).toContain("412 kcal");
   });
 
+  it("optionale Zutaten und Beilagen bleiben erhalten", () => {
+    const md = recipeToMarkdown({
+      ...dal,
+      ingredients: [...dal.ingredients, { amount: 1, unit: "tbsp", name: "Joghurt", note: null, optional: true }],
+      side_dishes: ["Naan", "Basmatireis"],
+    });
+    expect(md).toContain("- 1 EL Joghurt (optional)");
+    expect(md).toContain("**Passt dazu:** Naan, Basmatireis");
+    const [r] = parseMarkdownFiles([file("linsen-dal.md", md)]).recipes;
+    expect(r.sideDishes).toEqual(["Naan", "Basmatireis"]);
+    expect(r.ingredients.at(-1)?.text).toBe("1 EL Joghurt (optional)");
+  });
+
   it("ganzes Buch mit Inhaltsverzeichnis", () => {
     const md = bookToMarkdown([dal, { ...dal, title: "Pasta *speciale*", category: "pasta" }], {
       title: "Rezeptbuch von Jonah",

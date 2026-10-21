@@ -141,7 +141,9 @@ export default async function SharedRecipePage({ params }: PageProps<"/r/[token]
               grams: l.grams,
               name: l.name,
               note: l.note,
+              optional: l.is_optional,
             }))}
+            sideDishes={recipe.side_dishes.map((name) => ({ name, href: null }))}
             missingGramsNames={missingGramNames(recipe)}
             steps={
               <section aria-labelledby="zubereitung" className="space-y-3">

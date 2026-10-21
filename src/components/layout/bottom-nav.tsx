@@ -12,18 +12,18 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Hauptnavigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pr-[max(0.375rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(0.375rem,env(safe-area-inset-left))] backdrop-blur md:hidden"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = isActivePath(pathname, href);
           return (
-            <li key={href}>
+            <li key={href} className="min-w-0">
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-medium transition-colors",
+                  "flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[0.68rem] leading-tight font-medium tracking-tight transition-colors",
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -35,7 +35,7 @@ export function BottomNav() {
                 >
                   <Icon className="size-5" aria-hidden />
                 </span>
-                {label}
+                <span className="max-w-full truncate">{label}</span>
               </Link>
             </li>
           );

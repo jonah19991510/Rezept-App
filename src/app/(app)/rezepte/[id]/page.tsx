@@ -21,7 +21,8 @@ import { todayInBerlin } from "@/lib/domain/week";
 import { formatMinutes } from "@/lib/format-quantity";
 import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
 import { getCookLogs, getIngredientNutrition, getRecipeCost, getRecipeVersions } from "@/lib/server/kitchen-log";
-import { getRecipeDetail } from "@/lib/server/recipes";
+import { linkSideDishes } from "@/lib/domain/side-dishes";
+import { getOwnRecipeTitles, getRecipeDetail } from "@/lib/server/recipes";
 import { getSiteUrl } from "@/lib/site-url";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -46,7 +47,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const isCocktail = recipe.recipe_type === "cocktail";
   const kicker = isCocktail
     ? [
-        baseSpirit(ingredients.map((l) => ({ name: l.ingredient.name, amount: l.amount, unit: l.unit, ingredient: l.ingredient }))) ??
+        baseSpirit(ingredients.filter((l) => !l.is_optional).map((l) => ({ name: l.ingredient.name, amount: l.amount, unit: l.unit, ingredient: l.ingredient }))) ??
           "alkoholfrei",
         cocktail?.method ? METHOD_LABELS[cocktail.method] : null,
       ]
@@ -67,7 +68,15 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const prep = formatMinutes(recipe.prep_minutes);
   const cook = formatMinutes(recipe.cook_minutes);
   const total = formatMinutes((recipe.prep_minutes ?? 0) + (recipe.cook_minutes ?? 0));
-  const missingGrams = ingredients.filter((l) => l.amount != null && l.grams == null);
+  // Optionale Zutaten zählen ohnehin nicht in den Nährwerten
+  const missingGrams = ingredients.filter((l) => !l.is_optional && l.amount != null && l.grams == null);
+  // Beilagen: gleichnamige eigene Rezepte verlinken
+  const sideDishes = recipe.side_dishes.length
+    ? linkSideDishes(recipe.side_dishes, await getOwnRecipeTitles(user.id), recipe.id).map((s) => ({
+        name: s.name,
+        href: s.recipeId ? `/rezepte/${s.recipeId}` : null,
+      }))
+    : [];
   // Direkt nach „In mein Rezeptbuch übernehmen“ (Weiterleitung mit ?uebernommen=1)
   const justForked = detail.isOwner && query.uebernommen === "1" && recipe.forked_from_id != null;
   const back = !detail.isOwner
@@ -197,7 +206,9 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           grams: l.grams,
           name: l.ingredient.name,
           note: l.note,
+          optional: l.is_optional,
         }))}
+        sideDishes={sideDishes}
         missingGramsNames={missingGrams.map((l) => l.ingredient.name)}
         steps={
           <section aria-labelledby="zubereitung" className="space-y-3">

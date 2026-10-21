@@ -141,7 +141,7 @@ export function WeekPlanner({
         </div>
 
         <section
-          className="space-y-4"
+          className="min-w-0 touch-pan-y space-y-4"
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
           aria-label={`${weekdayLong(selectedDay)}, ${dayMonth(selectedDay)}`}
@@ -157,7 +157,7 @@ export function WeekPlanner({
             >
               <ChevronLeft aria-hidden />
             </Button>
-            <h2 className="text-xl font-semibold">
+            <h2 className="min-w-0 text-center text-xl font-semibold">
               {weekdayLong(selectedDay)}, {dayMonth(selectedDay)}
               {selectedDay === today ? <span className="ml-2 text-sm font-normal text-primary">heute</span> : null}
             </h2>
@@ -303,7 +303,7 @@ export function WeekPlanner({
         {summary.plannedDays === 0 ? (
           <p className="text-sm text-muted-foreground">Noch nichts geplant. Tipp auf „planen“, um ein Rezept einzutragen.</p>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <p className="mb-3 text-sm text-muted-foreground">
                 Durchschnitt pro geplantem Tag ({summary.plannedDays} {summary.plannedDays === 1 ? "Tag" : "Tage"})

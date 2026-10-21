@@ -156,6 +156,7 @@ export async function importRecipeBackupAction(input: BackupFile): Promise<Impor
           grams: resolveLineGrams(line.amount, line.unit, infoById.get(ingredientId) ?? {}, line.grams),
           note: line.note ?? "",
           step_position: line.step_position,
+          is_optional: line.is_optional,
         },
       ];
     });
@@ -174,6 +175,7 @@ export async function importRecipeBackupAction(input: BackupFile): Promise<Impor
         tags: recipe.tags,
         is_meal_prep: recipe.is_meal_prep,
         source_url: recipe.source_url ?? "",
+        side_dishes: recipe.side_dishes,
       },
       p_ingredients: ingredients,
       p_steps: recipe.steps,

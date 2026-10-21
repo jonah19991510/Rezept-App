@@ -182,6 +182,7 @@ function Comparison({
                 <span className="min-w-0">
                   {item.name}
                   {item.note ? <span className="text-muted-foreground">, {item.note}</span> : null}
+                  {item.is_optional ? <span className="text-muted-foreground"> (optional)</span> : null}
                 </span>
                 <span className="shrink-0 tabular-nums">
                   {c.kind === "changed" ? (

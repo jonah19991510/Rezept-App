@@ -980,6 +980,40 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
     mit der Zutat, auch bei anderen Nutzern; die Gramm rechnet ein Trigger (Security Definer im privaten Schema, nicht
     über die API aufrufbar) neu.
 
+## Wünsche vom 21.10.2026: Handy-Layout, Rezeptbild, optionale Zutaten, Beilagen, Keep-alive
+
+- **Seitliches Scrollen behoben** (Wochenplan, Rezept-Editor): Raster ohne feste Spaltenbreite (`grid` ohne
+  `grid-cols-1`) wurden von nicht umbrechenden Texten breiter als der Bildschirm (Vorschläge unter „Bis zum Ziel
+  fehlen …“, „Gebraucht in“-Auswahl, Zutaten-Chips). Jetzt `grid-cols-1`/`minmax(0,1fr)`, lange Titel brechen um
+  (`wrap-anywhere`), im Editor Menge + Einheit in einer Zeile und die Notiz darunter. Zusätzlich hat der App-Rahmen
+  `overflow-x-clip` (kein Scroll-Container, sticky Kopf/Speicherleiste gehen weiter). Tagesansicht mit
+  `touch-pan-y`, damit das Wischen zwischen Tagen nicht vom Browser übernommen wird. Geprüft bei 375 px: keine
+  Elemente mehr breiter als der Bildschirm.
+- **Untere Navigation:** Abstand links/rechts (mind. 6 px bzw. Safe Area), etwas kleinere Schrift; „Entdecken“
+  klebt nicht mehr am Rand.
+- **Rezeptkarte als Bild** (`/r/[token]/bild`): jetzt mit allen Zutaten (vorher höchstens 12), der Zubereitung und
+  den Beilagen. 1080 px breit, mindestens 1920 hoch (Story-Format); passt der Inhalt nicht, wird das Bild länger
+  (höchstens 7200 px). Die Höhe schätzt `domain/story-layout.ts` aus den Textlängen (Tests). Beispiel „Penne Con
+  Pollo“ (11 Zutaten, 9 Schritte): 1080×2460.
+- **Optionale Zutaten:** Schalter „Optional“ je Zutat im Editor. Zählen nicht in Nährwerten, Kosten, Alkoholgehalt
+  (Views und Live-Rechnung im Editor), kommen nicht auf die Einkaufsliste, fehlen bei „Was kann ich kochen/mixen?“
+  nie und werden beim Kochen nicht vom Vorrat abgezogen. Rezeptseite und geteilte Karte zeigen sie als eigene Liste
+  „Optional“, der Kochmodus mit Hinweis an der Notiz. Gehören zur Version (Änderung erzeugt eine neue Version).
+  Import: „optional“/„(optional)“ in der Notiz wird zum Schalter; Markdown-Export schreibt „(optional)“.
+- **Beilagen („Passt dazu“):** Liste von Texten am Rezept (höchstens 20), nicht Teil des Rezepts, keine Nährwerte,
+  nicht versioniert (wie Tags). Heißt eine Beilage wie eines der eigenen Gerichte, verlinkt die Rezeptseite sie.
+  Auch in geteilter Karte, Bild, Markdown („**Passt dazu:** …“, wird wieder eingelesen), Sicherung und Kopien.
+- **Migration** `…20261021120000_optional_ingredients_side_dishes` (in der DB, additiv): Spalten
+  `recipe_ingredients.is_optional`, `recipes.side_dishes`; `save_recipe` (ohne `side_dishes` bleiben die
+  gespeicherten, so speichert die alte App-Version weiter richtig), `recipe_snapshot` (Schlüssel `is_optional` nur
+  wenn true: alle 9 Rezepte vergleichen sich danach unverändert, keine Geister-Versionen), `duplicate_recipe`,
+  `fork_shared_recipe`, `get_shared_recipe`, Views `recipe_nutrition`/`recipe_costs`/`recipe_alcohol`.
+  Security-Advisor: keine neuen Hinweise.
+- **Keep-alive:** `GET /api/keep-alive` liest eine Zeile aus `app_config` (ohne Login, keine Daten), Vercel Cron ruft
+  es täglich um 05:17 UTC auf (`vercel.json`). Supabase pausiert kostenlose Projekte sonst nach 7 Tagen ohne
+  Aktivität. Optional `CRON_SECRET` in Vercel setzen: dann nur noch mit `Authorization: Bearer …` (schickt Vercel
+  selbst mit), sonst 401.
+
 ## Offene Punkte
 
 - Meal Prep: „Woche kopieren“ übernimmt Kochtag und Reste als normale Einträge (ohne Batch), d. h. in der Zielwoche

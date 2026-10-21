@@ -23,7 +23,7 @@ export default async function WhatToCookPage() {
     supabase
       .from("recipes")
       .select(
-        "id, title, recipe_ingredients!recipe_ingredients_recipe_id_fkey(ingredient_id, ingredients!recipe_ingredients_ingredient_id_fkey(name, is_staple))",
+        "id, title, recipe_ingredients!recipe_ingredients_recipe_id_fkey(ingredient_id, is_optional, ingredients!recipe_ingredients_ingredient_id_fkey(name, is_staple))",
       )
       .eq("owner_id", user.id)
       .eq("recipe_type", "dish"),
@@ -39,7 +39,8 @@ export default async function WhatToCookPage() {
     recipes.data.map((r) => ({
       id: r.id,
       title: r.title,
-      lines: r.recipe_ingredients.map((l) => ({ ingredientId: l.ingredient_id, name: l.ingredients.name, isStaple: l.ingredients.is_staple })),
+      // Optionale Zutaten fehlen nie
+      lines: r.recipe_ingredients.filter((l) => !l.is_optional).map((l) => ({ ingredientId: l.ingredient_id, name: l.ingredients.name, isStaple: l.ingredients.is_staple })),
     })),
     pantryIds,
     expiringIds,

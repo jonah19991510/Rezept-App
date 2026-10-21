@@ -22,7 +22,9 @@ export type MarkdownRecipe = {
   source_url: string | null;
   /** Makros pro Portion, falls alle Zutaten Grammangaben haben */
   perServing: { kcal: number; protein: number; carbs: number; fat: number; fiber: number } | null;
-  ingredients: { amount: number | null; unit: Enums<"unit"> | null; name: string; note: string | null }[];
+  ingredients: { amount: number | null; unit: Enums<"unit"> | null; name: string; note: string | null; optional?: boolean }[];
+  /** Beilagen als Vorschläge („**Passt dazu:** …“) */
+  side_dishes?: string[];
   steps: { text: string; timer_seconds: number | null }[];
   /** Phase 15: ohne Angabe Gericht */
   recipe_type?: Enums<"recipe_type">;
@@ -107,7 +109,7 @@ function macroLine(m: NonNullable<MarkdownRecipe["perServing"]>): string {
 function ingredientLine(l: MarkdownRecipe["ingredients"][number]): string {
   const quantity = formatQuantity(l.amount, l.unit);
   const note = l.note?.trim() ? `, ${inline(l.note)}` : "";
-  return `- ${quantity ? `${quantity} ` : ""}${inline(l.name)}${note}`;
+  return `- ${quantity ? `${quantity} ` : ""}${inline(l.name)}${note}${l.optional ? " (optional)" : ""}`;
 }
 
 function stepLine(step: MarkdownRecipe["steps"][number], index: number): string {
@@ -130,6 +132,7 @@ function recipeSection(r: MarkdownRecipe, level: number): string {
     const drink = drinkLine(r);
     if (drink) blocks.push(drink);
   } else if (r.perServing) blocks.push(macroLine(r.perServing));
+  if (r.side_dishes?.length) blocks.push(`**Passt dazu:** ${r.side_dishes.map(inline).join(", ")}`);
 
   blocks.push(`${h(level + 1)} Zutaten`);
   blocks.push(r.ingredients.length > 0 ? r.ingredients.map(ingredientLine).join("\n") : "*Keine Zutaten eingetragen.*");

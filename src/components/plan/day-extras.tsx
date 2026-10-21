@@ -91,12 +91,12 @@ export function DayExtras({
   if (!gap && open.length === 0 && ideas.length === 0) return null;
 
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       {gap ? (
         <section className="rounded-3xl border bg-card p-4" aria-label="Lücke zum Ziel">
           <p className="flex items-start gap-2 text-sm">
             <Lightbulb className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-            <span>
+            <span className="min-w-0">
               Bis zum Ziel fehlen noch{" "}
               <span className="font-semibold">
                 {[
@@ -113,8 +113,9 @@ export function DayExtras({
             <ul className="mt-3 divide-y rounded-2xl border">
               {suggestions.map((s) => (
                 <li key={s.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{s.title}</span>
+                  <span className="min-w-0 flex-1">
+                    {/* Zeilenumbruch statt Abschneiden: lange Titel bleiben lesbar und sprengen die Breite nicht */}
+                    <span className="block text-sm font-medium wrap-anywhere">{s.title}</span>
                     <span className="block text-xs text-muted-foreground tabular-nums">
                       {s.servings === 0.5 ? "½ Portion · " : ""}+{formatNumber(Math.round(s.adds.protein), 0)} g Protein · +
                       {formatNumber(Math.round(s.adds.kcal), 0)} kcal
@@ -124,6 +125,7 @@ export function DayExtras({
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="shrink-0"
                     onClick={() => onPlan({ date, slot: suggestSlot(dayEntries, s.adds.kcal), recipeId: s.id, servings: s.servings })}
                     aria-label={`${s.title} einplanen`}
                   >
@@ -158,6 +160,7 @@ export function DayExtras({
                 type="button"
                 variant="outline"
                 size="sm"
+                className="h-auto min-h-9 max-w-full py-1.5 text-left whitespace-normal"
                 onClick={() => onPlan({ date, slot: suggestSlot(dayEntries, null), recipeId: r.id })}
               >
                 <Plus aria-hidden />
@@ -185,7 +188,7 @@ function LeftoverBatch({ batch, date, slot }: { batch: PlanBatch; date: string; 
 
   return (
     <section className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border bg-card p-4" aria-label="Meal-Prep-Reste">
-      <p className="flex min-w-0 items-start gap-2 text-sm">
+      <p className="flex min-w-0 flex-1 basis-56 items-start gap-2 text-sm">
         <Boxes className="mt-0.5 size-4 shrink-0 text-sage" aria-hidden />
         <span>
           Vom Meal Prep <span className="font-medium">{batch.title}</span> {batch.remaining === 1 ? "ist" : "sind"} noch{" "}

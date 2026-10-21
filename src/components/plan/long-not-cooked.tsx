@@ -19,14 +19,14 @@ export function LongNotCooked({ items, weeks, onPlan }: { items: LongNotCookedIt
       <ul className="divide-y rounded-2xl border">
         {items.map((item) => (
           <li key={item.id} className="flex items-center justify-between gap-3 px-3 py-2">
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-medium">{item.title}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium wrap-anywhere">{item.title}</span>
               <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 <StarValue value={item.avgRating} />
                 vor {item.weeksAgo} Wochen
               </span>
             </span>
-            <Button type="button" variant="outline" size="sm" onClick={() => onPlan(item.id)} aria-label={`${item.title} einplanen`}>
+            <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => onPlan(item.id)} aria-label={`${item.title} einplanen`}>
               <Plus aria-hidden />
               Einplanen
             </Button>

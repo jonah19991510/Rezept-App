@@ -84,8 +84,8 @@ export async function buildRecipeBackup(userId: string): Promise<BackupFile> {
   const result = await supabase
     .from("recipes")
     .select(
-      `recipe_type, title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url,
-       recipe_ingredients!recipe_ingredients_recipe_id_fkey(position, amount, unit, grams, note, step_position, ingredient:ingredients!recipe_ingredients_ingredient_id_fkey(${BACKUP_INGREDIENT_COLUMNS})),
+      `recipe_type, title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url, side_dishes,
+       recipe_ingredients!recipe_ingredients_recipe_id_fkey(position, amount, unit, grams, note, step_position, is_optional, ingredient:ingredients!recipe_ingredients_ingredient_id_fkey(${BACKUP_INGREDIENT_COLUMNS})),
        recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds),
        cocktail_details!cocktail_details_recipe_id_fkey(glass, method, ice, garnish)`,
     )
@@ -95,15 +95,22 @@ export async function buildRecipeBackup(userId: string): Promise<BackupFile> {
   return toBackupFile(rows, new Date());
 }
 
-const MARKDOWN_SELECT = `id, recipe_type, title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url,
-  recipe_ingredients!recipe_ingredients_recipe_id_fkey(position, amount, unit, note, ingredient:ingredients!recipe_ingredients_ingredient_id_fkey(name)),
+const MARKDOWN_SELECT = `id, recipe_type, title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url, side_dishes,
+  recipe_ingredients!recipe_ingredients_recipe_id_fkey(position, amount, unit, note, is_optional, ingredient:ingredients!recipe_ingredients_ingredient_id_fkey(name)),
   recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds),
   cocktail_details!cocktail_details_recipe_id_fkey(glass, method, ice, garnish)`;
 
 type MarkdownRow = Omit<MarkdownRecipe, "perServing" | "ingredients" | "steps" | "cocktail" | "alcohol"> & {
   id: string;
   cocktail_details: MarkdownRecipe["cocktail"];
-  recipe_ingredients: { position: number; amount: number | null; unit: MarkdownRecipe["ingredients"][number]["unit"]; note: string | null; ingredient: { name: string } }[];
+  recipe_ingredients: {
+    position: number;
+    amount: number | null;
+    unit: MarkdownRecipe["ingredients"][number]["unit"];
+    note: string | null;
+    is_optional: boolean;
+    ingredient: { name: string };
+  }[];
   recipe_steps: { position: number; text: string; timer_seconds: number | null }[];
 };
 
@@ -142,7 +149,7 @@ async function toMarkdownRecipes(supabase: Awaited<ReturnType<typeof createClien
           : null,
       ingredients: [...recipe_ingredients]
         .sort((a, b) => a.position - b.position)
-        .map((l) => ({ amount: l.amount, unit: l.unit, name: l.ingredient.name, note: l.note })),
+        .map((l) => ({ amount: l.amount, unit: l.unit, name: l.ingredient.name, note: l.note, optional: l.is_optional })),
       steps: [...recipe_steps].sort((a, b) => a.position - b.position).map(({ text, timer_seconds }) => ({ text, timer_seconds })),
     };
   });

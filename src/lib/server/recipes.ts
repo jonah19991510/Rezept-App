@@ -109,6 +109,13 @@ export async function getPublicRecipeList(userId: string, type: RecipeType = "di
   return cocktails ? items.map((i) => ({ ...i, cocktail: cocktails.get(i.id) ?? EMPTY_COCKTAIL })) : items;
 }
 
+/** Titel aller eigenen Gerichte (für verlinkte Beilagen). */
+export async function getOwnRecipeTitles(userId: string): Promise<{ id: string; title: string }[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("recipes").select("id, title").eq("owner_id", userId).eq("recipe_type", "dish");
+  return data ?? [];
+}
+
 export type RecipeDetailIngredient = Tables<"recipe_ingredients"> & { ingredient: Tables<"ingredients"> };
 
 export type RecipeDetail = {

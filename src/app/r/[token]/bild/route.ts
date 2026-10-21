@@ -2,7 +2,7 @@ import { shareImageFileName } from "@/lib/domain/shared-recipe";
 import { getSharedPhotoDataUrl, getSharedRecipe } from "@/lib/server/shared-recipes";
 import { STORY_PHOTO, asJpeg, sharedStoryImage } from "@/lib/share-images";
 
-/** Rezeptkarte als Bild (1080×1920 JPEG, z. B. für Instagram-Stories), zum Herunterladen. */
+/** Rezeptkarte als Bild (JPEG, 1080 breit, ab 1920 hoch: Story-Format, bei langen Rezepten länger), zum Herunterladen. */
 export async function GET(_request: Request, ctx: RouteContext<"/r/[token]/bild">) {
   const { token } = await ctx.params;
   const recipe = await getSharedRecipe(token);

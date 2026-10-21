@@ -11,7 +11,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="min-h-dvh md:flex">
       <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-background/90 px-4 py-2 backdrop-blur md:justify-end md:px-8">
           <Brand className="md:hidden" />
           <UserMenu displayName={user.displayName} isAdmin={user.role === "admin"} />

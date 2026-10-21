@@ -30,10 +30,11 @@ const row: RecipeRowForBackup = {
   tags: ["Klassiker"],
   is_meal_prep: true,
   source_url: null,
+  side_dishes: ["Naan"],
   recipe_ingredients: [
-    { position: 1, ingredient: KOKOS, amount: 400, unit: "ml", grams: 400, note: null, step_position: null },
-    { position: 0, ingredient: LINSEN, amount: 200, unit: "g", grams: 200, note: "gewaschen", step_position: 1 },
-    { position: 2, ingredient: SPEZIAL, amount: 1, unit: "tsp", grams: 3, note: null, step_position: null },
+    { position: 1, ingredient: KOKOS, amount: 400, unit: "ml", grams: 400, note: null, step_position: null, is_optional: false },
+    { position: 0, ingredient: LINSEN, amount: 200, unit: "g", grams: 200, note: "gewaschen", step_position: 1, is_optional: false },
+    { position: 2, ingredient: SPEZIAL, amount: 1, unit: "tsp", grams: 3, note: null, step_position: null, is_optional: false },
   ],
   recipe_steps: [
     { position: 2, text: "Kochen.", timer_seconds: 1200 },
@@ -69,7 +70,7 @@ describe("toBackupFile", () => {
       cocktail_details: { glass: "coupette", method: "shaken", ice: null, garnish: "Limettenrad" },
       title: "Daiquiri",
       category: "drink",
-      recipe_ingredients: [{ position: 0, ingredient: rum, amount: 6, unit: "cl", grams: 57, note: null, step_position: null }],
+      recipe_ingredients: [{ position: 0, ingredient: rum, amount: 6, unit: "cl", grams: 57, note: null, step_position: null, is_optional: false }],
     };
     const v2 = toBackupFile([daiquiri, row], now);
     expect(v2.version).toBe(2);

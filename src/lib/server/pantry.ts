@@ -47,14 +47,15 @@ export async function getRecipeLinesForPantry(recipeId: string): Promise<{ servi
   const { data } = await supabase
     .from("recipes")
     .select(
-      "servings, recipe_ingredients!recipe_ingredients_recipe_id_fkey(amount, unit, grams, ingredient_id, ingredients!recipe_ingredients_ingredient_id_fkey(name, is_staple, food_group, density_g_per_ml, piece_weight_g))",
+      "servings, recipe_ingredients!recipe_ingredients_recipe_id_fkey(amount, unit, grams, ingredient_id, is_optional, ingredients!recipe_ingredients_ingredient_id_fkey(name, is_staple, food_group, density_g_per_ml, piece_weight_g))",
     )
     .eq("id", recipeId)
     .maybeSingle();
   if (!data) return null;
   return {
     servings: data.servings,
-    lines: data.recipe_ingredients.map((l) => ({
+    // Optionale Zutaten zählen weder als fehlend noch als verbraucht
+    lines: data.recipe_ingredients.filter((l) => !l.is_optional).map((l) => ({
       ingredientId: l.ingredient_id,
       name: l.ingredients.name,
       isStaple: l.ingredients.is_staple,

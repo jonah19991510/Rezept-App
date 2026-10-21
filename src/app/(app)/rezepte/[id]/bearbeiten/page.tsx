@@ -34,6 +34,7 @@ export default async function EditRecipePage({ params }: PageProps<"/rezepte/[id
         thresholds={thresholds}
         dilution={dilution}
         tagSuggestions={collectTags(list)}
+        sideSuggestions={list.map((r) => r.title)}
         initial={{
           id: recipe.id,
           recipe_type: recipe.recipe_type,
@@ -49,6 +50,7 @@ export default async function EditRecipePage({ params }: PageProps<"/rezepte/[id
           tags: recipe.tags,
           is_meal_prep: recipe.is_meal_prep,
           source_url: recipe.source_url ?? "",
+          side_dishes: recipe.side_dishes,
           ingredients: detail.ingredients.map((line) => ({
             ingredient: toIngredientOption(line.ingredient),
             amount: line.amount,
@@ -56,6 +58,7 @@ export default async function EditRecipePage({ params }: PageProps<"/rezepte/[id
             grams: line.grams,
             note: line.note ?? "",
             step_position: line.step_position,
+            is_optional: line.is_optional,
           })),
           steps: detail.steps.map((s) => ({ text: s.text, timer_seconds: s.timer_seconds })),
         }}

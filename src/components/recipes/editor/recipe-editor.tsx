@@ -42,6 +42,8 @@ export type EditorInitial = {
   tags: string[];
   is_meal_prep: boolean;
   source_url: string;
+  /** Beilagen als Vorschläge (gehören nicht zum Rezept); ohne Angabe keine */
+  side_dishes?: string[];
   ingredients: {
     ingredient: IngredientOption;
     amount: number | null;
@@ -49,6 +51,8 @@ export type EditorInitial = {
     grams: number | null;
     note: string;
     step_position: number | null;
+    /** Optionale Zutat: zählt nicht in Nährwerten, Kosten und Einkaufsliste */
+    is_optional?: boolean;
   }[];
   steps: { text: string; timer_seconds: number | null }[];
 };
@@ -62,6 +66,7 @@ type Line = {
   note: string;
   /** Schritt, in dem die Zutat gebraucht wird (über den stabilen Schlüssel, damit Umsortieren nichts verschiebt) */
   stepKey: number | null;
+  optional: boolean;
 };
 
 type Step = { key: number; text: string; timerMinutes: string };
@@ -96,6 +101,7 @@ export function RecipeEditor({
   thresholds,
   dilution = DEFAULT_DILUTION,
   tagSuggestions,
+  sideSuggestions = [],
   onSaved,
   cancel,
 }: {
@@ -104,6 +110,8 @@ export function RecipeEditor({
   /** Phase 15: Verdünnung je Methode (app_config), für die Live-Anzeige des Alkoholgehalts */
   dilution?: DilutionConfig;
   tagSuggestions: string[];
+  /** Vorschläge für Beilagen, z. B. Titel der eigenen Rezepte (werden auf der Rezeptseite verlinkt) */
+  sideSuggestions?: string[];
   /** Markdown-Import: nach dem Speichern hier weitermachen statt zur Rezeptseite zu wechseln */
   onSaved?: (recipeId: string) => void;
   /** Statt „Abbrechen“ (Link zur Übersicht) eine eigene Aktion, z. B. „Überspringen“ */
@@ -118,6 +126,7 @@ export function RecipeEditor({
   const [tags, setTags] = useState(initial.tags);
   const [isMealPrep, setIsMealPrep] = useState(initial.is_meal_prep);
   const [sourceUrl, setSourceUrl] = useState(initial.source_url);
+  const [sideDishes, setSideDishes] = useState(initial.side_dishes ?? []);
   // Phase 15: Cocktail-Felder
   const isCocktail = initial.recipe_type === "cocktail";
   const [glass, setGlass] = useState<Enums<"glass"> | "">(initial.cocktail?.glass ?? "");
@@ -140,6 +149,7 @@ export function RecipeEditor({
       manualGrams: needsManualGrams(l.amount, l.unit, l.ingredient) ? formatDecimalInput(l.grams) : "",
       note: l.note,
       stepKey: l.step_position != null ? (stepsWithKeys[l.step_position - 1]?.key ?? null) : null,
+      optional: l.is_optional ?? false,
     }));
     return { steps: stepsWithKeys, lines: linesWithKeys };
   });
@@ -183,7 +193,7 @@ export function RecipeEditor({
     const unit = defaultUnit(ingredient, isCocktail);
     setLines((prev) => [
       ...prev,
-      { key: nextKey(), ingredient, amount: unit === "piece" ? "1" : "", unit, manualGrams: "", note: "", stepKey: null },
+      { key: nextKey(), ingredient, amount: unit === "piece" ? "1" : "", unit, manualGrams: "", note: "", stepKey: null, optional: false },
     ]);
   }
 
@@ -198,19 +208,23 @@ export function RecipeEditor({
           grams: resolveLineGrams(amount, unit, l.ingredient, parseDecimal(l.manualGrams)),
           needsManual: needsManualGrams(amount, unit, l.ingredient),
           ingredient: l.ingredient,
+          optional: l.optional,
         };
       }),
     [lines],
   );
+  // Optionale Zutaten zählen nicht mit (wie in den Views recipe_nutrition und recipe_alcohol)
   const nutrition = useMemo(
-    () => computeRecipeNutrition(resolved, servingsNumber, thresholds),
+    () => computeRecipeNutrition(resolved.filter((r) => !r.optional), servingsNumber, thresholds),
     [resolved, servingsNumber, thresholds],
   );
   const alcohol = useMemo(
     () =>
       isCocktail
         ? computeAlcohol(
-            lines.map((l) => ({ amount: parseDecimal(l.amount), unit: l.unit || null, ingredient: l.ingredient })),
+            lines
+              .filter((l) => !l.optional)
+              .map((l) => ({ amount: parseDecimal(l.amount), unit: l.unit || null, ingredient: l.ingredient })),
             method || null,
             servingsNumber,
             dilution,
@@ -264,6 +278,7 @@ export function RecipeEditor({
       tags,
       is_meal_prep: isCocktail ? false : isMealPrep,
       source_url: sourceUrl.trim(),
+      side_dishes: isCocktail ? [] : sideDishes,
       ingredients: lines.map((l) => ({
         ingredient_id: l.ingredient.id,
         amount: l.amount.trim() ? (parseDecimal(l.amount) ?? Number.NaN) : null,
@@ -271,6 +286,7 @@ export function RecipeEditor({
         manual_grams: parseDecimal(l.manualGrams),
         note: l.note,
         step_position: stepNumber(l.stepKey),
+        is_optional: l.optional,
       })),
       steps: steps.map((s) => ({ text: s.text, timer_seconds: timerSeconds(s.timerMinutes) })),
       change_note: changeNote,
@@ -311,7 +327,7 @@ export function RecipeEditor({
       <FormMessage message={message} />
 
       {/* Grunddaten */}
-      <section className="grid gap-4 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="sec-basis">
+      <section className="grid grid-cols-1 gap-4 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="sec-basis">
         <h2 id="sec-basis" className="text-xl font-semibold">
           Grunddaten
         </h2>
@@ -388,19 +404,19 @@ export function RecipeEditor({
       </section>
 
       {/* Zutaten */}
-      <section className="grid gap-4 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="sec-zutaten">
+      <section className="grid grid-cols-1 gap-4 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="sec-zutaten">
         <h2 id="sec-zutaten" className="text-xl font-semibold">
           Zutaten
         </h2>
         {lines.length === 0 ? (
           <p className="text-sm text-muted-foreground">Noch keine Zutaten. Füg die erste hinzu, die Makros rechnen sich dann mit.</p>
         ) : (
-          <ol className="grid gap-3">
+          <ol className="grid grid-cols-1 gap-3">
             {lines.map((line, index) => {
               const r = resolved[index];
               const prefix = `ingredients.${index}`;
               return (
-                <li key={line.key} className="grid gap-2 rounded-2xl border p-3">
+                <li key={line.key} className={cn("grid grid-cols-1 gap-2 rounded-2xl border p-3", line.optional && "border-dashed")}>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
@@ -412,6 +428,7 @@ export function RecipeEditor({
                       aria-label={`${line.ingredient.name} austauschen`}
                     >
                       {line.ingredient.name}
+                      {line.optional ? <span className="ml-1.5 text-xs font-normal text-muted-foreground">optional</span> : null}
                     </button>
                     <Button type="button" variant="ghost" size="icon" onClick={() => { setDirty(true); setLines((p) => move(p, index, -1)); }} disabled={index === 0} aria-label="Nach oben">
                       <ArrowUp aria-hidden />
@@ -423,7 +440,8 @@ export function RecipeEditor({
                       <Trash2 aria-hidden />
                     </Button>
                   </div>
-                  <div className="grid grid-cols-[6rem_7.5rem_1fr] gap-2">
+                  {/* Handy: Menge und Einheit nebeneinander, Notiz darunter; ab sm alles in einer Zeile */}
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-[6rem_7.5rem_minmax(0,1fr)]">
                     <Input
                       aria-label="Menge"
                       inputMode="decimal"
@@ -447,26 +465,28 @@ export function RecipeEditor({
                     </NativeSelect>
                     <Input
                       aria-label="Notiz"
+                      className="col-span-2 sm:col-span-1"
                       placeholder="Notiz, z. B. gewürfelt"
                       value={line.note}
                       maxLength={200}
                       onChange={(e) => updateLine(line.key, { note: e.target.value })}
                     />
                   </div>
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
                   {steps.length > 0 ? (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Label htmlFor={`step-${line.key}`} className="text-muted-foreground">
+                    <div className="flex min-w-0 flex-1 basis-56 items-center gap-2">
+                      <Label htmlFor={`step-${line.key}`} className="shrink-0 text-muted-foreground">
                         Gebraucht in
                       </Label>
                       <NativeSelect
                         id={`step-${line.key}`}
-                        className="h-9 w-auto min-w-36"
+                        className="min-w-0 flex-1 sm:max-w-64"
                         value={stepNumber(line.stepKey)?.toString() ?? ""}
                         onChange={(e) =>
                           updateLine(line.key, { stepKey: e.target.value ? (steps[Number(e.target.value) - 1]?.key ?? null) : null })
                         }
                       >
-                        <option value="">keinem bestimmten Schritt</option>
+                        <option value="">keinem Schritt</option>
                         {steps.map((s, i) => (
                           <option key={s.key} value={i + 1}>
                             Schritt {i + 1}
@@ -475,8 +495,17 @@ export function RecipeEditor({
                       </NativeSelect>
                     </div>
                   ) : null}
+                    <label htmlFor={`optional-${line.key}`} className="flex min-h-11 items-center gap-2 text-muted-foreground">
+                      Optional
+                      <Switch
+                        id={`optional-${line.key}`}
+                        checked={line.optional}
+                        onCheckedChange={(v) => updateLine(line.key, { optional: v })}
+                      />
+                    </label>
+                  </div>
                   {r.needsManual ? (
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
                       <Label htmlFor={`manual-${line.key}`} className="text-muted-foreground">
                         Wie viel wiegt das zusammen? ≈
                       </Label>
@@ -493,7 +522,9 @@ export function RecipeEditor({
                   <p className={cn("text-xs", err(`${prefix}.amount`) || err(`${prefix}.unit`) ? "text-destructive" : "text-muted-foreground")}>
                     {err(`${prefix}.amount`)?.[0] ??
                       err(`${prefix}.unit`)?.[0] ??
-                      (r.grams != null
+                      (line.optional
+                        ? `optional, zählt nicht in Nährwerten, Kosten und Einkaufsliste${r.grams != null ? ` (≈ ${formatGrams(r.grams, 0)})` : ""}`
+                        : r.grams != null
                         ? `≈ ${formatGrams(r.grams, 0)} · ${formatNumber(Math.round((r.grams * line.ingredient.kcal) / 100), 0)} kcal`
                         : line.amount.trim()
                           ? "Gewicht unbekannt, zählt nicht in den Nährwerten"
@@ -557,18 +588,18 @@ export function RecipeEditor({
       </section>
 
       {/* Zubereitung */}
-      <section className="grid gap-4 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="sec-schritte">
+      <section className="grid grid-cols-1 gap-4 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="sec-schritte">
         <h2 id="sec-schritte" className="text-xl font-semibold">
           Zubereitung
         </h2>
         {steps.length > 0 ? (
-          <ol className="grid gap-3">
+          <ol className="grid grid-cols-1 gap-3">
             {steps.map((step, index) => (
-              <li key={step.key} className="grid grid-cols-[2rem_1fr] gap-2">
+              <li key={step.key} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-2">
                 <span className="mt-2 grid size-8 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
                   {index + 1}
                 </span>
-                <div className="grid gap-1">
+                <div className="grid min-w-0 grid-cols-1 gap-1">
                   <Textarea
                     aria-label={`Schritt ${index + 1}`}
                     value={step.text}
@@ -637,6 +668,31 @@ export function RecipeEditor({
         </Button>
       </section>
 
+      {/* Beilagen: Vorschläge, gehören nicht zum Rezept (keine Nährwerte, kein Einkauf) */}
+      {isCocktail ? null : (
+        <section className="grid grid-cols-1 gap-3 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="sec-beilagen">
+          <div className="space-y-1">
+            <h2 id="sec-beilagen" className="text-xl font-semibold">
+              Passt dazu (optional)
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Beilagen als Vorschlag, z. B. Spätzle oder Kroketten zum Gulasch. Sie gehören nicht zum Rezept und zählen
+              nicht in den Nährwerten. Heißt eine Beilage wie eines deiner Rezepte, wird sie verlinkt.
+            </p>
+          </div>
+          <TagInput
+            id="side-dishes"
+            value={sideDishes}
+            onChange={changed(setSideDishes)}
+            suggestions={sideSuggestions.filter((t) => t.toLocaleLowerCase("de") !== title.trim().toLocaleLowerCase("de"))}
+            placeholder="Beilage eingeben und Enter drücken"
+            maxLength={100}
+            itemLabel="Beilage"
+          />
+          {err("side_dishes") ? <p className="text-sm text-destructive">{err("side_dishes")?.[0]}</p> : null}
+        </section>
+      )}
+
       {initial.id ? (
         <section className="space-y-1.5">
           <Label htmlFor="change-note">Was hast du geändert? (optional)</Label>
@@ -656,8 +712,8 @@ export function RecipeEditor({
       ) : null}
 
       {/* Speicherleiste: bleibt sichtbar, auf dem Handy über der Navigation */}
-      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-3 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur md:bottom-4">
-        <p className="text-sm tabular-nums">
+      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-2 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur md:bottom-4">
+        <p className="min-w-0 text-sm tabular-nums">
           {alcohol ? (
             <>
               <span className="font-semibold">{formatNumber(alcohol.abvPercent, 1)} % vol</span>
@@ -666,14 +722,14 @@ export function RecipeEditor({
             </>
           ) : (
             <>
-              <span className="font-semibold">{formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal</span>
+              <span className="font-semibold whitespace-nowrap">{formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal</span>
               <span className="text-muted-foreground"> · </span>
-              <span className="font-medium">{formatNumber(nutrition.perServing.protein, 0)} g P</span>
+              <span className="font-medium whitespace-nowrap">{formatNumber(nutrition.perServing.protein, 0)} g P</span>
             </>
           )}
           <span className="block text-xs text-muted-foreground">pro {isCocktail ? "Drink" : "Portion"}</span>
         </p>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-1 sm:gap-2">
           {cancel ? (
             <Button type="button" variant="ghost" onClick={cancel.onClick} disabled={pending}>
               {cancel.label}

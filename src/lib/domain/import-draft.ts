@@ -43,9 +43,33 @@ export type DraftEditorInitial = {
     grams: number | null;
     note: string;
     step_position: number | null;
+    is_optional: boolean;
   }[];
   steps: { text: string; timer_seconds: number | null }[];
 };
+
+/**
+ * „optional“ bzw. „(optional)“ in der Notiz einer importierten Zeile („Petersilie, optional“, „Chili (optional)“,
+ * Gruppe „optional“ aus dem Markdown-Import) wird zur optionalen Zutat; der Rest bleibt Notiz.
+ */
+export function splitOptionalNote(note: string): { note: string; optional: boolean } {
+  let optional = false;
+  const withoutBrackets = note.replace(/\s*\(\s*optional\s*\)\s*/gi, () => {
+    optional = true;
+    return " ";
+  });
+  const parts = withoutBrackets
+    .split(",")
+    .map((p) => p.trim())
+    .filter((p) => {
+      if (/^optional$/i.test(p)) {
+        optional = true;
+        return false;
+      }
+      return p.length > 0;
+    });
+  return { note: parts.join(", "), optional };
+}
 
 /** Anfangsentscheidung: der Vorschlag, falls es einen gibt. */
 export function initialChoices(draft: ImportDraft): LineChoice[] {
@@ -70,13 +94,15 @@ export function draftToEditorInitial(
     }
     // US-Volumen (cups) über die Dichte der gewählten Zutat umrechnen: 1 cup Mehl → 127 g
     const refined = refineUsLine(line, choice.ingredient.density_g_per_ml);
+    const { note, optional } = splitOptionalNote(line.note);
     ingredients.push({
       ingredient: choice.ingredient,
       amount: refined.amount,
       unit: refined.amount == null ? null : refined.unit,
       grams: null,
-      note: line.note,
+      note,
       step_position: null,
+      is_optional: optional,
     });
   });
   return {

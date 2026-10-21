@@ -78,6 +78,7 @@ async function persistRecipe(input: RecipeInput): Promise<SaveRecipeStayResult> 
     grams: resolveLineGrams(line.amount, line.unit, infoById.get(line.ingredient_id) ?? {}, line.manual_grams),
     note: line.note,
     step_position: line.step_position,
+    is_optional: line.is_optional,
   }));
 
   const { data: recipeId, error } = await supabase.rpc("save_recipe", {
@@ -92,6 +93,7 @@ async function persistRecipe(input: RecipeInput): Promise<SaveRecipeStayResult> 
       tags: recipe.tags,
       is_meal_prep: recipe.is_meal_prep,
       source_url: recipe.source_url,
+      side_dishes: recipe.side_dishes,
       // Phase 15: ohne Angabe behält die Datenbank den Typ; Cocktail-Felder nur bei Cocktails
       ...(recipe.recipe_type ? { recipe_type: recipe.recipe_type } : {}),
       ...(recipe.recipe_type === "cocktail" && recipe.cocktail ? { cocktail: recipe.cocktail } : {}),
@@ -150,6 +152,7 @@ export async function restoreVersionAction(input: { recipeId: string; version: n
         grams: resolveLineGrams(i.amount, unit, infoById.get(i.ingredient_id) ?? {}, i.grams),
         note: i.note,
         step_position: i.step_position,
+        is_optional: i.is_optional,
       };
     });
   const dropped = snapshot.ingredients.length - ingredients.length;

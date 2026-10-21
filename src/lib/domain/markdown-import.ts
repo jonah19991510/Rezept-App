@@ -18,6 +18,8 @@ export type MarkdownImportRecipe = {
   cookMinutes: number | null;
   category: Enums<"recipe_category"> | null;
   tags: string[];
+  /** Beilagen („**Passt dazu:** Spätzle, Kroketten“), gehören nicht zum Rezept */
+  sideDishes: string[];
   isMealPrep: boolean;
   sourceUrl: string;
   /** Phase 15: Cocktail (eigener Export „*Cocktail*“, „Glas:“, „Methode:“, „Art: Cocktail“) */
@@ -222,6 +224,7 @@ type PropertyKind =
   | "method"
   | "ice"
   | "garnish"
+  | "sides"
   | "ignore";
 
 const PROPERTY_KEYS: [RegExp, PropertyKind][] = [
@@ -236,6 +239,7 @@ const PROPERTY_KEYS: [RegExp, PropertyKind][] = [
   [/^art$|^typ$|^gericht$/, "type"],
   [/^kategorien?$|^category$|^mahlzeit$/, "category"],
   [/^tags?$|^schlagworte?$/, "tags"],
+  [/^passt dazu$|^dazu passt$|^beilagen?$|^dazu$/, "sides"],
   [/^kuche$|^cuisine$/, "kitchen"],
   [/^quelle$|^source$|^url$|^link$|^original$/, "source"],
   [/(kcal|kalorien|eiweiss|protein|fett|kohlenhydrate|ballaststoffe|nahrwerte).*$|^pro portion$|^pro drink$/, "macro"],
@@ -379,6 +383,7 @@ function parseRecipe(block: { title: string; lines: string[] }, fileName: string
     cookMinutes: null,
     category: null,
     tags: [],
+    sideDishes: [],
     isMealPrep: false,
     sourceUrl: "",
     recipeType: "dish",
@@ -438,6 +443,14 @@ function parseRecipe(block: { title: string; lines: string[] }, fileName: string
         break;
       case "kitchen":
         addTag(v);
+        break;
+      case "sides":
+        for (const side of splitValues(v)) {
+          const name = side.slice(0, 100).trim();
+          if (name && !recipe.sideDishes.some((s) => norm(s) === norm(name)) && recipe.sideDishes.length < 20) {
+            recipe.sideDishes.push(name);
+          }
+        }
         break;
       case "source": {
         const url = /https?:\/\/[^\s)>\]]+/.exec(value)?.[0];

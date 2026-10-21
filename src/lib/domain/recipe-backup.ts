@@ -52,6 +52,8 @@ export const backupRecipeSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(30)).max(20),
   is_meal_prep: z.boolean(),
   source_url: z.string().max(2000).nullable(),
+  /** seit 21.10.2026; ältere Sicherungen ohne Beilagen */
+  side_dishes: z.array(z.string().trim().min(1).max(100)).max(20).default([]),
   ingredients: z
     .array(
       z.object({
@@ -61,6 +63,8 @@ export const backupRecipeSchema = z.object({
         grams: z.number().min(0).max(100000).nullable(),
         note: z.string().max(200).nullable(),
         step_position: z.number().int().min(1).nullable(),
+        /** seit 21.10.2026 */
+        is_optional: z.boolean().default(false),
       }),
     )
     .max(100),
@@ -104,6 +108,7 @@ export function toBackupFile(rows: RecipeRowForBackup[], now: Date): BackupFile 
           grams: l.grams,
           note: l.note,
           step_position: l.step_position,
+          is_optional: l.is_optional,
         })),
       steps: [...recipe_steps].sort((a, b) => a.position - b.position).map(({ text, timer_seconds }) => ({ text, timer_seconds })),
     })),

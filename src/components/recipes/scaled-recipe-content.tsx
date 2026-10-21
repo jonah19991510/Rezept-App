@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { ChefHat, Martini, RotateCcw, TriangleAlert } from "lucide-react";
+import { ChefHat, Martini, RotateCcw, TriangleAlert, UtensilsCrossed } from "lucide-react";
 import { MacroSummary, type MacroValues } from "@/components/recipes/macro-summary";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { scaleAmount, scaleFactor } from "@/lib/domain/scaling";
@@ -30,7 +30,12 @@ export type ScalableLine = {
   grams: number | null;
   name: string;
   note: string | null;
+  /** Optionale Zutat: eigene Liste unter den Zutaten, zählt nicht in den Nährwerten */
+  optional?: boolean;
 };
+
+/** Beilage als Vorschlag; href, wenn es ein passendes Rezept gibt */
+export type SideDishLink = { name: string; href: string | null };
 
 /**
  * Nährwerte und Zutaten mit Portionen-Schalter. Das Skalieren ist nur eine Ansicht:
@@ -46,6 +51,7 @@ export function ScaledRecipeContent({
   showCookButton = true,
   kind = "dish",
   cocktail = null,
+  sideDishes = [],
 }: {
   recipeId: string;
   servings: number;
@@ -58,6 +64,8 @@ export function ScaledRecipeContent({
   /** Phase 15: Cocktail mit Drinks, Mix-Modus und Alkoholgehalt */
   kind?: Enums<"recipe_type">;
   cocktail?: CocktailFacts | null;
+  /** Beilagen („Passt dazu“), gehören nicht zum Rezept */
+  sideDishes?: SideDishLink[];
 }) {
   const w = KIND_WORDS[kind];
   const isCocktail = kind === "cocktail";
@@ -65,6 +73,27 @@ export function ScaledRecipeContent({
   const factor = scaleFactor(target, servings);
   const changed = target !== servings;
   const portionsLabel = `für ${String(target).replace(".", ",")} ${servingsLabel(target, kind)}`;
+  const required = lines.filter((l) => !l.optional);
+  const optional = lines.filter((l) => l.optional);
+
+  const renderLine = (line: ScalableLine) => {
+    const scaled = scaleAmount(line.amount, line.unit, factor);
+    const grams = line.grams != null ? line.grams * factor : null;
+    return (
+      <li key={line.id} className="flex gap-3 px-4 py-3">
+        <span className="w-24 shrink-0 font-medium tabular-nums">
+          {formatScaledQuantity(scaled.amount, line.unit, scaled.approx) || "–"}
+        </span>
+        <span className="min-w-0">
+          {line.name}
+          {line.note ? <span className="text-muted-foreground">, {line.note}</span> : null}
+          {!isCocktail && grams != null && grams >= 1 && line.unit !== "g" ? (
+            <span className="block text-xs text-muted-foreground">≈ {formatGrams(grams, 0)}</span>
+          ) : null}
+        </span>
+      </li>
+    );
+  };
 
   return (
     <>
@@ -150,26 +179,27 @@ export function ScaledRecipeContent({
           {lines.length === 0 ? (
             <p className="text-sm text-muted-foreground">Noch keine Zutaten eingetragen.</p>
           ) : (
-            <ul className={cn("divide-y rounded-2xl border bg-card", changed && "border-primary/40")} aria-live="polite">
-              {lines.map((line) => {
-                const scaled = scaleAmount(line.amount, line.unit, factor);
-                const grams = line.grams != null ? line.grams * factor : null;
-                return (
-                  <li key={line.id} className="flex gap-3 px-4 py-3">
-                    <span className="w-24 shrink-0 font-medium tabular-nums">
-                      {formatScaledQuantity(scaled.amount, line.unit, scaled.approx) || "–"}
-                    </span>
-                    <span className="min-w-0">
-                      {line.name}
-                      {line.note ? <span className="text-muted-foreground">, {line.note}</span> : null}
-                      {!isCocktail && grams != null && grams >= 1 && line.unit !== "g" ? (
-                        <span className="block text-xs text-muted-foreground">≈ {formatGrams(grams, 0)}</span>
-                      ) : null}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <>
+              {required.length > 0 ? (
+                <ul className={cn("divide-y rounded-2xl border bg-card", changed && "border-primary/40")} aria-live="polite">
+                  {required.map(renderLine)}
+                </ul>
+              ) : null}
+              {optional.length > 0 ? (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-muted-foreground">Optional</h3>
+                  <ul
+                    className={cn("divide-y rounded-2xl border border-dashed bg-card", changed && "border-primary/40")}
+                    aria-live="polite"
+                  >
+                    {optional.map(renderLine)}
+                  </ul>
+                  <p className="text-xs text-muted-foreground">
+                    Zählen nicht in den Nährwerten{isCocktail ? " und im Alkoholgehalt" : ""} und kommen nicht auf die Einkaufsliste.
+                  </p>
+                </div>
+              ) : null}
+            </>
           )}
           {changed ? (
             <p className="text-xs text-muted-foreground">
@@ -181,6 +211,33 @@ export function ScaledRecipeContent({
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
               Für {missingGramsNames.join(", ")} fehlt das Gewicht. {missingGramsNames.length === 1 ? "Diese Zutat zählt" : "Diese Zutaten zählen"} in den Nährwerten nicht mit.
             </p>
+          ) : null}
+          {sideDishes.length > 0 ? (
+            <div className="space-y-2 rounded-2xl bg-muted/50 p-4 break-inside-avoid">
+              <h3 className="flex items-center gap-1.5 font-semibold">
+                <UtensilsCrossed className="size-4 text-primary" aria-hidden />
+                Passt dazu
+              </h3>
+              <ul className="flex flex-wrap gap-2">
+                {sideDishes.map((side) => (
+                  <li key={side.name} className="max-w-full">
+                    {side.href ? (
+                      <Link
+                        href={side.href}
+                        className="inline-flex min-h-9 max-w-full items-center rounded-full border border-primary/40 bg-card px-3 text-sm text-primary hover:bg-primary/10"
+                      >
+                        <span className="truncate">{side.name}</span>
+                      </Link>
+                    ) : (
+                      <span className="inline-flex min-h-9 max-w-full items-center rounded-full border bg-card px-3 text-sm">
+                        <span className="truncate">{side.name}</span>
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted-foreground">Vorschläge, gehören nicht zum Rezept und zählen nicht in den Nährwerten.</p>
+            </div>
           ) : null}
         </section>
 

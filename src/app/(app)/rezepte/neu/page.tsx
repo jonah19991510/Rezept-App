@@ -25,6 +25,7 @@ export default async function NewRecipePage({ searchParams }: PageProps<"/rezept
         thresholds={thresholds}
         dilution={dilution}
         tagSuggestions={collectTags(list)}
+        sideSuggestions={list.map((r) => r.title)}
         initial={{
           recipe_type: cocktail ? "cocktail" : "dish",
           cocktail: cocktail ? { glass: null, method: null, ice: "", garnish: "" } : null,

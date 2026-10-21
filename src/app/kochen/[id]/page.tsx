@@ -43,7 +43,8 @@ export default async function CookPage({ params, searchParams }: PageProps<"/koc
         amount: l.amount,
         unit: l.unit,
         name: l.ingredient.name,
-        note: l.note,
+        // Optionale Zutaten als Hinweis an der Notiz
+        note: l.is_optional ? [l.note, "optional"].filter(Boolean).join(", ") : l.note,
         stepPosition: l.step_position,
       }))}
       steps={steps.map((s) => ({ position: s.position, text: s.text, timerSeconds: s.timer_seconds }))}

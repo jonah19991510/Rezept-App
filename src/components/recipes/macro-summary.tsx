@@ -11,9 +11,9 @@ export type MacroValues = {
 };
 
 const MACROS = [
-  { key: "protein", label: "Protein", color: "bg-macro-protein", kcalPerGram: 4 },
-  { key: "carbs", label: "Kohlenhydrate", color: "bg-macro-carbs", kcalPerGram: 4 },
-  { key: "fat", label: "Fett", color: "bg-macro-fat", kcalPerGram: 9 },
+  { key: "protein", label: "Protein", short: "Protein", color: "bg-macro-protein", kcalPerGram: 4 },
+  { key: "carbs", label: "Kohlenhydrate", short: "KH", color: "bg-macro-carbs", kcalPerGram: 4 },
+  { key: "fat", label: "Fett", short: "Fett", color: "bg-macro-fat", kcalPerGram: 9 },
 ] as const;
 
 /** Makros als Kacheln plus Balken mit der kcal-Verteilung. Farben sind in der ganzen App gleich. */
@@ -42,7 +42,8 @@ export function MacroSummary({
         {MACROS.map((m) => (
           <Tile
             key={m.key}
-            label={compact ? m.label.replace("Kohlenhydrate", "KH") : m.label}
+            label={compact ? m.short : m.label}
+            shortLabel={m.short}
             value={`${formatNumber(values[m.key], values[m.key] < 10 ? 1 : 0)} g`}
             macro={m.key}
             compact={compact}
@@ -75,21 +76,25 @@ export function MacroSummary({
 
 function Tile({
   label,
+  shortLabel = label,
   value,
   macro,
   compact,
 }: {
   label: string;
+  /** Auf schmalen Handys (vier Kacheln nebeneinander) */
+  shortLabel?: string;
   value: string;
   macro: "kcal" | "protein" | "carbs" | "fat";
   compact: boolean;
 }) {
   return (
-    <div className={cn("rounded-2xl bg-muted/60 px-2 text-center", compact ? "py-1.5" : "py-3")}>
-      <div className={cn("font-heading font-semibold", compact ? "text-base" : "text-xl")}>{value}</div>
+    <div className={cn("min-w-0 rounded-2xl bg-muted/60 px-1 text-center sm:px-2", compact ? "py-1.5" : "py-3")}>
+      <div className={cn("font-heading font-semibold whitespace-nowrap", compact ? "text-base" : "text-lg sm:text-xl")}>{value}</div>
       <div className="flex items-center justify-center gap-1 text-[0.7rem] text-muted-foreground">
         <MacroDot macro={macro} />
-        <span className="truncate">{label}</span>
+        <span className="truncate sm:hidden">{shortLabel}</span>
+        <span className="hidden truncate sm:inline">{label}</span>
       </div>
     </div>
   );

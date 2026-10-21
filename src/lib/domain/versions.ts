@@ -18,6 +18,8 @@ const snapshotSchema = z.object({
         grams: z.number().nullable().catch(null),
         note: z.string().nullable().catch(null),
         step_position: z.number().nullable().catch(null),
+        /** Nur gesetzt, wenn true (ältere Versionen haben den Schlüssel nicht) */
+        is_optional: z.boolean().catch(false).default(false),
       }),
     )
     .catch([]),
@@ -64,7 +66,7 @@ function withKeys(list: SnapshotIngredient[]) {
 
 /**
  * Zutaten zweier Versionen vergleichen. Gleiche Zutat (bei mehrfachem Vorkommen in Reihenfolge) wird
- * gegenübergestellt; geändert heißt: andere Menge, Einheit oder Notiz.
+ * gegenübergestellt; geändert heißt: andere Menge, Einheit, Notiz oder optional/nicht optional.
  */
 export function diffIngredients(before: SnapshotIngredient[], after: SnapshotIngredient[]): IngredientChange[] {
   const old = new Map(withKeys(before).map((x) => [x.key, x.item]));
@@ -77,7 +79,8 @@ export function diffIngredients(before: SnapshotIngredient[], after: SnapshotIng
       continue;
     }
     used.add(k);
-    const changed = prev.amount !== item.amount || prev.unit !== item.unit || (prev.note ?? "") !== (item.note ?? "");
+    const changed = prev.amount !== item.amount || prev.unit !== item.unit || (prev.note ?? "") !== (item.note ?? "") ||
+      prev.is_optional !== item.is_optional;
     result.push(changed ? { kind: "changed", before: prev, after: item } : { kind: "same", after: item });
   }
   for (const [k, item] of old) if (!used.has(k)) result.push({ kind: "removed", before: item });
@@ -105,7 +108,7 @@ export function snapshotMacros(snapshot: RecipeSnapshot, nutrition: Map<string, 
   const total = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
   for (const i of snapshot.ingredients) {
     const n = nutrition.get(i.ingredient_id);
-    if (!n || i.grams == null) continue;
+    if (!n || i.grams == null || i.is_optional) continue;
     total.kcal += (i.grams * n.kcal) / 100;
     total.protein += (i.grams * n.protein) / 100;
     total.carbs += (i.grams * n.carbs) / 100;

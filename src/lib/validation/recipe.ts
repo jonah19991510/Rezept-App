@@ -24,6 +24,8 @@ export const recipeIngredientInputSchema = z
     manual_grams: z.number().min(0).max(100000).nullable(),
     note: z.string().trim().max(200, "Höchstens 200 Zeichen.").default(""),
     step_position: z.number().int().min(1).nullable().default(null),
+    /** Optionale Zutat: zählt nicht in Nährwerten, Kosten und Einkaufsliste */
+    is_optional: z.boolean().default(false),
   })
   .refine((l) => l.amount == null || l.unit != null, { path: ["unit"], message: "Bitte eine Einheit wählen." });
 
@@ -42,7 +44,18 @@ export const cocktailInputSchema = z.object({
 
 export type CocktailInput = z.input<typeof cocktailInputSchema>;
 
-const tagSchema = z.string().trim().min(1).max(30, "Ein Tag darf höchstens 30 Zeichen haben.");
+/** Doppelte (ohne Groß-/Kleinschreibung) entfernen, erste Schreibweise bleibt. */
+function uniqueCaseInsensitive(list: string[]): string[] {
+  const seen = new Set<string>();
+  return list.filter((t) => {
+    const key = t.toLocaleLowerCase("de-DE");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+const tagSchema =z.string().trim().min(1).max(30, "Ein Tag darf höchstens 30 Zeichen haben.");
 
 export const recipeInputSchema = z.object({
   id: z.uuid().optional(),
@@ -62,19 +75,17 @@ export const recipeInputSchema = z.object({
   tags: z
     .array(tagSchema)
     .max(20, "Höchstens 20 Tags.")
-    .transform((tags) => {
-      const seen = new Set<string>();
-      return tags.filter((t) => {
-        const key = t.toLocaleLowerCase("de-DE");
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-    }),
+    .transform(uniqueCaseInsensitive),
   is_meal_prep: z.boolean(),
   source_url: z
     .union([z.literal(""), z.url({ protocol: /^https?$/, error: "Bitte eine Webadresse mit http(s):// angeben." })])
     .default(""),
+  /** Beilagen als Vorschläge (gehören nicht zum Rezept), z. B. „Spätzle“ zum Gulasch */
+  side_dishes: z
+    .array(z.string().trim().min(1).max(100, "Eine Beilage darf höchstens 100 Zeichen haben."))
+    .max(20, "Höchstens 20 Beilagen.")
+    .default([])
+    .transform(uniqueCaseInsensitive),
   ingredients: z.array(recipeIngredientInputSchema).max(100, "Höchstens 100 Zutaten."),
   steps: z.array(recipeStepInputSchema).max(60, "Höchstens 60 Schritte."),
   /** Phase 12: optionale Notiz zur neuen Version (nur bei inhaltlichen Änderungen gespeichert) */
