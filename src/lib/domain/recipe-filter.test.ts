@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { autoTagsFor, collectTags, filterRecipes, parseRecipeFilter, type RecipeListItem } from "./recipe-filter";
+import { autoTagsFor, collectTags, filterRecipes, parseRecipeFilter, toListSort, type RecipeListItem } from "./recipe-filter";
 
 function recipe(partial: Partial<RecipeListItem> & { id: string; title: string }): RecipeListItem {
   return {
@@ -117,5 +117,16 @@ describe("filterRecipes mit Koch-Log und Kosten (Phase 12)", () => {
     expect(ids(filterRecipes(list, parseRecipeFilter({ kosten: "2,50" }), context))).toEqual(["billig"]);
     expect(ids(filterRecipes(list, parseRecipeFilter({ bewertung: "5" }), context))).toEqual(["teuer"]);
     expect(ids(filterRecipes(list, parseRecipeFilter({ lange: "1" }), context))).toEqual(["billig"]);
+  });
+});
+
+describe("toListSort", () => {
+  it("lässt nur Sortierungen des Bereichs zu", () => {
+    expect(toListSort("name", "kitchen")).toBe("name");
+    expect(toListSort("protein", "kitchen")).toBe("protein");
+    expect(toListSort("stark", "kitchen")).toBe("neu");
+    expect(toListSort("stark", "bar")).toBe("stark");
+    expect(toListSort("protein", "bar")).toBe("neu");
+    expect(toListSort(undefined, "bar")).toBe("neu");
   });
 });

@@ -83,6 +83,16 @@ export function totalMinutes(item: Pick<RecipeListItem, "prep_minutes" | "cook_m
 const SORTS = ["neu", "name", "protein", "kcal", "zeit", "stark", "leicht"] as const;
 export type RecipeSort = (typeof SORTS)[number];
 
+/** Sortierungen je Bereich (wie die Spalten user_settings.recipe_sort bzw. cocktail_sort). */
+export const KITCHEN_SORTS = ["neu", "name", "protein", "kcal", "zeit"] as const satisfies readonly RecipeSort[];
+export const BAR_SORTS = ["neu", "name", "stark", "leicht", "kcal"] as const satisfies readonly RecipeSort[];
+
+/** Gespeicherte bzw. gewählte Sortierung prüfen; Unbekanntes oder Fremdes (Bar-Sortierung in der Küche) wird „neu“. */
+export function toListSort(value: unknown, mode: "kitchen" | "bar"): RecipeSort {
+  const allowed: readonly string[] = mode === "bar" ? BAR_SORTS : KITCHEN_SORTS;
+  return typeof value === "string" && allowed.includes(value) ? (value as RecipeSort) : "neu";
+}
+
 const optionalNumber = z
   .string()
   .optional()

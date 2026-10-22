@@ -4,16 +4,24 @@ import { missingPricesText } from "@/lib/domain/costs";
 import { formatEuro } from "@/lib/format";
 import type { RecipeCost as Cost } from "@/lib/server/kitchen-log";
 
-/** Kosten gesamt und pro Portion nach den eigenen Preisen; fehlende Preise werden offen genannt. */
+/**
+ * Kosten pro Portion und gesamt nach den eigenen Preisen; fehlende Preise werden offen genannt. „Gesamt“ folgt dem
+ * Portionen-Schalter des Rezepts (`factor` = gewählte / Rezeptportionen), pro Portion bleibt gleich.
+ */
 export function RecipeCost({
   cost,
   missingPrices,
   unit = "Portion",
+  factor = 1,
+  totalLabel,
 }: {
   cost: Cost | null;
   /** Zutaten, die noch nicht in die Kosten eingehen („Preise ergänzen“ zeigt sie zum Eintragen) */
   missingPrices: MissingPrice[];
   unit?: "Portion" | "Drink";
+  factor?: number;
+  /** z. B. „für 4 Portionen“ */
+  totalLabel?: string;
 }) {
   if (!cost || cost.count === 0) return null;
   const missing = missingPricesText(cost.priced, cost.count);
@@ -34,7 +42,9 @@ export function RecipeCost({
           <p className="text-sm">
             {missing ? "mindestens " : "ca. "}
             <span className="font-heading text-2xl font-semibold">{formatEuro(cost.perServing)}</span> pro {unit} ·{" "}
-            {formatEuro(cost.total)} gesamt
+            <span aria-live="polite">
+              {formatEuro(cost.total * factor)} gesamt{totalLabel ? ` ${totalLabel}` : ""}
+            </span>
           </p>
           {missing ? (
             <p className="text-xs text-muted-foreground">

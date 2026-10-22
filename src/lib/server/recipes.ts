@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { baseSpirit } from "@/lib/domain/cocktail";
 import { authorName, toDiscoverItems } from "@/lib/domain/community";
-import { toRecipeView, type CocktailSummary, type RecipeListItem, type RecipeView } from "@/lib/domain/recipe-filter";
+import { toListSort, toRecipeView, type CocktailSummary, type RecipeListItem, type RecipeSort, type RecipeView } from "@/lib/domain/recipe-filter";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -12,11 +12,18 @@ const LIST_NUTRITION =
 
 type RecipeType = "dish" | "cocktail";
 
-/** Gespeicherte Ansicht der Rezeptliste (Raster oder Liste). */
-export async function getRecipeView(userId: string): Promise<RecipeView> {
+/** Gespeicherte Ansicht (Raster oder Liste) und Sortierung der Rezeptliste; die Sortierung je Küche bzw. Bar. */
+export async function getRecipeListSettings(userId: string, type: RecipeType): Promise<{ view: RecipeView; sort: RecipeSort }> {
   const supabase = await createClient();
-  const { data } = await supabase.from("user_settings").select("recipe_view").eq("user_id", userId).maybeSingle();
-  return toRecipeView(data?.recipe_view);
+  const { data } = await supabase
+    .from("user_settings")
+    .select("recipe_view, recipe_sort, cocktail_sort")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return {
+    view: toRecipeView(data?.recipe_view),
+    sort: type === "cocktail" ? toListSort(data?.cocktail_sort, "bar") : toListSort(data?.recipe_sort, "kitchen"),
+  };
 }
 
 /** Alle eigenen Rezepte (Küche) bzw. Cocktails (Bar) mit Makros (aus der View) und Favoriten-Markierung. */

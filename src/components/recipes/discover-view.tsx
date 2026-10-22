@@ -8,7 +8,7 @@ import { RecipeList } from "@/components/recipes/recipe-list";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { collectBaseSpirits, collectTags, filterRecipes, hasActiveFilter, parseRecipeFilter } from "@/lib/domain/recipe-filter";
-import { getPublicRecipeList, getRecipeView } from "@/lib/server/recipes";
+import { getPublicRecipeList, getRecipeListSettings } from "@/lib/server/recipes";
 
 /** Entdecken (Phase 6) mit Küche | Bar (Phase 15): öffentliche Rezepte bzw. Cocktails aus der Runde. */
 export async function DiscoverView({
@@ -19,8 +19,9 @@ export async function DiscoverView({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await requireUser();
-  const [all, params, view] = await Promise.all([getPublicRecipeList(user.id, type), searchParams, getRecipeView(user.id)]);
-  const filter = parseRecipeFilter(params);
+  const [all, params, settings] = await Promise.all([getPublicRecipeList(user.id, type), searchParams, getRecipeListSettings(user.id, type)]);
+  // Ohne ?sortierung= gilt die gespeicherte Sortierung
+  const filter = parseRecipeFilter({ ...params, sortierung: params.sortierung ?? settings.sort });
   const recipes = filterRecipes(all, filter);
   const authors = new Set(all.map((r) => r.author?.name)).size;
   const bar = type === "cocktail";
@@ -61,7 +62,8 @@ export async function DiscoverView({
 
           <RecipeList
             recipes={recipes}
-            initialView={view}
+            initialView={settings.view}
+            initialSort={filter.sortierung ?? "neu"}
             mode={bar ? "bar" : "kitchen"}
             countLabel={
               hasActiveFilter(filter)

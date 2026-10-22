@@ -12,7 +12,10 @@ import { formatScaledQuantity } from "@/lib/format-quantity";
 import { KIND_WORDS, servingsLabel } from "@/lib/labels";
 import type { Enums } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
+import type { MissingPrice } from "@/components/prices/missing-prices";
+import type { RecipeCost as Cost } from "@/lib/server/kitchen-log";
 import { PortionStepper } from "./portion-stepper";
+import { RecipeCost } from "./recipe-cost";
 
 /** Phase 15: Alkoholgehalt pro Drink (aus der View recipe_alcohol) */
 export type CocktailFacts = {
@@ -52,6 +55,7 @@ export function ScaledRecipeContent({
   kind = "dish",
   cocktail = null,
   sideDishes = [],
+  cost = null,
 }: {
   recipeId: string;
   servings: number;
@@ -66,6 +70,8 @@ export function ScaledRecipeContent({
   cocktail?: CocktailFacts | null;
   /** Beilagen („Passt dazu“), gehören nicht zum Rezept */
   sideDishes?: SideDishLink[];
+  /** Kosten nach eigenen Preisen; „gesamt“ rechnet mit der gewählten Portionenzahl */
+  cost?: { cost: Cost | null; missingPrices: MissingPrice[] } | null;
 }) {
   const w = KIND_WORDS[kind];
   const isCocktail = kind === "cocktail";
@@ -243,6 +249,16 @@ export function ScaledRecipeContent({
 
         {steps}
       </div>
+
+      {cost ? (
+        <RecipeCost
+          cost={cost.cost}
+          missingPrices={cost.missingPrices}
+          unit={isCocktail ? "Drink" : "Portion"}
+          factor={factor}
+          totalLabel={portionsLabel}
+        />
+      ) : null}
     </>
   );
 }

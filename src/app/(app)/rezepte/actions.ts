@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { toListSort } from "@/lib/domain/recipe-filter";
 import { resolveLineGrams, type Unit } from "@/lib/domain/units";
 import { Constants } from "@/lib/supabase/database.types";
 import { copyPhotoToRecipe, removeRecipePhotoFolder } from "@/lib/server/photos";
@@ -233,6 +234,21 @@ export async function setFavoriteAction(recipeId: string, favorite: boolean): Pr
   revalidatePath("/entdecken");
   revalidatePath("/entdecken/bar");
   revalidatePath(`/rezepte/${recipeId}`);
+  return { ok: !error };
+}
+
+/** Gewählte Sortierung merken (Küche und Bar getrennt), gilt auch in Entdecken. */
+export async function setRecipeSortAction(mode: "kitchen" | "bar", sort: string): Promise<{ ok: boolean }> {
+  const user = await requireUser();
+  if (mode !== "kitchen" && mode !== "bar") return { ok: false };
+  const value = toListSort(sort, mode);
+  if (value !== sort) return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("user_settings")
+    .upsert({ user_id: user.id, ...(mode === "bar" ? { cocktail_sort: value } : { recipe_sort: value }) }, { onConflict: "user_id" });
+  revalidatePath(mode === "bar" ? "/rezepte/bar" : "/rezepte");
+  revalidatePath(mode === "bar" ? "/entdecken/bar" : "/entdecken");
   return { ok: !error };
 }
 

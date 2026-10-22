@@ -893,8 +893,10 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          cocktail_sort: string
           hide_staples: boolean
           long_not_cooked_weeks: number
+          recipe_sort: string
           recipe_view: string
           shopping_sort: string
           training_weekdays: number[]
@@ -902,8 +904,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cocktail_sort?: string
           hide_staples?: boolean
           long_not_cooked_weeks?: number
+          recipe_sort?: string
           recipe_view?: string
           shopping_sort?: string
           training_weekdays?: number[]
@@ -911,8 +915,10 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          cocktail_sort?: string
           hide_staples?: boolean
           long_not_cooked_weeks?: number
+          recipe_sort?: string
           recipe_view?: string
           shopping_sort?: string
           training_weekdays?: number[]

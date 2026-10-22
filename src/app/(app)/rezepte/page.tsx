@@ -14,19 +14,19 @@ import { collectTags, filterRecipes, hasActiveFilter, parseRecipeFilter } from "
 import { todayInBerlin } from "@/lib/domain/week";
 import { getCookLogs, getLongNotCookedWeeks, getRecipeCosts } from "@/lib/server/kitchen-log";
 import { countReadyRecipes } from "@/lib/server/pantry";
-import { getOwnRecipeList, getRecipeView } from "@/lib/server/recipes";
+import { getOwnRecipeList, getRecipeListSettings } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Rezepte" };
 
 export default async function RecipesPage({ searchParams }: PageProps<"/rezepte">) {
   const user = await requireUser();
-  const [list, params, costs, logs, longWeeks, view, ready] = await Promise.all([
+  const [list, params, costs, logs, longWeeks, settings, ready] = await Promise.all([
     getOwnRecipeList(user.id),
     searchParams,
     getRecipeCosts(),
     getCookLogs(user.id),
     getLongNotCookedWeeks(user.id),
-    getRecipeView(user.id),
+    getRecipeListSettings(user.id, "dish"),
     countReadyRecipes(user.id, "dish"),
   ]);
   // Phase 12: Kosten pro Portion und Koch-Log für Filter und Karten
@@ -41,7 +41,8 @@ export default async function RecipesPage({ searchParams }: PageProps<"/rezepte"
       lastCooked: s.lastDate,
     };
   });
-  const filter = parseRecipeFilter(params);
+  // Ohne ?sortierung= gilt die gespeicherte Sortierung
+  const filter = parseRecipeFilter({ ...params, sortierung: params.sortierung ?? settings.sort });
   const recipes = filterRecipes(all, filter, { today: todayInBerlin(), longNotCookedWeeks: longWeeks });
   const noun = (n: number) => (n === 1 ? "Rezept" : "Rezepte");
 
@@ -68,7 +69,8 @@ export default async function RecipesPage({ searchParams }: PageProps<"/rezepte"
           <RecipeFilters ownTags={collectTags(all)} ownBook />
           <RecipeList
             recipes={recipes}
-            initialView={view}
+            initialView={settings.view}
+            initialSort={filter.sortierung ?? "neu"}
             countLabel={
               hasActiveFilter(filter) ? `${recipes.length} von ${all.length} ${noun(all.length)}` : `${all.length} ${noun(all.length)}`
             }

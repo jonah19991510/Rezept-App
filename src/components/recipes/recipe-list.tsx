@@ -3,8 +3,8 @@
 import { useState, useTransition, type ReactNode } from "react";
 import { ArrowDownUp, LayoutGrid, Rows3 } from "lucide-react";
 import { toast } from "sonner";
-import { setRecipeViewAction } from "@/app/(app)/rezepte/actions";
-import type { RecipeListItem, RecipeView } from "@/lib/domain/recipe-filter";
+import { setRecipeSortAction, setRecipeViewAction } from "@/app/(app)/rezepte/actions";
+import type { RecipeListItem, RecipeSort, RecipeView } from "@/lib/domain/recipe-filter";
 import { cn } from "@/lib/utils";
 import { RecipeCard } from "./recipe-card";
 import { useUrlParams } from "./recipe-filters";
@@ -38,12 +38,15 @@ const VIEWS = [
 export function RecipeList({
   recipes,
   initialView,
+  initialSort,
   countLabel,
   mode = "kitchen",
   empty,
 }: {
   recipes: RecipeListItem[];
   initialView: RecipeView;
+  /** gespeicherte oder per URL gewählte Sortierung */
+  initialSort: RecipeSort;
   /** z. B. „12 Rezepte“ oder „3 von 12 Cocktails“ */
   countLabel: string;
   mode?: "kitchen" | "bar";
@@ -54,7 +57,16 @@ export function RecipeList({
   const [view, setView] = useState<RecipeView>(initialView);
   const [, startTransition] = useTransition();
   const labels: Record<string, string> = mode === "bar" ? BAR_SORT_LABELS : SORT_LABELS;
-  const sort = params.get("sortierung") ?? "neu";
+  const sort = params.get("sortierung") ?? initialSort;
+
+  /** Sortierung in die URL (sofort sichtbar) und für den Nutzer merken (gilt beim nächsten Öffnen). */
+  function changeSort(next: string) {
+    update({ sortierung: next });
+    startTransition(async () => {
+      const result = await setRecipeSortAction(mode, next);
+      if (!result.ok) toast.error("Die Sortierung konnte nicht gespeichert werden.");
+    });
+  }
 
   function changeView(next: RecipeView) {
     if (next === view) return;
@@ -78,7 +90,7 @@ export function RecipeList({
             <select
               aria-label="Sortierung"
               value={sort}
-              onChange={(e) => update({ sortierung: e.target.value === "neu" ? null : e.target.value })}
+              onChange={(e) => changeSort(e.target.value)}
               className="absolute inset-0 cursor-pointer appearance-none opacity-0"
             >
               {Object.entries(labels).map(([value, label]) => (

@@ -1056,6 +1056,20 @@ Vercel-Connector geprüft). Am Handy über den LAN-Server vom Nutzer getestet (C
   Beispieldaten (ohne Login, danach gelöscht): kein seitliches Scrollen, Chips wischbar, Herz trifft den Knopf statt
   des Links. Mit echten Daten nicht im Browser geprüft (Claude kann sich nicht anmelden).
 
+### Nachtrag 22.10.2026: Sortierung merken, Kosten mit Portionen
+
+**Noch nicht live** (lokal gebaut und geprüft).
+
+- **Sortierung je Nutzer:** Spalten `user_settings.recipe_sort` (Küche: neu, name, protein, kcal, zeit) und
+  `cocktail_sort` (Bar: neu, name, stark, leicht, kcal), Standard `neu`, Migration `…20261022120000_recipe_sort`
+  (in der DB, additiv). Ohne `?sortierung=` in der Adresse gilt die gespeicherte Sortierung (Küche, Bar, Entdecken);
+  eine Änderung schreibt sie in die Adresse und speichert sie (`setRecipeSortAction`, prüft per `toListSort`).
+  Vorher stand sie nur in der Adresse und war nach dem Neuladen der Startseite weg. Nicht mit echtem Login geprüft.
+- **Kosten im Rezept folgen dem Portionen-Schalter:** Der Kostenblock sitzt jetzt in `ScaledRecipeContent`;
+  „gesamt“ = Gesamtkosten × gewählte/Rezeptportionen, mit „für N Portionen“, pro Portion unverändert. Geprüft mit
+  Beispieldaten: 2 → 4 Portionen, 4,70 € → 9,40 €.
+- 312 Tests, Typecheck, Lint, Build grün.
+
 ## Offene Punkte
 
 - Meal Prep: „Woche kopieren“ übernimmt Kochtag und Reste als normale Einträge (ohne Batch), d. h. in der Zielwoche

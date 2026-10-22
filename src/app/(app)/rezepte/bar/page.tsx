@@ -13,19 +13,19 @@ import { cookSummary } from "@/lib/domain/cooklog";
 import { collectBaseSpirits, collectTags, filterRecipes, hasActiveFilter, parseRecipeFilter } from "@/lib/domain/recipe-filter";
 import { getCookLogs, getRecipeCosts } from "@/lib/server/kitchen-log";
 import { countReadyRecipes } from "@/lib/server/pantry";
-import { getOwnRecipeList, getRecipeView } from "@/lib/server/recipes";
+import { getOwnRecipeList, getRecipeListSettings } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Bar" };
 
 /** Phase 15: eigene Cocktails (Rezepte mit recipe_type „cocktail“) im selben Design wie die Küche. */
 export default async function BarPage({ searchParams }: PageProps<"/rezepte/bar">) {
   const user = await requireUser();
-  const [list, params, costs, logs, view, ready] = await Promise.all([
+  const [list, params, costs, logs, settings, ready] = await Promise.all([
     getOwnRecipeList(user.id, "cocktail"),
     searchParams,
     getRecipeCosts(),
     getCookLogs(user.id),
-    getRecipeView(user.id),
+    getRecipeListSettings(user.id, "cocktail"),
     countReadyRecipes(user.id, "cocktail"),
   ]);
   const all = list.map((r) => {
@@ -39,7 +39,8 @@ export default async function BarPage({ searchParams }: PageProps<"/rezepte/bar"
       lastCooked: s.lastDate,
     };
   });
-  const filter = parseRecipeFilter(params);
+  // Ohne ?sortierung= gilt die gespeicherte Sortierung
+  const filter = parseRecipeFilter({ ...params, sortierung: params.sortierung ?? settings.sort });
   const cocktails = filterRecipes(all, filter);
   const noun = (n: number) => (n === 1 ? "Cocktail" : "Cocktails");
 
@@ -72,7 +73,8 @@ export default async function BarPage({ searchParams }: PageProps<"/rezepte/bar"
           />
           <RecipeList
             recipes={cocktails}
-            initialView={view}
+            initialView={settings.view}
+            initialSort={filter.sortierung ?? "neu"}
             mode="bar"
             countLabel={
               hasActiveFilter(filter)

@@ -7,7 +7,6 @@ import { FavoriteButton } from "@/components/recipes/favorite-button";
 import { PublishToggle } from "@/components/recipes/publish-toggle";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { RecipeActions } from "@/components/recipes/recipe-actions";
-import { RecipeCost } from "@/components/recipes/recipe-cost";
 import { RecipeTags } from "@/components/recipes/recipe-tags";
 import { ScaledRecipeContent } from "@/components/recipes/scaled-recipe-content";
 import { ShareLink } from "@/components/recipes/share-link";
@@ -233,6 +232,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           optional: l.is_optional,
         }))}
         sideDishes={sideDishes}
+        cost={{ cost, missingPrices }}
         missingGramsNames={missingGrams.map((l) => l.ingredient.name)}
         steps={
           <section aria-labelledby="zubereitung" className="space-y-3">
@@ -256,8 +256,6 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           </section>
         }
       />
-
-      <RecipeCost cost={cost} missingPrices={missingPrices} unit={isCocktail ? "Drink" : "Portion"} />
 
       <CookLogSection recipeId={recipe.id} logs={logs} today={todayInBerlin()} servings={recipe.servings} kind={recipe.recipe_type} />
 
