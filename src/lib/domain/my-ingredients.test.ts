@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  groupByFoodGroup,
   canDeleteIngredient,
   canEditIngredient,
   collectMyIngredients,
@@ -87,5 +88,19 @@ describe("defaultDiet", () => {
     expect(defaultDiet("other")).toBe("none");
     expect(defaultDiet("dairy")).toBe("vegetarian");
     expect(defaultDiet("vegetables")).toBe("vegan");
+  });
+});
+
+describe("groupByFoodGroup", () => {
+  it("gruppiert in Supermarkt-Reihenfolge und behält die Reihenfolge innerhalb", () => {
+    const items = [
+      { name: "Lachs", g: "fish" as const },
+      { name: "Apfel", g: "fruit" as const },
+      { name: "Butter", g: "dairy" as const },
+      { name: "Kabeljau", g: "fish" as const },
+    ];
+    const sections = groupByFoodGroup(items, (i) => i.g);
+    expect(sections.map((s) => s.label)).toEqual(["Obst", "Milchprodukte", "Fisch"]);
+    expect(sections[2].items.map((i) => i.name)).toEqual(["Lachs", "Kabeljau"]);
   });
 });

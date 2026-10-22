@@ -16,6 +16,10 @@ function revalidatePantry() {
   revalidatePath("/einkauf");
   revalidatePath("/einkauf/vorrat");
   revalidatePath("/einkauf/was-kochen");
+  revalidatePath("/einkauf/was-mixen");
+  // Banner „sofort kochbar/mixbar“ über der Rezeptliste
+  revalidatePath("/rezepte");
+  revalidatePath("/rezepte/bar");
 }
 
 /** Zutat in den Vorrat legen oder ändern. Gleiche Zutat im selben Bereich wird überschrieben. */

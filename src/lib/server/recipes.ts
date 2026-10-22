@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { baseSpirit } from "@/lib/domain/cocktail";
 import { authorName, toDiscoverItems } from "@/lib/domain/community";
-import type { CocktailSummary, RecipeListItem } from "@/lib/domain/recipe-filter";
+import { toRecipeView, type CocktailSummary, type RecipeListItem, type RecipeView } from "@/lib/domain/recipe-filter";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -11,6 +11,13 @@ const LIST_NUTRITION =
   "recipe_id, kcal_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving, is_high_protein, is_low_carb, is_vegetarian, is_vegan";
 
 type RecipeType = "dish" | "cocktail";
+
+/** Gespeicherte Ansicht der Rezeptliste (Raster oder Liste). */
+export async function getRecipeView(userId: string): Promise<RecipeView> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("user_settings").select("recipe_view").eq("user_id", userId).maybeSingle();
+  return toRecipeView(data?.recipe_view);
+}
 
 /** Alle eigenen Rezepte (Küche) bzw. Cocktails (Bar) mit Makros (aus der View) und Favoriten-Markierung. */
 export async function getOwnRecipeList(userId: string, type: RecipeType = "dish"): Promise<RecipeListItem[]> {

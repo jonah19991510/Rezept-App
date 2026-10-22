@@ -79,11 +79,14 @@ export default async function SettingsPage() {
         <LongNotCookedForm initial={longWeeks} />
       </section>
 
-      <section className="mb-6 rounded-3xl border bg-card p-5" aria-labelledby="sec-daten">
+      <section id="daten" className="mb-6 scroll-mt-20 rounded-3xl border bg-card p-5" aria-labelledby="sec-daten">
         <h2 id="sec-daten" className="mb-1 text-lg font-semibold">
           Deine Daten
         </h2>
-        <p className="mb-4 text-sm text-muted-foreground">Als JSON-Datei herunterladen oder eine Rezept-Sicherung einspielen.</p>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Rezepte von Webseiten oder aus Markdown/Notion importieren, alles als Datei herunterladen oder eine
+          Rezept-Sicherung einspielen.
+        </p>
         <DataSection />
       </section>
 

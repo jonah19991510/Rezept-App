@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  pantryChecklist,
   consumePantry,
   cookability,
   coverShoppingItem,
@@ -155,5 +156,30 @@ describe("shoppingListText", () => {
         "Einkaufsliste (Mo, 19.10.)",
       ),
     ).toBe("Einkaufsliste (Mo, 19.10.)\n\nObst & Gemüse\n- 2 Stück Zwiebeln\n- 1,5 kg Kartoffeln\n\nEigene Einträge\n- 1 Flasche Spülmittel\n- Brot");
+  });
+});
+
+describe("pantryChecklist", () => {
+  const c = (ingredientId: string, name: string, foodGroup: "fish" | "spirits" | "spices_sauces" | "dairy", isStaple = false) => ({
+    ingredientId,
+    name,
+    foodGroup,
+    isStaple,
+  });
+  const candidates = [c("1", "Lachs", "fish"), c("2", "Gin", "spirits"), c("3", "Salz", "spices_sauces", true), c("4", "Butter", "dairy")];
+  const entries = [{ ...c("4", "Butter", "dairy"), id: "e4", location: "kitchen" as const }];
+
+  it("zeigt Vorhandenes und fehlende Zutaten des Bereichs, ohne Grundzutaten", () => {
+    const rows = pantryChecklist(candidates, entries, "kitchen");
+    expect(rows.map((r) => [r.item.name, r.entry?.id ?? null])).toEqual([
+      ["Butter", "e4"],
+      ["Lachs", null],
+    ]);
+  });
+
+  it("ordnet Spirituosen der Bar zu und listet Vorhandenes nicht doppelt", () => {
+    expect(pantryChecklist(candidates, entries, "bar").map((r) => r.item.name)).toEqual(["Gin"]);
+    const ginInKitchen = [{ ...c("2", "Gin", "spirits"), id: "e2", location: "kitchen" as const }];
+    expect(pantryChecklist(candidates, ginInKitchen, "bar")).toEqual([]);
   });
 });

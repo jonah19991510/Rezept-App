@@ -3,33 +3,40 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Clock, Heart, Search, SlidersHorizontal, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { AUTO_TAG_LABELS, CATEGORY_LABELS, METHOD_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
+import { chipClass, ChipSelect } from "./chip-select";
 
-const SORT_LABELS = {
-  neu: "Zuletzt geändert",
-  name: "Name A–Z",
-  protein: "Meiste Protein",
-  kcal: "Wenigste kcal",
-  zeit: "Schnellste zuerst",
-} as const;
+/** Filter hinter dem Regler-Knopf neben der Suche */
+const MORE_KEYS = ["protein", "zeit", "kosten", "bewertung"];
 
-/** Phase 15: Sortierung in der Bar */
-const BAR_SORT_LABELS = {
-  neu: "Zuletzt geändert",
-  name: "Name A–Z",
-  stark: "Stärkste zuerst",
-  leicht: "Leichteste zuerst",
-  kcal: "Wenigste kcal",
-} as const;
+/** Suchparameter in der URL ändern (gemeinsam für Filter und Sortierung). */
+export function useUrlParams() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const [pending, startTransition] = useTransition();
 
-const MORE_KEYS = ["protein", "zeit", "kosten", "bewertung", "lange", "methode"];
+  function update(changes: Record<string, string | null>) {
+    const next = new URLSearchParams(params.toString());
+    for (const [key, value] of Object.entries(changes)) {
+      if (value == null || value === "") next.delete(key);
+      else next.set(key, value);
+    }
+    const qs = next.toString();
+    startTransition(() => router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false }));
+  }
 
-/** Suche, Filter und Sortierung. Alles steht in der URL, damit Zurück-Knopf und Teilen funktionieren. */
+  return { params, update, pending };
+}
+
+/**
+ * Suche, Filter-Chips (seitlich wischbar) und weitere Filter hinter dem Regler. Alles steht in der URL, damit
+ * Zurück-Knopf und Teilen funktionieren. Sortierung und Ansicht sitzen über der Liste (RecipeList).
+ */
 export function RecipeFilters({
   ownTags,
   tagGroupLabel = "Eigene Tags",
@@ -50,21 +57,11 @@ export function RecipeFilters({
   const bar = mode === "bar";
   const router = useRouter();
   const pathname = usePathname();
-  const params = useSearchParams();
-  const [pending, startTransition] = useTransition();
+  const { params, update, pending } = useUrlParams();
+  const [, startTransition] = useTransition();
   const [query, setQuery] = useState(params.get("q") ?? "");
   const [showMore, setShowMore] = useState(MORE_KEYS.some((k) => params.get(k)));
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function update(changes: Record<string, string | null>) {
-    const next = new URLSearchParams(params.toString());
-    for (const [key, value] of Object.entries(changes)) {
-      if (value == null || value === "") next.delete(key);
-      else next.set(key, value);
-    }
-    const qs = next.toString();
-    startTransition(() => router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false }));
-  }
 
   useEffect(() => () => {
     if (debounce.current) clearTimeout(debounce.current);
@@ -77,38 +74,96 @@ export function RecipeFilters({
   }
 
   const favorites = params.get("favoriten") === "1";
-  const hasFilters = ["q", "kategorie", "basis", "tag", "favoriten", ...MORE_KEYS].some((k) => params.get(k));
   const longAgo = params.get("lange") === "1";
+  const hasFilters = ["q", "kategorie", "basis", "tag", "favoriten", "methode", "lange", ...MORE_KEYS].some((k) => params.get(k));
+  const moreActive = MORE_KEYS.filter((k) => params.get(k)).length;
+  const hasMorePanel = !bar || ownBook;
+
+  const category = params.get("kategorie") ?? "";
+  const base = params.get("basis") ?? "";
+  const method = params.get("methode") ?? "";
+  const tag = params.get("tag") ?? "";
+  const tagLabel = tag ? (AUTO_TAG_LABELS[tag as keyof typeof AUTO_TAG_LABELS] ?? tag) : "Tag";
+
+  function reset() {
+    setQuery("");
+    const sort = params.get("sortierung");
+    startTransition(() => router.replace(sort ? `${pathname}?sortierung=${sort}` : pathname, { scroll: false }));
+  }
 
   return (
-    <div className={cn("mb-6 space-y-3", pending && "opacity-80")} role="search">
-      <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <Input
-          type="search"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          placeholder={searchPlaceholder}
-          aria-label={bar ? "Cocktails durchsuchen" : "Rezepte durchsuchen"}
-          className="pl-9"
-        />
+    <div className={cn("mb-4 space-y-3", pending && "opacity-80")} role="search">
+      <div className="flex gap-2">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <Input
+            type="search"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder={searchPlaceholder}
+            aria-label={bar ? "Cocktails durchsuchen" : "Rezepte durchsuchen"}
+            className="h-12 rounded-full pl-10"
+          />
+        </div>
+        {hasMorePanel ? (
+          <button
+            type="button"
+            aria-expanded={showMore}
+            aria-label={moreActive ? `Weitere Filter (${moreActive} aktiv)` : "Weitere Filter"}
+            onClick={() => setShowMore((v) => !v)}
+            className={cn(chipClass(showMore || moreActive > 0), "size-12 justify-center px-0 [&_svg]:size-5")}
+          >
+            <SlidersHorizontal aria-hidden />
+            {moreActive ? (
+              <span className="absolute -top-0.5 -right-0.5 grid size-5 place-items-center rounded-full bg-primary text-[0.65rem] font-semibold text-primary-foreground">
+                {moreActive}
+              </span>
+            ) : null}
+          </button>
+        ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto_auto]">
+      {/* Am Handy seitlich wischbar (innerhalb der Seitenränder, bündig mit der Suche), ab Tablet umbrechend */}
+      <div
+        className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] md:flex-wrap md:overflow-visible [&::-webkit-scrollbar]:hidden"
+        aria-label="Filter"
+        role="group"
+      >
+        <button type="button" aria-pressed={favorites} onClick={() => update({ favoriten: favorites ? null : "1" })} className={chipClass(favorites)}>
+          <Heart className={cn(favorites && "fill-current")} aria-hidden />
+          Favoriten
+        </button>
+
         {bar ? (
-          <NativeSelect aria-label="Basisspirituose" value={params.get("basis") ?? ""} onChange={(e) => update({ basis: e.target.value })}>
-            <option value="">Alle Spirituosen</option>
-            {baseSpirits.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </NativeSelect>
+          <>
+            <ChipSelect label="Basisspirituose" value={base} display={base || "Spirituose"} onChange={(v) => update({ basis: v })}>
+              <option value="">Alle Spirituosen</option>
+              {baseSpirits.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </ChipSelect>
+            <ChipSelect
+              label="Methode"
+              value={method}
+              display={method ? (METHOD_LABELS[method as keyof typeof METHOD_LABELS] ?? "Methode") : "Methode"}
+              onChange={(v) => update({ methode: v })}
+            >
+              <option value="">Alle Methoden</option>
+              {Object.entries(METHOD_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </ChipSelect>
+          </>
         ) : (
-          <NativeSelect
-            aria-label="Kategorie"
-            value={params.get("kategorie") ?? ""}
-            onChange={(e) => update({ kategorie: e.target.value })}
+          <ChipSelect
+            label="Kategorie"
+            value={category}
+            display={category ? (CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] ?? "Kategorie") : "Kategorie"}
+            onChange={(v) => update({ kategorie: v })}
           >
             <option value="">Alle Kategorien</option>
             {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
@@ -116,96 +171,76 @@ export function RecipeFilters({
                 {label}
               </option>
             ))}
-          </NativeSelect>
+          </ChipSelect>
         )}
 
-        <NativeSelect aria-label="Tag" value={params.get("tag") ?? ""} onChange={(e) => update({ tag: e.target.value })}>
-          <option value="">Alle Tags</option>
-          {bar ? null : (
-            <optgroup label="Automatisch">
-              {Object.entries(AUTO_TAG_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {ownTags.length > 0 ? (
-            <optgroup label={tagGroupLabel}>
-              {ownTags.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
-        </NativeSelect>
-
-        <NativeSelect
-          aria-label="Sortierung"
-          value={params.get("sortierung") ?? "neu"}
-          onChange={(e) => update({ sortierung: e.target.value === "neu" ? null : e.target.value })}
-          className="col-span-2 sm:col-span-1"
-        >
-          {Object.entries(bar ? BAR_SORT_LABELS : SORT_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </NativeSelect>
-
-        <Button
-          type="button"
-          variant={favorites ? "default" : "outline"}
-          aria-pressed={favorites}
-          onClick={() => update({ favoriten: favorites ? null : "1" })}
-        >
-          <Heart className={cn(favorites && "fill-current")} aria-hidden />
-          Favoriten
-        </Button>
-        <Button type="button" variant="outline" aria-expanded={showMore} onClick={() => setShowMore((v) => !v)}>
-          <SlidersHorizontal aria-hidden />
-          Mehr
-        </Button>
-      </div>
-
-      {showMore ? (
-        <div className="grid grid-cols-2 gap-3 rounded-2xl border bg-card p-3 sm:max-w-xl sm:grid-cols-4">
-          {bar ? (
-            <div className="grid gap-1.5">
-              <Label htmlFor="filter-methode">Methode</Label>
-              <NativeSelect id="filter-methode" value={params.get("methode") ?? ""} onChange={(e) => update({ methode: e.target.value || null })}>
-                <option value="">alle</option>
-                {Object.entries(METHOD_LABELS).map(([value, label]) => (
+        {!bar || ownTags.length > 0 ? (
+          <ChipSelect label="Tag" value={tag} display={tagLabel} onChange={(v) => update({ tag: v })}>
+            <option value="">Alle Tags</option>
+            {bar ? null : (
+              <optgroup label="Automatisch">
+                {Object.entries(AUTO_TAG_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
                 ))}
-              </NativeSelect>
-            </div>
-          ) : null}
-          <div className={cn("grid gap-1.5", bar && "hidden")}>
-            <Label htmlFor="filter-protein">Protein ab (g/Portion)</Label>
-            <Input
-              id="filter-protein"
-              inputMode="decimal"
-              defaultValue={params.get("protein") ?? ""}
-              placeholder="z. B. 30"
-              onBlur={(e) => update({ protein: e.target.value.trim() || null })}
-              onKeyDown={(e) => e.key === "Enter" && update({ protein: e.currentTarget.value.trim() || null })}
-            />
-          </div>
-          <div className={cn("grid gap-1.5", bar && "hidden")}>
-            <Label htmlFor="filter-zeit">Höchstens (Minuten)</Label>
-            <Input
-              id="filter-zeit"
-              inputMode="numeric"
-              defaultValue={params.get("zeit") ?? ""}
-              placeholder="z. B. 30"
-              onBlur={(e) => update({ zeit: e.target.value.trim() || null })}
-              onKeyDown={(e) => e.key === "Enter" && update({ zeit: e.currentTarget.value.trim() || null })}
-            />
-          </div>
+              </optgroup>
+            )}
+            {ownTags.length > 0 ? (
+              <optgroup label={tagGroupLabel}>
+                {ownTags.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+          </ChipSelect>
+        ) : null}
+
+        {ownBook && !bar ? (
+          <button type="button" aria-pressed={longAgo} onClick={() => update({ lange: longAgo ? null : "1" })} className={chipClass(longAgo)}>
+            <Clock aria-hidden />
+            Lange nicht gekocht
+          </button>
+        ) : null}
+
+        {hasFilters ? (
+          <button type="button" onClick={reset} className={cn(chipClass(false), "border-dashed text-muted-foreground")}>
+            <X aria-hidden />
+            Zurücksetzen
+          </button>
+        ) : null}
+      </div>
+
+      {showMore && hasMorePanel ? (
+        <div className="grid grid-cols-2 gap-3 rounded-3xl border bg-card p-4 sm:max-w-xl sm:grid-cols-4">
+          {bar ? null : (
+            <>
+              <div className="grid gap-1.5">
+                <Label htmlFor="filter-protein">Protein ab (g/Portion)</Label>
+                <Input
+                  id="filter-protein"
+                  inputMode="decimal"
+                  defaultValue={params.get("protein") ?? ""}
+                  placeholder="z. B. 30"
+                  onBlur={(e) => update({ protein: e.target.value.trim() || null })}
+                  onKeyDown={(e) => e.key === "Enter" && update({ protein: e.currentTarget.value.trim() || null })}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="filter-zeit">Höchstens (Minuten)</Label>
+                <Input
+                  id="filter-zeit"
+                  inputMode="numeric"
+                  defaultValue={params.get("zeit") ?? ""}
+                  placeholder="z. B. 30"
+                  onBlur={(e) => update({ zeit: e.target.value.trim() || null })}
+                  onKeyDown={(e) => e.key === "Enter" && update({ zeit: e.currentTarget.value.trim() || null })}
+                />
+              </div>
+            </>
+          )}
           {ownBook ? (
             <>
               <div className="grid gap-1.5">
@@ -234,34 +269,9 @@ export function RecipeFilters({
                   ))}
                 </NativeSelect>
               </div>
-              <Button
-                type="button"
-                variant={longAgo ? "default" : "outline"}
-                aria-pressed={longAgo}
-                className={cn("col-span-2 sm:col-span-4 sm:justify-self-start", bar && "hidden")}
-                onClick={() => update({ lange: longAgo ? null : "1" })}
-              >
-                <Clock aria-hidden />
-                Lange nicht gekocht
-              </Button>
             </>
           ) : null}
         </div>
-      ) : null}
-
-      {hasFilters ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setQuery("");
-            startTransition(() => router.replace(pathname, { scroll: false }));
-          }}
-        >
-          <X aria-hidden />
-          Filter zurücksetzen
-        </Button>
       ) : null}
     </div>
   );

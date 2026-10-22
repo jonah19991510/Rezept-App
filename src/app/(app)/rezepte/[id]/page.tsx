@@ -15,12 +15,13 @@ import { VersionHistory } from "@/components/recipes/version-history";
 import { requireUser } from "@/lib/auth";
 import { baseSpirit, dilutionNote } from "@/lib/domain/cocktail";
 import { authorName } from "@/lib/domain/community";
+import { defaultPriceUnit, unpricedIngredients } from "@/lib/domain/costs";
 import { autoTagsFor } from "@/lib/domain/recipe-filter";
 import { snapshotMacros } from "@/lib/domain/versions";
 import { todayInBerlin } from "@/lib/domain/week";
 import { formatMinutes } from "@/lib/format-quantity";
 import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
-import { getCookLogs, getIngredientNutrition, getRecipeCost, getRecipeVersions } from "@/lib/server/kitchen-log";
+import { getCookLogs, getIngredientNutrition, getPrices, getRecipeCost, getRecipeVersions } from "@/lib/server/kitchen-log";
 import { linkSideDishes } from "@/lib/domain/side-dishes";
 import { getOwnRecipeTitles, getRecipeDetail } from "@/lib/server/recipes";
 import { getSiteUrl } from "@/lib/site-url";
@@ -57,11 +58,34 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
       ? CATEGORY_LABELS[recipe.category]
       : null;
   // Phase 12: Kosten nach eigenen Preisen, eigenes Koch-Log, Versionen (nur Owner)
-  const [cost, logs, versions] = await Promise.all([
+  const [cost, logs, versions, prices] = await Promise.all([
     getRecipeCost(recipe.id),
     getCookLogs(user.id, recipe.id),
     detail.isOwner ? getRecipeVersions(recipe.id) : Promise.resolve([]),
+    getPrices(user.id),
   ]);
+  // „Preise ergänzen“: welche Zutaten noch nicht in die Kosten eingehen, mit Vorlage fürs Preisformular
+  const priceById = new Map(prices.map((p) => [p.ingredientId, p]));
+  const missingPrices = unpricedIngredients(
+    ingredients.map((l) => ({ ingredientId: l.ingredient_id, name: l.ingredient.name, grams: l.grams, isOptional: l.is_optional })),
+    new Map(prices.map((p) => [p.ingredientId, p.perGram])),
+  ).map((m) => {
+    const p = priceById.get(m.ingredientId);
+    const i = ingredients.find((l) => l.ingredient_id === m.ingredientId)!.ingredient;
+    return {
+      ...m,
+      draft: {
+        id: p?.id,
+        ingredientId: m.ingredientId,
+        name: m.name,
+        info: { density_g_per_ml: i.density_g_per_ml, piece_weight_g: i.piece_weight_g },
+        price: p ? p.price.toFixed(2).replace(".", ",") : "",
+        amount: p ? String(p.packageAmount).replace(".", ",") : "",
+        unit: p?.packageUnit ?? defaultPriceUnit(i.food_group, i.density_g_per_ml),
+        store: p?.store ?? "",
+      },
+    };
+  });
   const versionNutrition = await getIngredientNutrition([
     ...new Set(versions.flatMap((v) => v.snapshot.ingredients.map((i) => i.ingredient_id))),
   ]);
@@ -233,7 +257,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
         }
       />
 
-      <RecipeCost cost={cost} unit={isCocktail ? "Drink" : "Portion"} />
+      <RecipeCost cost={cost} missingPrices={missingPrices} unit={isCocktail ? "Drink" : "Portion"} />
 
       <CookLogSection recipeId={recipe.id} logs={logs} today={todayInBerlin()} servings={recipe.servings} kind={recipe.recipe_type} />
 

@@ -229,7 +229,23 @@ export async function setFavoriteAction(recipeId: string, favorite: boolean): Pr
     : await supabase.from("favorites").delete().eq("user_id", user.id).eq("recipe_id", recipeId);
 
   revalidatePath("/rezepte");
+  revalidatePath("/rezepte/bar");
+  revalidatePath("/entdecken");
+  revalidatePath("/entdecken/bar");
   revalidatePath(`/rezepte/${recipeId}`);
+  return { ok: !error };
+}
+
+/** Rezeptliste nebeneinander oder untereinander anzeigen (gilt für Küche, Bar und Entdecken). */
+export async function setRecipeViewAction(view: "grid" | "list"): Promise<{ ok: boolean }> {
+  const user = await requireUser();
+  if (view !== "grid" && view !== "list") return { ok: false };
+  const supabase = await createClient();
+  const { error } = await supabase.from("user_settings").upsert({ user_id: user.id, recipe_view: view }, { onConflict: "user_id" });
+  revalidatePath("/rezepte");
+  revalidatePath("/rezepte/bar");
+  revalidatePath("/entdecken");
+  revalidatePath("/entdecken/bar");
   return { ok: !error };
 }
 

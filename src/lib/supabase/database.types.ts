@@ -895,6 +895,7 @@ export type Database = {
         Row: {
           hide_staples: boolean
           long_not_cooked_weeks: number
+          recipe_view: string
           shopping_sort: string
           training_weekdays: number[]
           updated_at: string
@@ -903,6 +904,7 @@ export type Database = {
         Insert: {
           hide_staples?: boolean
           long_not_cooked_weeks?: number
+          recipe_view?: string
           shopping_sort?: string
           training_weekdays?: number[]
           updated_at?: string
@@ -911,6 +913,7 @@ export type Database = {
         Update: {
           hide_staples?: boolean
           long_not_cooked_weeks?: number
+          recipe_view?: string
           shopping_sort?: string
           training_weekdays?: number[]
           updated_at?: string

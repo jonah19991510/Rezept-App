@@ -1017,6 +1017,44 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
   Aktivität. Optional `CRON_SECRET` in Vercel setzen: dann nur noch mit `Authorization: Bearer …` (schickt Vercel
   selbst mit), sonst 401.
 
+## Wünsche vom 22.10.2026: Rezeptliste im neuen Design, Vorrat zum Abhaken, fehlende Preise
+
+**Noch nicht live** (lokal gebaut und geprüft).
+
+- **Rezeptliste (Küche, Bar, Entdecken) nach dem Entwurf „Rezeptbuch Bar-Redesign“:** Umschalter Küche | Bar über
+  die ganze Breite (aktiv in Orange, gilt überall, wo er vorkommt). Darunter in Küche und Bar ein Hinweis „Was kann
+  ich kochen/mixen?“ mit der Zahl der Rezepte, die der Vorrat ganz abdeckt (`countReadyRecipes`, wie „Was kann ich
+  kochen?“: Grundzutaten und optionale Zutaten fehlen nie). Suche als Pille mit Regler-Knopf daneben (Protein, Zeit,
+  Kosten, Bewertung). Filter als Chips in einer Reihe, am Handy seitlich wischbar und innerhalb der Seitenränder (bündig mit der Suche; passt eine Reihe nicht, wird der letzte Chip am Rand abgeschnitten statt überzustehen), ab Tablet umbrechend: Favoriten,
+  Kategorie bzw. Spirituose und Methode, Tag, „Lange nicht gekocht“, Zurücksetzen. Die Auswahl-Chips öffnen die
+  eingebaute Auswahlliste des Handys (`chip-select.tsx`): Die native Auswahl liegt unsichtbar unter dem Chip, nimmt aber
+  keine Berührungen an (`pointer-events: none`), der Chip ist ein Knopf und öffnet sie per `showPicker()` bzw.
+  `focus()`. Zuerst lag die Auswahl berührbar über dem Chip und schluckte am Handy das Wischen (in der Bar ließ sich
+  die Reihe nicht bewegen); ein eigener Auswahl-Dialog als Ersatz gefiel dem Nutzer nicht (wirkte weniger modern).
+  Über der Liste Anzahl, Sortierung und der Umschalter
+  „Nebeneinander | Untereinander“.
+- **Ansicht je Nutzer:** Spalte `user_settings.recipe_view` (`grid`/`list`, Standard `grid`), gilt für Küche, Bar und
+  Entdecken. Wechselt sofort, gespeichert per `setRecipeViewAction`. Migration `…20261022090000_recipe_view` (in der
+  DB, additiv).
+- **Karten:** Raster mit Foto bzw. Platzhalter (Kochmütze/Glas) oben, Titel, Glas · Methode bzw. Kategorie · Zeit,
+  Chip „≈ 32 % vol“ bzw. kcal. Liste mit kleinem Bild links und allen Angaben wie bisher. Das Herz liegt auf der
+  Karte und setzt Favoriten, ohne das Rezept zu öffnen (Titel-Link deckt die Karte ab, Herz darüber).
+- **Neues Rezept/Neuer Cocktail** als schwebender Knopf unten rechts (am Handy über der Navigation).
+- **Importieren** ist von der Rezeptliste nach Einstellungen → Deine Daten gewandert („Rezepte importieren“); die
+  Importseite führt zurück zu den Einstellungen.
+- **Zutaten:** Umschalter „A–Z | Nach Kategorie“ (Überschriften wie Fisch, Milchprodukte in Supermarkt-Reihenfolge)
+  und Filter auf eine Kategorie.
+- **Vorrat zum Abhaken:** Alle Zutaten aus den eigenen Rezepten (und selbst angelegte) stehen im passenden Bereich
+  (Küche/Bar) bereit, Grundzutaten wie Salz nicht. Antippen markiert „vorhanden“ (Eintrag ohne Menge) bzw. „fehlt“
+  (Eintrag gelöscht; hatte er Menge oder Ablaufdatum, bietet ein Hinweis „Rückgängig“). Ansicht Alle | Vorhanden |
+  Fehlt, Suche, Stift für Menge und Ablaufdatum. „Andere Zutat“ für alles, was in keinem Rezept steckt.
+- **Preise ergänzen** im Rezept öffnet jetzt einen Dialog mit genau den Zutaten, die nicht in die Kosten eingehen:
+  ohne Preis, Preis pro Stück ohne Stückgewicht, oder Menge ohne Gramm (dort hilft kein Preis, nur ein Hinweis).
+  Antippen öffnet das Preisformular direkt im Dialog (`unpricedIngredients`, Tests).
+- Geprüft: 311 Tests, Typecheck, Lint, Build grün. Layout bei 375 px und 1280 px über eine temporäre Vorschauseite mit
+  Beispieldaten (ohne Login, danach gelöscht): kein seitliches Scrollen, Chips wischbar, Herz trifft den Knopf statt
+  des Links. Mit echten Daten nicht im Browser geprüft (Claude kann sich nicht anmelden).
+
 ## Offene Punkte
 
 - Meal Prep: „Woche kopieren“ übernimmt Kochtag und Reste als normale Einträge (ohne Batch), d. h. in der Zielwoche

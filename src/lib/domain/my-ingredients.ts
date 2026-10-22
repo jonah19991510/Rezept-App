@@ -1,5 +1,7 @@
 import type { Enums } from "@/lib/supabase/database.types";
+import { FOOD_GROUP_LABELS } from "@/lib/labels";
 import type { IngredientOption } from "./ingredient-option";
+import { DEPARTMENT_ORDER } from "./shopping";
 
 // Seite „Zutaten“: alle Zutaten aus den eigenen Rezepten und alle selbst angelegten, mit eigenem Preis.
 // Bearbeiten (Nährwerte, Dichte, Stückgewicht …) geht nur bei selbst angelegten Zutaten (Quelle „user“, RLS);
@@ -122,4 +124,18 @@ export function defaultDiet(group: Enums<"food_group">): Enums<"ingredient_diet"
   if (group === "meat" || group === "fish" || group === "other") return "none";
   if (group === "dairy" || group === "egg") return "vegetarian";
   return "vegan";
+}
+
+export type FoodGroupSection<T> = { group: Enums<"food_group">; label: string; items: T[] };
+
+/** Nach Kategorie (Lebensmittelgruppe) gruppieren, Reihenfolge wie im Supermarkt, innerhalb wie übergeben. */
+export function groupByFoodGroup<T>(items: T[], groupOf: (item: T) => Enums<"food_group">): FoodGroupSection<T>[] {
+  const sections = new Map<Enums<"food_group">, T[]>();
+  for (const item of items) {
+    const group = groupOf(item);
+    sections.set(group, [...(sections.get(group) ?? []), item]);
+  }
+  return [...sections]
+    .sort((a, b) => DEPARTMENT_ORDER.indexOf(a[0]) - DEPARTMENT_ORDER.indexOf(b[0]))
+    .map(([group, list]) => ({ group, label: FOOD_GROUP_LABELS[group], items: list }));
 }

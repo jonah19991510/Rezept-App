@@ -25,11 +25,11 @@ export default async function ImportPage({ searchParams }: PageProps<"/rezepte/i
   return (
     <div className="mx-auto max-w-3xl">
       <Link
-        href="/rezepte"
+        href="/einstellungen#daten"
         className="mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" aria-hidden />
-        Alle Rezepte
+        Einstellungen
       </Link>
       <PageHeader
         title="Rezepte importieren"

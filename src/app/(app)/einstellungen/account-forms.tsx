@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
-import { Download, FileText, FileUp, Loader2, Trash2 } from "lucide-react";
+import { Download, FileDown, FileText, FileUp, Loader2, Trash2 } from "lucide-react";
 import { FormField } from "@/components/forms/form-field";
 import { FormMessage } from "@/components/forms/form-message";
 import { useValidatedAction } from "@/components/forms/use-validated-action";
@@ -126,6 +127,11 @@ export function DataSection() {
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap gap-2">
+        {/* Rezepte von Webseiten oder aus Markdown/Notion (früher als Knopf über der Rezeptliste) */}
+        <Link href="/rezepte/import" className={buttonVariants({ variant: "outline" })}>
+          <FileDown aria-hidden />
+          Rezepte importieren
+        </Link>
         {/* Normale Links: Der Browser lädt die Datei herunter */}
         <a href="/einstellungen/meine-daten" download className={buttonVariants({ variant: "outline" })}>
           <Download aria-hidden />

@@ -1,5 +1,5 @@
 import "server-only";
-import { isPantryUnit, neededInUnit, type PantryEntry } from "@/lib/domain/pantry";
+import { cookability, isPantryUnit, neededInUnit, type PantryEntry } from "@/lib/domain/pantry";
 import type { FoodGroup } from "@/lib/domain/shopping";
 import type { Unit } from "@/lib/domain/units";
 import { createClient } from "@/lib/supabase/server";
@@ -27,6 +27,34 @@ export async function getPantry(userId: string): Promise<PantryRow[]> {
       isStaple: row.ingredients.is_staple,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
+}
+
+/** Banner über der Rezeptliste: wie viele eigene Rezepte bzw. Cocktails der Vorrat sofort abdeckt. */
+export async function countReadyRecipes(userId: string, type: "dish" | "cocktail"): Promise<number> {
+  const supabase = await createClient();
+  const [pantry, recipes] = await Promise.all([
+    getPantry(userId),
+    supabase
+      .from("recipes")
+      .select(
+        "id, title, recipe_ingredients!recipe_ingredients_recipe_id_fkey(ingredient_id, is_optional, ingredients!recipe_ingredients_ingredient_id_fkey(name, is_staple))",
+      )
+      .eq("owner_id", userId)
+      .eq("recipe_type", type),
+  ]);
+  if (recipes.error || pantry.length === 0) return 0;
+  const options = cookability(
+    recipes.data.map((r) => ({
+      id: r.id,
+      title: r.title,
+      lines: r.recipe_ingredients
+        .filter((l) => !l.is_optional)
+        .map((l) => ({ ingredientId: l.ingredient_id, name: l.ingredients.name, isStaple: l.ingredients.is_staple })),
+    })),
+    new Set(pantry.map((p) => p.ingredientId)),
+    new Set(),
+  );
+  return options.filter((o) => o.status === "all").length;
 }
 
 export type RecipeLineForPantry = {

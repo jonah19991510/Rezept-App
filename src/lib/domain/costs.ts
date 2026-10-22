@@ -83,3 +83,31 @@ export function missingPricesText(priced: number, count: number): string | null 
   if (missing <= 0) return null;
   return `${missing} von ${count} ${count === 1 ? "Zutat" : "Zutaten"} ohne Preis`;
 }
+
+export type UnpricedReason = "price" | "convert" | "grams";
+
+/**
+ * „Preise ergänzen“: Zutaten eines Rezepts, die nicht in die Kosten eingehen, je Zutat einmal, in Rezeptreihenfolge.
+ * „price“: kein eigener Preis, „convert“: Preis lässt sich nicht in Gramm umrechnen (Stück ohne Stückgewicht),
+ * „grams“: die Menge im Rezept hat keine Gramm. Optionale Zutaten zählen nicht (wie in der View recipe_costs).
+ */
+export function unpricedIngredients(
+  lines: { ingredientId: string; name: string; grams: number | null; isOptional: boolean }[],
+  perGram: Map<string, number | null>,
+): { ingredientId: string; name: string; reason: UnpricedReason }[] {
+  const result = new Map<string, { ingredientId: string; name: string; reason: UnpricedReason }>();
+  for (const line of lines) {
+    if (line.isOptional || result.has(line.ingredientId)) continue;
+    const p = perGram.get(line.ingredientId);
+    const reason: UnpricedReason | null = p === undefined ? "price" : p === null ? "convert" : line.grams == null ? "grams" : null;
+    if (reason) result.set(line.ingredientId, { ingredientId: line.ingredientId, name: line.name, reason });
+  }
+  return [...result.values()];
+}
+
+/** Vorschlag für die Packungseinheit: Eier pro Stück, Getränke und Milch in ml, sonst Gramm. */
+export function defaultPriceUnit(group: string, density: number | null): "g" | "ml" | "piece" {
+  if (group === "egg") return "piece";
+  if (group === "spirits" || group === "liqueurs_wine" || group === "syrups_juices") return "ml";
+  return group === "dairy" && density ? "ml" : "g";
+}

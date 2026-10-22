@@ -3,25 +3,29 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Carrot, Pencil, Search, SearchX, Trash2 } from "lucide-react";
+import { ArrowDownAZ, Carrot, LayoutList, Pencil, Search, SearchX, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteIngredientAction } from "@/app/(app)/zutaten/actions";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PriceForm, type PriceDraft } from "@/components/prices/price-manager";
+import { ChipSelect } from "@/components/recipes/chip-select";
 import { IngredientForm } from "@/components/recipes/editor/ingredient-form";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { pricePer100, type IngredientWeights } from "@/lib/domain/costs";
+import { defaultPriceUnit, pricePer100, type IngredientWeights } from "@/lib/domain/costs";
 import {
   filterMyIngredients,
+  groupByFoodGroup,
   ingredientOrigin,
   INGREDIENT_VIEWS,
   type IngredientView,
   type MyIngredient,
 } from "@/lib/domain/my-ingredients";
 import { formatEuro, formatNumber } from "@/lib/format";
+import { DEPARTMENT_ORDER } from "@/lib/domain/shopping";
 import { DIET_LABELS, FOOD_GROUP_LABELS } from "@/lib/labels";
+import type { Enums } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
 
 type Tab = "preis" | "angaben" | "rezepte";
@@ -48,7 +52,7 @@ function priceDraft(item: MyIngredient): PriceDraft {
     info: weights(item),
     price: p ? String(p.price.toFixed(2)).replace(".", ",") : "",
     amount: p ? String(p.packageAmount).replace(".", ",") : "",
-    unit: p?.packageUnit ?? (i.food_group === "egg" ? "piece" : ["spirits", "liqueurs_wine", "syrups_juices"].includes(i.food_group) ? "ml" : "g"),
+    unit: p?.packageUnit ?? defaultPriceUnit(i.food_group, i.density_g_per_ml),
     store: p?.store ?? "",
   };
 }
@@ -62,8 +66,12 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
   const [view, setView] = useState<IngredientView>("alle");
   const [openId, setOpenId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("preis");
+  const [sort, setSort] = useState<"name" | "kategorie">("name");
+  const [group, setGroup] = useState<Enums<"food_group"> | "">("");
   const open = items.find((i) => i.ingredient.id === openId) ?? null;
-  const shown = filterMyIngredients(items, { q: query, view });
+  const shown = filterMyIngredients(items, { q: query, view }).filter((i) => !group || i.ingredient.food_group === group);
+  // nur Kategorien, die in den eigenen Zutaten vorkommen
+  const groups = DEPARTMENT_ORDER.filter((g) => items.some((i) => i.ingredient.food_group === g));
 
   function show(item: MyIngredient) {
     setOpenId(item.ingredient.id);
@@ -120,38 +128,67 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
         })}
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex rounded-full border bg-card p-0.5" role="group" aria-label="Sortierung">
+          {(
+            [
+              ["name", "A–Z", ArrowDownAZ],
+              ["kategorie", "Nach Kategorie", LayoutList],
+            ] as const
+          ).map(([key, label, Icon]) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={sort === key}
+              onClick={() => setSort(key)}
+              className={cn(
+                "flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted-foreground transition hover:text-foreground",
+                sort === key && "bg-primary/15 text-primary hover:text-primary",
+              )}
+            >
+              <Icon className="size-4" aria-hidden />
+              {label}
+            </button>
+          ))}
+        </div>
+        <ChipSelect
+          label="Kategorie"
+          value={group}
+          display={group ? FOOD_GROUP_LABELS[group] : "Alle Kategorien"}
+          onChange={(v) => setGroup(v as Enums<"food_group"> | "")}
+        >
+          <option value="">Alle Kategorien</option>
+          {groups.map((g) => (
+            <option key={g} value={g}>
+              {FOOD_GROUP_LABELS[g]}
+            </option>
+          ))}
+        </ChipSelect>
+      </div>
+
       {shown.length === 0 ? (
         <EmptyState icon={SearchX} title="Nichts gefunden">
-          Keine Zutat passt zu Suche und Ansicht.
+          Keine Zutat passt zu Suche, Ansicht und Kategorie.
         </EmptyState>
+      ) : sort === "kategorie" ? (
+        groupByFoodGroup(shown, (i) => i.ingredient.food_group).map((section) => (
+          <section key={section.group} aria-label={section.label}>
+            <h2 className="mb-2 flex items-baseline gap-2 font-sans text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+              {section.label}
+              <span className="text-xs font-normal tabular-nums normal-case">{section.items.length}</span>
+            </h2>
+            <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
+              {section.items.map((item) => (
+                <IngredientRowButton key={item.ingredient.id} item={item} onOpen={show} />
+              ))}
+            </ul>
+          </section>
+        ))
       ) : (
         <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
-          {shown.map((item) => {
-            const price = priceText(item);
-            return (
-              <li key={item.ingredient.id}>
-                <button
-                  type="button"
-                  onClick={() => show(item)}
-                  className="flex min-h-14 w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/50"
-                >
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-1.5 font-medium">
-                      <span className="truncate">{item.ingredient.name}</span>
-                      {item.isOwn ? <Pencil className="size-3.5 shrink-0 text-muted-foreground" aria-label="bearbeitbar" /> : null}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {FOOD_GROUP_LABELS[item.ingredient.food_group]} · {ingredientOrigin(item)}
-                      {item.recipes.length > 0 ? ` · ${recipeWord(item.recipes.length)}` : ""}
-                    </span>
-                  </span>
-                  <span className={cn("shrink-0 text-right text-sm tabular-nums", !price && "text-muted-foreground")}>
-                    {price ?? "kein Preis"}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
+          {shown.map((item) => (
+            <IngredientRowButton key={item.ingredient.id} item={item} onOpen={show} />
+          ))}
         </ul>
       )}
 
@@ -249,6 +286,34 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** Eine Zeile der Zutatenliste: Name, Kategorie, Herkunft, Preis. */
+function IngredientRowButton({ item, onOpen }: { item: MyIngredient; onOpen: (item: MyIngredient) => void }) {
+  const price = priceText(item);
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onOpen(item)}
+        className="flex min-h-14 w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/50"
+      >
+        <span className="min-w-0">
+          <span className="flex items-center gap-1.5 font-medium">
+            <span className="truncate">{item.ingredient.name}</span>
+            {item.isOwn ? <Pencil className="size-3.5 shrink-0 text-muted-foreground" aria-label="bearbeitbar" /> : null}
+          </span>
+          <span className="block truncate text-xs text-muted-foreground">
+            {FOOD_GROUP_LABELS[item.ingredient.food_group]} · {ingredientOrigin(item)}
+            {item.recipes.length > 0 ? ` · ${recipeWord(item.recipes.length)}` : ""}
+          </span>
+        </span>
+        <span className={cn("shrink-0 text-right text-sm tabular-nums", !price && "text-muted-foreground")}>
+          {price ?? "kein Preis"}
+        </span>
+      </button>
+    </li>
   );
 }
 

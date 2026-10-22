@@ -27,6 +27,31 @@ export function defaultLocation(group: FoodGroup): PantryLocation {
   return group === "spirits" || group === "liqueurs_wine" || group === "syrups_juices" ? "bar" : "kitchen";
 }
 
+/** Zutat, die im Vorrat zum Abhaken angeboten wird (aus den eigenen Rezepten oder selbst angelegt). */
+export type PantryCandidate = { ingredientId: string; name: string; foodGroup: FoodGroup; isStaple: boolean };
+
+/**
+ * Abhakliste eines Bereichs: alles, was dort im Vorrat steht, plus die eigenen Zutaten, die in diesen Bereich
+ * gehören und nirgends vorhanden sind (ohne Grundzutaten wie Salz, die bei „Was kann ich kochen?“ nie fehlen).
+ * Alphabetisch.
+ */
+export function pantryChecklist<E extends PantryCandidate & { location: PantryLocation }>(
+  candidates: PantryCandidate[],
+  entries: E[],
+  area: PantryLocation,
+): { item: PantryCandidate; entry: E | null }[] {
+  const present = new Set(entries.map((e) => e.ingredientId));
+  const rows: { item: PantryCandidate; entry: E | null }[] = entries
+    .filter((e) => e.location === area)
+    .map((e) => ({ item: e, entry: e }));
+  for (const c of candidates) {
+    if (present.has(c.ingredientId) || c.isStaple || defaultLocation(c.foodGroup) !== area) continue;
+    present.add(c.ingredientId);
+    rows.push({ item: c, entry: null });
+  }
+  return rows.sort((a, b) => a.item.name.localeCompare(b.item.name, "de"));
+}
+
 export const EXPIRY_SOON_DAYS = 3;
 
 /** „abgelaufen“, „bald“ (in höchstens 3 Tagen) oder „ok“; ohne Datum null. */

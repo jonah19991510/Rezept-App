@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { PRICE_UNIT_LABELS, PRICE_UNITS, pricePer100, type IngredientWeights, type PriceUnit } from "@/lib/domain/costs";
+import { defaultPriceUnit, PRICE_UNIT_LABELS, PRICE_UNITS, pricePer100, type IngredientWeights, type PriceUnit } from "@/lib/domain/costs";
 import { formatDecimalInput, parseDecimal } from "@/lib/domain/decimal";
 import { formatDate, formatEuro, formatNumber } from "@/lib/format";
 import type { PriceRow } from "@/lib/server/kitchen-log";
@@ -109,7 +109,7 @@ export function PriceManager({ prices }: { prices: PriceRow[] }) {
               info,
               price: "",
               amount: "",
-              unit: ingredient.food_group === "egg" ? "piece" : ingredient.food_group === "dairy" && ingredient.density_g_per_ml ? "ml" : "g",
+              unit: defaultPriceUnit(ingredient.food_group, ingredient.density_g_per_ml),
               store: "",
             });
           }}

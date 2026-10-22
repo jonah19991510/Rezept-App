@@ -17,6 +17,13 @@ export type RecipeListNutrition = {
   is_vegan: boolean | null;
 };
 
+/** Rezeptliste nebeneinander (Raster) oder untereinander (Liste), je Nutzer in user_settings. */
+export type RecipeView = "grid" | "list";
+
+export function toRecipeView(value: unknown): RecipeView {
+  return value === "list" ? "list" : "grid";
+}
+
 /** Phase 15: Kurzinfo eines Cocktails für Karte, Filter und Sortierung (Bar). */
 export type CocktailSummary = {
   method: Enums<"cocktail_method"> | null;

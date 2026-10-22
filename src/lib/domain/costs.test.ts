@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { linesCost, missingPricesText, packageGrams, pricePer100, pricePerGram, shoppingEstimate, shoppingGrams } from "./costs";
+import { linesCost, missingPricesText, packageGrams, pricePer100, pricePerGram, shoppingEstimate, shoppingGrams, unpricedIngredients } from "./costs";
 
 const plain = { density_g_per_ml: null, piece_weight_g: null };
 const milk = { density_g_per_ml: 1.03, piece_weight_g: null };
@@ -66,5 +66,33 @@ describe("Kostenberechnung", () => {
   it("zeigt Preise pro 100 g bzw. 100 ml", () => {
     expect(pricePer100(0.00698, "g", plain)).toBeCloseTo(0.698);
     expect(pricePer100(1.19 / 1030, "ml", milk)).toBeCloseTo(0.119);
+  });
+});
+
+describe("unpricedIngredients", () => {
+  const line = (ingredientId: string, name: string, grams: number | null, isOptional = false) => ({ ingredientId, name, grams, isOptional });
+
+  it("nennt Zutaten ohne Preis, mit nicht umrechenbarem Preis und ohne Gramm, je Zutat einmal", () => {
+    const perGram = new Map<string, number | null>([
+      ["nudeln", 0.002],
+      ["ei", null],
+      ["salz", 0.001],
+    ]);
+    const result = unpricedIngredients(
+      [
+        line("nudeln", "Spaghetti", 500),
+        line("ei", "Ei", 120),
+        line("speck", "Speck", 100),
+        line("speck", "Speck", 20),
+        line("salz", "Salz", null),
+        line("petersilie", "Petersilie", 5, true),
+      ],
+      perGram,
+    );
+    expect(result).toEqual([
+      { ingredientId: "ei", name: "Ei", reason: "convert" },
+      { ingredientId: "speck", name: "Speck", reason: "price" },
+      { ingredientId: "salz", name: "Salz", reason: "grams" },
+    ]);
   });
 });

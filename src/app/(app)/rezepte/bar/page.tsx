@@ -1,28 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { GlassWater, Martini, Plus, SearchX } from "lucide-react";
+import { Martini, SearchX } from "lucide-react";
 import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
-import { PageHeader } from "@/components/layout/page-header";
-import { RecipeCard } from "@/components/recipes/recipe-card";
+import { NewRecipeFab } from "@/components/recipes/new-recipe-fab";
+import { ReadyBanner } from "@/components/recipes/ready-banner";
 import { RecipeFilters } from "@/components/recipes/recipe-filters";
+import { RecipeList } from "@/components/recipes/recipe-list";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { cookSummary } from "@/lib/domain/cooklog";
 import { collectBaseSpirits, collectTags, filterRecipes, hasActiveFilter, parseRecipeFilter } from "@/lib/domain/recipe-filter";
 import { getCookLogs, getRecipeCosts } from "@/lib/server/kitchen-log";
-import { getOwnRecipeList } from "@/lib/server/recipes";
+import { countReadyRecipes } from "@/lib/server/pantry";
+import { getOwnRecipeList, getRecipeView } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Bar" };
 
 /** Phase 15: eigene Cocktails (Rezepte mit recipe_type „cocktail“) im selben Design wie die Küche. */
 export default async function BarPage({ searchParams }: PageProps<"/rezepte/bar">) {
   const user = await requireUser();
-  const [list, params, costs, logs] = await Promise.all([
+  const [list, params, costs, logs, view, ready] = await Promise.all([
     getOwnRecipeList(user.id, "cocktail"),
     searchParams,
     getRecipeCosts(),
     getCookLogs(user.id),
+    getRecipeView(user.id),
+    countReadyRecipes(user.id, "cocktail"),
   ]);
   const all = list.map((r) => {
     const s = cookSummary(logs.filter((l) => l.recipeId === r.id));
@@ -37,38 +41,28 @@ export default async function BarPage({ searchParams }: PageProps<"/rezepte/bar"
   });
   const filter = parseRecipeFilter(params);
   const cocktails = filterRecipes(all, filter);
-
-  const actions = (
-    <div className="flex flex-wrap gap-2">
-      <Link href="/einkauf/was-mixen" className={buttonVariants({ variant: "outline" })}>
-        <GlassWater aria-hidden />
-        Was kann ich mixen?
-      </Link>
-      <Link href="/rezepte/neu?typ=cocktail" className={buttonVariants()}>
-        <Plus aria-hidden />
-        Neuer Cocktail
-      </Link>
-    </div>
-  );
+  const noun = (n: number) => (n === 1 ? "Cocktail" : "Cocktails");
 
   return (
     <>
+      <h1 className="sr-only">Bar</h1>
       <KitchenBarSwitch active="bar" kitchenHref="/rezepte" barHref="/rezepte/bar" />
       {all.length === 0 ? (
-        <>
-          <PageHeader title="Bar" description="Deine Cocktails." />
-          <EmptyState icon={Martini} title="Die Bar ist noch leer" action={actions}>
-            Leg deinen ersten Cocktail an. Alkoholgehalt, Gramm Alkohol und kcal pro Drink rechnet die App aus den Zutaten
-            und der Methode selbst aus.
-          </EmptyState>
-        </>
+        <EmptyState
+          icon={Martini}
+          title="Die Bar ist noch leer"
+          action={
+            <Link href="/rezepte/neu?typ=cocktail" className={buttonVariants()}>
+              Ersten Cocktail anlegen
+            </Link>
+          }
+        >
+          Leg deinen ersten Cocktail an. Alkoholgehalt, Gramm Alkohol und kcal pro Drink rechnet die App aus den Zutaten
+          und der Methode selbst aus.
+        </EmptyState>
       ) : (
         <>
-          <PageHeader
-            title="Bar"
-            description={`${all.length} ${all.length === 1 ? "Cocktail" : "Cocktails"} in deiner Bar`}
-            actions={actions}
-          />
+          <ReadyBanner kind="bar" count={ready} />
           <RecipeFilters
             ownTags={collectTags(all)}
             baseSpirits={collectBaseSpirits(all)}
@@ -76,28 +70,24 @@ export default async function BarPage({ searchParams }: PageProps<"/rezepte/bar"
             ownBook
             mode="bar"
           />
-          {cocktails.length === 0 ? (
-            <EmptyState icon={SearchX} title="Nichts gefunden">
-              {hasActiveFilter(filter) ? "Kein Cocktail passt zu diesen Filtern. Probier es mit weniger Filtern." : null}
-            </EmptyState>
-          ) : (
-            <>
-              {hasActiveFilter(filter) ? (
-                <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
-                  {cocktails.length} von {all.length} Cocktails
-                </p>
-              ) : null}
-              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {cocktails.map((recipe) => (
-                  <li key={recipe.id}>
-                    <RecipeCard recipe={recipe} />
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          <RecipeList
+            recipes={cocktails}
+            initialView={view}
+            mode="bar"
+            countLabel={
+              hasActiveFilter(filter)
+                ? `${cocktails.length} von ${all.length} ${noun(all.length)}`
+                : `${all.length} ${noun(all.length)}`
+            }
+            empty={
+              <EmptyState icon={SearchX} title="Nichts gefunden">
+                Kein Cocktail passt zu diesen Filtern. Probier es mit weniger Filtern.
+              </EmptyState>
+            }
+          />
         </>
       )}
+      <NewRecipeFab href="/rezepte/neu?typ=cocktail" label="Neuer Cocktail" />
     </>
   );
 }

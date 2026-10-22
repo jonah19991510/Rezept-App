@@ -1,29 +1,33 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, Download, Plus, SearchX } from "lucide-react";
+import { BookOpen, SearchX } from "lucide-react";
 import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
-import { PageHeader } from "@/components/layout/page-header";
-import { RecipeCard } from "@/components/recipes/recipe-card";
+import { NewRecipeFab } from "@/components/recipes/new-recipe-fab";
+import { ReadyBanner } from "@/components/recipes/ready-banner";
 import { RecipeFilters } from "@/components/recipes/recipe-filters";
+import { RecipeList } from "@/components/recipes/recipe-list";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { cookSummary } from "@/lib/domain/cooklog";
 import { collectTags, filterRecipes, hasActiveFilter, parseRecipeFilter } from "@/lib/domain/recipe-filter";
 import { todayInBerlin } from "@/lib/domain/week";
 import { getCookLogs, getLongNotCookedWeeks, getRecipeCosts } from "@/lib/server/kitchen-log";
-import { getOwnRecipeList } from "@/lib/server/recipes";
+import { countReadyRecipes } from "@/lib/server/pantry";
+import { getOwnRecipeList, getRecipeView } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Rezepte" };
 
 export default async function RecipesPage({ searchParams }: PageProps<"/rezepte">) {
   const user = await requireUser();
-  const [list, params, costs, logs, longWeeks] = await Promise.all([
+  const [list, params, costs, logs, longWeeks, view, ready] = await Promise.all([
     getOwnRecipeList(user.id),
     searchParams,
     getRecipeCosts(),
     getCookLogs(user.id),
     getLongNotCookedWeeks(user.id),
+    getRecipeView(user.id),
+    countReadyRecipes(user.id, "dish"),
   ]);
   // Phase 12: Kosten pro Portion und Koch-Log für Filter und Karten
   const all = list.map((r) => {
@@ -39,62 +43,44 @@ export default async function RecipesPage({ searchParams }: PageProps<"/rezepte"
   });
   const filter = parseRecipeFilter(params);
   const recipes = filterRecipes(all, filter, { today: todayInBerlin(), longNotCookedWeeks: longWeeks });
-
-  const newButton = (
-    <div className="flex flex-wrap gap-2">
-      <Link href="/rezepte/import" className={buttonVariants({ variant: "outline" })}>
-        <Download aria-hidden />
-        Importieren
-      </Link>
-      <Link href="/rezepte/neu" className={buttonVariants()}>
-        <Plus aria-hidden />
-        Neues Rezept
-      </Link>
-    </div>
-  );
-
-  if (all.length === 0) {
-    return (
-      <>
-        <KitchenBarSwitch active="kitchen" kitchenHref="/rezepte" barHref="/rezepte/bar" />
-        <PageHeader title="Rezepte" description="Dein persönliches Rezeptbuch." />
-        <EmptyState icon={BookOpen} title="Dein Rezeptbuch ist noch leer" action={newButton}>
-          Leg dein erstes Rezept an. Die Makros rechnet die App aus den Zutaten selbst aus.
-        </EmptyState>
-      </>
-    );
-  }
+  const noun = (n: number) => (n === 1 ? "Rezept" : "Rezepte");
 
   return (
     <>
+      <h1 className="sr-only">Rezepte</h1>
       <KitchenBarSwitch active="kitchen" kitchenHref="/rezepte" barHref="/rezepte/bar" />
-      <PageHeader
-        title="Rezepte"
-        description={`${all.length} ${all.length === 1 ? "Rezept" : "Rezepte"} in deinem Buch`}
-        actions={newButton}
-      />
-      <RecipeFilters ownTags={collectTags(all)} ownBook />
-
-      {recipes.length === 0 ? (
-        <EmptyState icon={SearchX} title="Nichts gefunden">
-          {hasActiveFilter(filter) ? "Kein Rezept passt zu diesen Filtern. Probier es mit weniger Filtern." : null}
+      {all.length === 0 ? (
+        <EmptyState
+          icon={BookOpen}
+          title="Dein Rezeptbuch ist noch leer"
+          action={
+            <Link href="/rezepte/neu" className={buttonVariants()}>
+              Erstes Rezept anlegen
+            </Link>
+          }
+        >
+          Leg dein erstes Rezept an. Die Makros rechnet die App aus den Zutaten selbst aus. Rezepte aus dem Netz oder aus
+          Notion holst du unter Einstellungen → Deine Daten → Rezepte importieren.
         </EmptyState>
       ) : (
         <>
-          {hasActiveFilter(filter) ? (
-            <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
-              {recipes.length} von {all.length} Rezepten
-            </p>
-          ) : null}
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {recipes.map((recipe) => (
-              <li key={recipe.id}>
-                <RecipeCard recipe={recipe} />
-              </li>
-            ))}
-          </ul>
+          <ReadyBanner kind="kitchen" count={ready} />
+          <RecipeFilters ownTags={collectTags(all)} ownBook />
+          <RecipeList
+            recipes={recipes}
+            initialView={view}
+            countLabel={
+              hasActiveFilter(filter) ? `${recipes.length} von ${all.length} ${noun(all.length)}` : `${all.length} ${noun(all.length)}`
+            }
+            empty={
+              <EmptyState icon={SearchX} title="Nichts gefunden">
+                Kein Rezept passt zu diesen Filtern. Probier es mit weniger Filtern.
+              </EmptyState>
+            }
+          />
         </>
       )}
+      <NewRecipeFab href="/rezepte/neu" label="Neues Rezept" />
     </>
   );
 }

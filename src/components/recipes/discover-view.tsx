@@ -3,12 +3,12 @@ import { Compass, Martini, SearchX } from "lucide-react";
 import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { RecipeCard } from "@/components/recipes/recipe-card";
 import { RecipeFilters } from "@/components/recipes/recipe-filters";
+import { RecipeList } from "@/components/recipes/recipe-list";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { collectBaseSpirits, collectTags, filterRecipes, hasActiveFilter, parseRecipeFilter } from "@/lib/domain/recipe-filter";
-import { getPublicRecipeList } from "@/lib/server/recipes";
+import { getPublicRecipeList, getRecipeView } from "@/lib/server/recipes";
 
 /** Entdecken (Phase 6) mit Küche | Bar (Phase 15): öffentliche Rezepte bzw. Cocktails aus der Runde. */
 export async function DiscoverView({
@@ -19,7 +19,7 @@ export async function DiscoverView({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await requireUser();
-  const [all, params] = await Promise.all([getPublicRecipeList(user.id, type), searchParams]);
+  const [all, params, view] = await Promise.all([getPublicRecipeList(user.id, type), searchParams, getRecipeView(user.id)]);
   const filter = parseRecipeFilter(params);
   const recipes = filterRecipes(all, filter);
   const authors = new Set(all.map((r) => r.author?.name)).size;
@@ -59,26 +59,21 @@ export async function DiscoverView({
             baseSpirits={bar ? collectBaseSpirits(all) : []}
           />
 
-          {recipes.length === 0 ? (
-            <EmptyState icon={SearchX} title="Nichts gefunden">
-              {hasActiveFilter(filter) ? `Kein ${noun.one} passt zu diesen Filtern. Probier es mit weniger Filtern.` : null}
-            </EmptyState>
-          ) : (
-            <>
-              {hasActiveFilter(filter) ? (
-                <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
-                  {recipes.length} von {all.length} {noun.many}
-                </p>
-              ) : null}
-              <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {recipes.map((recipe) => (
-                  <li key={recipe.id}>
-                    <RecipeCard recipe={recipe} />
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+          <RecipeList
+            recipes={recipes}
+            initialView={view}
+            mode={bar ? "bar" : "kitchen"}
+            countLabel={
+              hasActiveFilter(filter)
+                ? `${recipes.length} von ${all.length} ${all.length === 1 ? noun.one : noun.many}`
+                : `${all.length} ${all.length === 1 ? noun.one : noun.many}`
+            }
+            empty={
+              <EmptyState icon={SearchX} title="Nichts gefunden">
+                Kein {noun.one} passt zu diesen Filtern. Probier es mit weniger Filtern.
+              </EmptyState>
+            }
+          />
         </>
       )}
     </>
