@@ -1058,7 +1058,8 @@ Vercel-Connector geprüft). Am Handy über den LAN-Server vom Nutzer getestet (C
 
 ### Nachtrag 22.10.2026: Sortierung merken, Kosten mit Portionen
 
-**Noch nicht live** (lokal gebaut und geprüft).
+**Live** seit 22.10.2026: Push `d3ad138` → Deployment `dpl_9D3Qks2ed4oxZ6vwiCEpW7hcbQeL` (`production`, „READY“, per
+Vercel-Connector geprüft).
 
 - **Sortierung je Nutzer:** Spalten `user_settings.recipe_sort` (Küche: neu, name, protein, kcal, zeit) und
   `cocktail_sort` (Bar: neu, name, stark, leicht, kcal), Standard `neu`, Migration `…20261022120000_recipe_sort`
