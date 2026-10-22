@@ -1019,7 +1019,8 @@ Handy-Test: `npm run dev:lan` (siehe README), `allowedDevOrigins` für 192.168.x
 
 ## Wünsche vom 22.10.2026: Rezeptliste im neuen Design, Vorrat zum Abhaken, fehlende Preise
 
-**Noch nicht live** (lokal gebaut und geprüft).
+**Live** seit 22.10.2026: Push `28a3dac` → Deployment `dpl_5TVU8pdhEdtMkGHbTVEeMvMUsxqa` (`production`, per
+Vercel-Connector geprüft). Am Handy über den LAN-Server vom Nutzer getestet (Chip-Reihe, Ansicht, Herz).
 
 - **Rezeptliste (Küche, Bar, Entdecken) nach dem Entwurf „Rezeptbuch Bar-Redesign“:** Umschalter Küche | Bar über
   die ganze Breite (aktiv in Orange, gilt überall, wo er vorkommt). Darunter in Küche und Bar ein Hinweis „Was kann
