@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronRight, Lock } from "lucide-react";
 import { IngredientManager } from "@/components/ingredients/ingredient-manager";
 import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/lib/auth";
@@ -17,14 +18,20 @@ export default async function IngredientsPage() {
     <div className="mx-auto max-w-2xl">
       <PageHeader
         title="Zutaten"
-        description={
-          <>
-            Aus deinen Rezepten und selbst angelegt. Preise siehst nur du; alle Preise auf einen Blick unter{" "}
-            <Link href="/preise" className="text-primary underline-offset-4 hover:underline">
-              Preise
+        meta={
+          <div className="flex items-center justify-between gap-3">
+            <p className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+              <Lock className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">Preise siehst nur du</span>
+            </p>
+            <Link
+              href="/preise"
+              className="-mr-2 inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full px-2 text-sm font-semibold text-primary transition hover:text-primary/80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            >
+              Alle Preise
+              <ChevronRight className="size-4" aria-hidden />
             </Link>
-            .
-          </>
+          </div>
         }
       />
       <IngredientManager items={items} displayNames={displayNames} />

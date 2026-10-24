@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ArrowDownAZ, Carrot, LayoutList, Pencil, Search, SearchX, Trash2 } from "lucide-react";
+import { ArrowDownAZ, Carrot, LayoutList, Plus, SearchX, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { setIngredientDisplayNameAction } from "@/app/(app)/einkauf/pantry-actions";
 import { deleteIngredientAction } from "@/app/(app)/zutaten/actions";
 import { EmptyState } from "@/components/layout/empty-state";
+import { ChipRow, CountChip, GroupHeading, ListCard, SearchField, SegmentToggle } from "@/components/layout/list-blocks";
 import { PriceForm, type PriceDraft } from "@/components/prices/price-manager";
 import { ChipSelect } from "@/components/recipes/chip-select";
 import { IngredientForm } from "@/components/recipes/editor/ingredient-form";
+import { FabButton } from "@/components/recipes/new-recipe-fab";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -19,30 +21,41 @@ import { defaultPriceUnit, pricePer100, type IngredientWeights } from "@/lib/dom
 import { ingredientLabel } from "@/lib/domain/ingredient-name";
 import {
   filterMyIngredients,
+  FOOD_GROUP_ORDER,
   groupByFoodGroup,
+  groupByInitial,
   ingredientOrigin,
   INGREDIENT_VIEWS,
   type IngredientView,
   type MyIngredient,
 } from "@/lib/domain/my-ingredients";
 import { formatEuro, formatNumber } from "@/lib/format";
-import { DEPARTMENT_ORDER } from "@/lib/domain/shopping";
 import { DIET_LABELS, FOOD_GROUP_LABELS } from "@/lib/labels";
 import type { Enums } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
 
 type Tab = "preis" | "angaben" | "rezepte";
+type Sort = "name" | "kategorie";
+
+const SORT_OPTIONS = [
+  { value: "name", label: "A–Z", icon: ArrowDownAZ, showLabel: true },
+  { value: "kategorie", label: "Nach Kategorie", icon: LayoutList },
+] as const;
 
 const weights = (item: MyIngredient): IngredientWeights => ({
   density_g_per_ml: item.ingredient.density_g_per_ml,
   piece_weight_g: item.ingredient.piece_weight_g,
 });
 
-function priceText(item: MyIngredient): string | null {
+/** Eigener Preis für die Liste: Betrag und Bezug („/ 100 g“, „/ 100 ml“, bei Stück ohne Stückgewicht „/ Stück“). */
+function priceParts(item: MyIngredient): { amount: string; per: string } | null {
   const p = item.price;
   if (!p) return null;
-  if (p.perGram == null) return formatEuro(p.price);
-  return `${formatEuro(pricePer100(p.perGram, p.packageUnit, weights(item)))}/100 ${p.packageUnit === "ml" ? "ml" : "g"}`;
+  if (p.perGram == null) return { amount: formatEuro(p.packageAmount > 0 ? p.price / p.packageAmount : p.price), per: "/ Stück" };
+  return {
+    amount: formatEuro(pricePer100(p.perGram, p.packageUnit, weights(item))),
+    per: `/ 100 ${p.packageUnit === "ml" ? "ml" : "g"}`,
+  };
 }
 
 function priceDraft(item: MyIngredient): PriceDraft {
@@ -61,8 +74,12 @@ function priceDraft(item: MyIngredient): PriceDraft {
 }
 
 const recipeWord = (n: number) => (n === 1 ? "1 Rezept" : `${n} Rezepte`);
+const recipeCount = (n: number) => (n === 0 ? "in keinem Rezept" : recipeWord(n));
 
-/** Seite „Zutaten“: Liste mit Suche und Ansichten, Antippen öffnet Preis, Angaben und Rezepte der Zutat. */
+/**
+ * Seite „Zutaten“: Suche, Filter-Chips mit Zählern (plus Kategorie), Liste in Abschnitten (A–Z oder nach Kategorie).
+ * Der Preis rechts öffnet die Preiseingabe, die übrige Zeile die Zutat (Angaben, Rezepte). Plus-Knopf: eigene Zutat.
+ */
 export function IngredientManager({
   items,
   displayNames = {},
@@ -76,16 +93,31 @@ export function IngredientManager({
   const [view, setView] = useState<IngredientView>("alle");
   const [openId, setOpenId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("preis");
-  const [sort, setSort] = useState<"name" | "kategorie">("name");
+  const [sort, setSort] = useState<Sort>("name");
   const [group, setGroup] = useState<Enums<"food_group"> | "">("");
+  const [creating, setCreating] = useState(false);
   const open = items.find((i) => i.ingredient.id === openId) ?? null;
-  const shown = filterMyIngredients(items, { q: query, view }).filter((i) => !group || i.ingredient.food_group === group);
+  const shown = filterMyIngredients(items, { q: query, view, group });
   // nur Kategorien, die in den eigenen Zutaten vorkommen
-  const groups = DEPARTMENT_ORDER.filter((g) => items.some((i) => i.ingredient.food_group === g));
+  const groups = FOOD_GROUP_ORDER.filter((g) => items.some((i) => i.ingredient.food_group === g));
+  const sections =
+    sort === "kategorie"
+      ? groupByFoodGroup(shown, (i) => i.ingredient.food_group).map((s) => ({
+          key: s.group,
+          title: s.label,
+          aside: `${s.items.filter((i) => i.price).length} / ${s.items.length} mit Preis`,
+          items: s.items,
+        }))
+      : groupByInitial(shown, (i) => i.ingredient.name).map((s) => ({
+          key: s.letter,
+          title: s.letter,
+          aside: String(s.items.length),
+          items: s.items,
+        }));
 
-  function show(item: MyIngredient) {
+  function show(item: MyIngredient, next: Tab) {
     setOpenId(item.ingredient.id);
-    setTab("preis");
+    setTab(next);
   }
 
   function done() {
@@ -93,114 +125,99 @@ export function IngredientManager({
     router.refresh();
   }
 
-  if (items.length === 0) {
-    return (
-      <EmptyState icon={Carrot} title="Noch keine Zutaten">
-        Sobald du Rezepte mit Zutaten anlegst oder eigene Zutaten erstellst, erscheinen sie hier. Dann kannst du Preise
-        eintragen und eigene Zutaten korrigieren.
-      </EmptyState>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="relative">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <Input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Zutaten suchen …"
-          aria-label="Zutaten suchen"
-          className="pl-9"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1 sm:grid-cols-4" role="tablist" aria-label="Ansicht">
-        {(Object.entries(INGREDIENT_VIEWS) as [IngredientView, string][]).map(([key, label]) => {
-          const count = filterMyIngredients(items, { view: key }).length;
-          return (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={view === key}
-              onClick={() => setView(key)}
-              className={cn(
-                "flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-medium text-muted-foreground transition hover:text-foreground",
-                view === key && "bg-card text-foreground shadow-sm",
-              )}
-            >
-              {label}
-              <span className="text-xs tabular-nums opacity-70">{count}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-full border bg-card p-0.5" role="group" aria-label="Sortierung">
-          {(
-            [
-              ["name", "A–Z", ArrowDownAZ],
-              ["kategorie", "Nach Kategorie", LayoutList],
-            ] as const
-          ).map(([key, label, Icon]) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={sort === key}
-              onClick={() => setSort(key)}
-              className={cn(
-                "flex h-10 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted-foreground transition hover:text-foreground",
-                sort === key && "bg-primary/15 text-primary hover:text-primary",
-              )}
-            >
-              <Icon className="size-4" aria-hidden />
-              {label}
-            </button>
-          ))}
-        </div>
-        <ChipSelect
-          label="Kategorie"
-          value={group}
-          display={group ? FOOD_GROUP_LABELS[group] : "Alle Kategorien"}
-          onChange={(v) => setGroup(v as Enums<"food_group"> | "")}
-        >
-          <option value="">Alle Kategorien</option>
-          {groups.map((g) => (
-            <option key={g} value={g}>
-              {FOOD_GROUP_LABELS[g]}
-            </option>
-          ))}
-        </ChipSelect>
-      </div>
-
-      {shown.length === 0 ? (
-        <EmptyState icon={SearchX} title="Nichts gefunden">
-          Keine Zutat passt zu Suche, Ansicht und Kategorie.
+    // Unten Platz lassen, damit der schwebende Knopf die letzte Zeile nicht verdeckt
+    <div className="pb-16 md:pb-20">
+      {items.length === 0 ? (
+        <EmptyState icon={Carrot} title="Noch keine Zutaten">
+          Sobald du Rezepte mit Zutaten anlegst, erscheinen ihre Zutaten hier. Eigene Zutaten legst du mit dem Plus-Knopf
+          an. Dann kannst du Preise eintragen und eigene Zutaten korrigieren.
         </EmptyState>
-      ) : sort === "kategorie" ? (
-        groupByFoodGroup(shown, (i) => i.ingredient.food_group).map((section) => (
-          <section key={section.group} aria-label={section.label}>
-            <h2 className="mb-2 flex items-baseline gap-2 font-sans text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-              {section.label}
-              <span className="text-xs font-normal tabular-nums normal-case">{section.items.length}</span>
-            </h2>
-            <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
-              {section.items.map((item) => (
-                <IngredientRowButton key={item.ingredient.id} item={item} onOpen={show} />
-              ))}
-            </ul>
-          </section>
-        ))
       ) : (
-        <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
-          {shown.map((item) => (
-            <IngredientRowButton key={item.ingredient.id} item={item} onOpen={show} />
-          ))}
-        </ul>
+        <div className="space-y-4">
+          <div className="space-y-3">
+            <SearchField value={query} onChange={setQuery} placeholder="Zutaten suchen …" label="Zutaten suchen" />
+            <ChipRow label="Anzeigen">
+              {(Object.entries(INGREDIENT_VIEWS) as [IngredientView, string][]).map(([key, label]) => (
+                <CountChip
+                  key={key}
+                  active={view === key}
+                  count={filterMyIngredients(items, { q: query, view: key, group }).length}
+                  onClick={() => setView(key)}
+                >
+                  {label}
+                </CountChip>
+              ))}
+              <ChipSelect
+                label="Kategorie"
+                value={group}
+                display={group ? FOOD_GROUP_LABELS[group] : "Kategorie"}
+                onChange={(v) => setGroup(v as Enums<"food_group"> | "")}
+              >
+                <option value="">Alle Kategorien</option>
+                {groups.map((g) => (
+                  <option key={g} value={g}>
+                    {FOOD_GROUP_LABELS[g]}
+                  </option>
+                ))}
+              </ChipSelect>
+            </ChipRow>
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <p className="min-w-0 truncate text-sm text-muted-foreground" aria-live="polite">
+              {shown.length === 1 ? "1 Zutat" : `${shown.length} Zutaten`}
+            </p>
+            <SegmentToggle label="Sortierung" value={sort} options={SORT_OPTIONS} onChange={setSort} />
+          </div>
+
+          {sections.length === 0 ? (
+            <EmptyState icon={SearchX} title="Keine Zutat gefunden">
+              Keine Zutat passt zu Suche und Filter. Mit dem Plus-Knopf unten rechts legst du eine eigene Zutat an.
+            </EmptyState>
+          ) : (
+            sections.map((section) => (
+              <section key={section.key} aria-label={section.title}>
+                <GroupHeading aside={section.aside}>{section.title}</GroupHeading>
+                <ListCard className="mt-1">
+                  {section.items.map((item) => (
+                    <IngredientRow
+                      key={item.ingredient.id}
+                      item={item}
+                      showGroup={sort === "name"}
+                      onOpen={() => show(item, "angaben")}
+                      onPrice={() => show(item, "preis")}
+                    />
+                  ))}
+                </ListCard>
+              </section>
+            ))
+          )}
+        </div>
       )}
+
+      <FabButton label="Zutat anlegen" onClick={() => setCreating(true)} />
+
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="pr-8">Eigene Zutat anlegen</DialogTitle>
+            <DialogDescription>Nährwerte pro 100 g, z. B. von der Verpackung.</DialogDescription>
+          </DialogHeader>
+          {creating ? (
+            <IngredientForm
+              initial={{ name: query.trim() || undefined }}
+              submitLabel="Zutat anlegen"
+              onSaved={(ingredient) => {
+                toast.success(`${ingredient.name} angelegt.`);
+                setCreating(false);
+                router.refresh();
+              }}
+              onCancel={() => setCreating(false)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open != null} onOpenChange={(o) => !o && setOpenId(null)}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
@@ -342,30 +359,70 @@ function DisplayNameForm({ item, current, onSaved }: { item: MyIngredient; curre
   );
 }
 
-/** Eine Zeile der Zutatenliste: Name, Kategorie, Herkunft, Preis. */
-function IngredientRowButton({ item, onOpen }: { item: MyIngredient; onOpen: (item: MyIngredient) => void }) {
-  const price = priceText(item);
+
+/**
+ * Eine Zeile der Zutatenliste: Name (eigene mit Label „Eigene“), darunter Gruppe · Quelle · Rezepte. Rechts der Preis
+ * bzw. „+ Preis“; beides öffnet die Preiseingabe, die übrige Zeile die Zutat.
+ */
+function IngredientRow({
+  item,
+  showGroup,
+  onOpen,
+  onPrice,
+}: {
+  item: MyIngredient;
+  /** Zutatengruppe in der zweiten Zeile (nur A–Z; nach Kategorie steht sie in der Überschrift) */
+  showGroup: boolean;
+  onOpen: () => void;
+  onPrice: () => void;
+}) {
+  const name = item.ingredient.name;
+  const price = priceParts(item);
+  const sub = [
+    showGroup ? FOOD_GROUP_LABELS[item.ingredient.food_group] : null,
+    item.isOwn ? null : ingredientOrigin(item),
+    recipeCount(item.recipes.length),
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <li>
+    <li className="flex min-h-17 items-center">
       <button
         type="button"
-        onClick={() => onOpen(item)}
-        className="flex min-h-14 w-full items-center justify-between gap-3 px-4 py-2 text-left hover:bg-muted/50"
+        onClick={onOpen}
+        className="flex min-h-17 min-w-0 flex-1 flex-col justify-center gap-0.5 py-2 pr-2 pl-4 text-left transition hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset"
       >
-        <span className="min-w-0">
-          <span className="flex items-center gap-1.5 font-medium">
-            <span className="truncate">{item.ingredient.name}</span>
-            {item.isOwn ? <Pencil className="size-3.5 shrink-0 text-muted-foreground" aria-label="bearbeitbar" /> : null}
-          </span>
-          <span className="block truncate text-xs text-muted-foreground">
-            {FOOD_GROUP_LABELS[item.ingredient.food_group]} · {ingredientOrigin(item)}
-            {item.recipes.length > 0 ? ` · ${recipeWord(item.recipes.length)}` : ""}
-          </span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-medium">{name}</span>
+          {item.isOwn ? (
+            <span className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-semibold text-primary">Eigene</span>
+          ) : null}
         </span>
-        <span className={cn("shrink-0 text-right text-sm tabular-nums", !price && "text-muted-foreground")}>
-          {price ?? "kein Preis"}
-        </span>
+        <span className="truncate text-xs text-muted-foreground">{sub}</span>
       </button>
+      <div className="flex shrink-0 items-center pr-2">
+        {price ? (
+          <button
+            type="button"
+            onClick={onPrice}
+            aria-label={`${name}: ${price.amount} ${price.per.replace("/", "pro")}, Preis bearbeiten`}
+            className="flex min-h-11 flex-col items-end justify-center rounded-xl px-2 text-right tabular-nums transition hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          >
+            <span className="font-semibold">{price.amount}</span>
+            <span className="text-xs text-muted-foreground">{price.per}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onPrice}
+            aria-label={`${name}: Preis eintragen`}
+            className="inline-flex h-11 items-center gap-1 rounded-full border border-dashed border-muted-foreground/40 px-3.5 text-sm font-medium text-muted-foreground transition hover:border-primary/60 hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          >
+            <Plus className="size-4" aria-hidden />
+            Preis
+          </button>
+        )}
+      </div>
     </li>
   );
 }

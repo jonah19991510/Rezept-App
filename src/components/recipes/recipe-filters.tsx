@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Clock, Heart, Search, SlidersHorizontal, X } from "lucide-react";
+import { Clock, Heart, SlidersHorizontal, X } from "lucide-react";
+import { ChipRow, SearchField } from "@/components/layout/list-blocks";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -94,17 +95,13 @@ export function RecipeFilters({
   return (
     <div className={cn("mb-4 space-y-3", pending && "opacity-80")} role="search">
       <div className="flex gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <Input
-            type="search"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder={searchPlaceholder}
-            aria-label={bar ? "Cocktails durchsuchen" : "Rezepte durchsuchen"}
-            className="h-12 rounded-full pl-10"
-          />
-        </div>
+        <SearchField
+          value={query}
+          onChange={onQueryChange}
+          placeholder={searchPlaceholder}
+          label={bar ? "Cocktails durchsuchen" : "Rezepte durchsuchen"}
+          className="min-w-0 flex-1"
+        />
         {hasMorePanel ? (
           <button
             type="button"
@@ -123,12 +120,7 @@ export function RecipeFilters({
         ) : null}
       </div>
 
-      {/* Am Handy seitlich wischbar (innerhalb der Seitenränder, bündig mit der Suche), ab Tablet umbrechend */}
-      <div
-        className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] md:flex-wrap md:overflow-visible [&::-webkit-scrollbar]:hidden"
-        aria-label="Filter"
-        role="group"
-      >
+      <ChipRow label="Filter">
         <button type="button" aria-pressed={favorites} onClick={() => update({ favoriten: favorites ? null : "1" })} className={chipClass(favorites)}>
           <Heart className={cn(favorites && "fill-current")} aria-hidden />
           Favoriten
@@ -211,7 +203,7 @@ export function RecipeFilters({
             Zurücksetzen
           </button>
         ) : null}
-      </div>
+      </ChipRow>
 
       {showMore && hasMorePanel ? (
         <div className="grid grid-cols-2 gap-3 rounded-3xl border bg-card p-4 sm:max-w-xl sm:grid-cols-4">

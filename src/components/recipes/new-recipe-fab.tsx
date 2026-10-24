@@ -13,3 +13,12 @@ export function NewRecipeFab({ href, label }: { href: string; label: string }) {
     </Link>
   );
 }
+
+/** Derselbe Knopf ohne Seitenwechsel, z. B. für einen Dialog (Vorrat, Zutaten). */
+export function FabButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" aria-label={label} title={label} onClick={onClick} className={fabClass}>
+      <Plus className="size-7" aria-hidden />
+    </button>
+  );
+}

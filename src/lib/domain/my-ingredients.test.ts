@@ -6,7 +6,9 @@ import {
   collectMyIngredients,
   defaultDiet,
   filterMyIngredients,
+  groupByInitial,
   ingredientOrigin,
+  initialLetter,
   type IngredientRow,
   type MyIngredientPrice,
 } from "./my-ingredients";
@@ -72,6 +74,17 @@ describe("collectMyIngredients", () => {
     expect(names({ q: "  " })).toHaveLength(4);
   });
 
+  it("Kategorie zusammen mit Ansicht und Suche", () => {
+    const withGroups = items.map((i) =>
+      i.ingredient.id === "o" || i.ingredient.id === "z" ? { ...i, ingredient: { ...i.ingredient, food_group: "spices_sauces" as const } } : i,
+    );
+    const names = (filter: Parameters<typeof filterMyIngredients>[1]) => filterMyIngredients(withGroups, filter).map((i) => i.ingredient.name);
+    expect(names({ group: "spices_sauces" })).toEqual(["Omas Gewürz", "Zucker"]);
+    expect(names({ group: "spices_sauces", view: "ohne-preis" })).toEqual(["Omas Gewürz"]);
+    expect(names({ group: "spices_sauces", q: "zuc" })).toEqual(["Zucker"]);
+    expect(names({ group: "" })).toHaveLength(4);
+  });
+
   it("Herkunft", () => {
     expect(items.map(ingredientOrigin)).toEqual([
       "von jemand anderem angelegt",
@@ -92,7 +105,7 @@ describe("defaultDiet", () => {
 });
 
 describe("groupByFoodGroup", () => {
-  it("gruppiert in Supermarkt-Reihenfolge und behält die Reihenfolge innerhalb", () => {
+  it("gruppiert in der Reihenfolge der Spec und behält die Reihenfolge innerhalb", () => {
     const items = [
       { name: "Lachs", g: "fish" as const },
       { name: "Apfel", g: "fruit" as const },
@@ -100,7 +113,17 @@ describe("groupByFoodGroup", () => {
       { name: "Kabeljau", g: "fish" as const },
     ];
     const sections = groupByFoodGroup(items, (i) => i.g);
-    expect(sections.map((s) => s.label)).toEqual(["Obst", "Milchprodukte", "Fisch"]);
-    expect(sections[2].items.map((i) => i.name)).toEqual(["Lachs", "Kabeljau"]);
+    expect(sections.map((s) => s.label)).toEqual(["Obst", "Fisch", "Milchprodukte"]);
+    expect(sections[1].items.map((i) => i.name)).toEqual(["Lachs", "Kabeljau"]);
+  });
+});
+
+describe("groupByInitial", () => {
+  it("Umlaute unter dem Grundbuchstaben, Zeichen unter „#“ am Ende", () => {
+    expect(["Äpfel", "Öl", "Üba", "ßirup", "7up", " apfel"].map(initialLetter)).toEqual(["A", "O", "U", "#", "#", "A"]);
+    const sections = groupByInitial(["7up", "Agave", "Äpfel", "Butter", "Öl", "Olive"], (n) => n);
+    expect(sections.map((s) => s.letter)).toEqual(["A", "B", "O", "#"]);
+    expect(sections[0].items).toEqual(["Agave", "Äpfel"]);
+    expect(sections[2].items).toEqual(["Öl", "Olive"]);
   });
 });

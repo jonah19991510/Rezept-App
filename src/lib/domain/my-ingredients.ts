@@ -1,7 +1,6 @@
 import type { Enums } from "@/lib/supabase/database.types";
 import { FOOD_GROUP_LABELS } from "@/lib/labels";
 import type { IngredientOption } from "./ingredient-option";
-import { DEPARTMENT_ORDER } from "./shopping";
 
 // Seite „Zutaten“: alle Zutaten aus den eigenen Rezepten und alle selbst angelegten, mit eigenem Preis.
 // Bearbeiten (Nährwerte, Dichte, Stückgewicht …) geht nur bei selbst angelegten Zutaten (Quelle „user“, RLS);
@@ -92,10 +91,14 @@ function normalize(s: string) {
   return s.toLocaleLowerCase("de-DE").normalize("NFKD").replace(/\p{Diacritic}/gu, "");
 }
 
-/** Ansicht und Suche (alle Wörter müssen im Namen vorkommen). */
-export function filterMyIngredients(items: MyIngredient[], filter: { q?: string; view?: IngredientView }): MyIngredient[] {
+/** Ansicht, Kategorie und Suche (alle Wörter müssen im Namen vorkommen). */
+export function filterMyIngredients(
+  items: MyIngredient[],
+  filter: { q?: string; view?: IngredientView; group?: Enums<"food_group"> | "" },
+): MyIngredient[] {
   const words = normalize(filter.q ?? "").split(/\s+/).filter(Boolean);
   return items.filter((item) => {
+    if (filter.group && item.ingredient.food_group !== filter.group) return false;
     switch (filter.view ?? "alle") {
       case "rezepte":
         if (item.recipes.length === 0) return false;
@@ -128,7 +131,10 @@ export function defaultDiet(group: Enums<"food_group">): Enums<"ingredient_diet"
 
 export type FoodGroupSection<T> = { group: Enums<"food_group">; label: string; items: T[] };
 
-/** Nach Kategorie (Lebensmittelgruppe) gruppieren, Reihenfolge wie im Supermarkt, innerhalb wie übergeben. */
+/** Reihenfolge der Zutatengruppen wie in der Spec (Gemüse, Obst, Fleisch … Sonstiges). */
+export const FOOD_GROUP_ORDER = Object.keys(FOOD_GROUP_LABELS) as Enums<"food_group">[];
+
+/** Nach Kategorie (Zutatengruppe) gruppieren, Reihenfolge wie in der Spec, innerhalb wie übergeben. */
 export function groupByFoodGroup<T>(items: T[], groupOf: (item: T) => Enums<"food_group">): FoodGroupSection<T>[] {
   const sections = new Map<Enums<"food_group">, T[]>();
   for (const item of items) {
@@ -136,6 +142,24 @@ export function groupByFoodGroup<T>(items: T[], groupOf: (item: T) => Enums<"foo
     sections.set(group, [...(sections.get(group) ?? []), item]);
   }
   return [...sections]
-    .sort((a, b) => DEPARTMENT_ORDER.indexOf(a[0]) - DEPARTMENT_ORDER.indexOf(b[0]))
+    .sort((a, b) => FOOD_GROUP_ORDER.indexOf(a[0]) - FOOD_GROUP_ORDER.indexOf(b[0]))
     .map(([group, list]) => ({ group, label: FOOD_GROUP_LABELS[group], items: list }));
+}
+
+/** Anfangsbuchstabe für die A–Z-Abschnitte: Ä, Ö, Ü unter A, O, U; Ziffern und Zeichen unter „#“. */
+export function initialLetter(name: string): string {
+  const first = normalize(name.trim()).charAt(0).toLocaleUpperCase("de-DE");
+  return /^[A-Z]$/.test(first) ? first : "#";
+}
+
+/** Nach Anfangsbuchstabe gruppieren (A–Z, „#“ am Ende), innerhalb wie übergeben. */
+export function groupByInitial<T>(items: T[], nameOf: (item: T) => string): { letter: string; items: T[] }[] {
+  const sections = new Map<string, T[]>();
+  for (const item of items) {
+    const letter = initialLetter(nameOf(item));
+    sections.set(letter, [...(sections.get(letter) ?? []), item]);
+  }
+  return [...sections]
+    .sort((a, b) => (a[0] === "#" ? 1 : b[0] === "#" ? -1 : a[0].localeCompare(b[0])))
+    .map(([letter, list]) => ({ letter, items: list }));
 }

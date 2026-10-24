@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 export const chipClass = (active: boolean) =>
   cn(
-    "relative inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium whitespace-nowrap transition focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none [&_svg]:size-4 [&_svg]:shrink-0",
+    "relative inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium whitespace-nowrap transition focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none [&_svg]:size-4 [&_svg]:shrink-0",
     active ? "border-primary/60 bg-primary/15 text-primary" : "bg-card text-foreground hover:bg-muted",
   );
 

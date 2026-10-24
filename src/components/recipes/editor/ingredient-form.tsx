@@ -52,11 +52,14 @@ export function IngredientForm({
   onSaved,
   onCancel,
   ingredientId,
+  submitLabel = "Zutat speichern und übernehmen",
 }: {
   initial: IngredientFormInitial;
   onSaved: (ingredient: IngredientOption) => void;
   onCancel: () => void;
   ingredientId?: string;
+  /** Beschriftung beim Anlegen (im Editor wird die Zutat gleich übernommen) */
+  submitLabel?: string;
 }) {
   const editing = ingredientId != null;
   const [name, setName] = useState(initial.name ?? "");
@@ -207,7 +210,7 @@ export function IngredientForm({
           Zurück
         </Button>
         <Button type="button" onClick={submit} disabled={pending}>
-          {pending ? "Wird gespeichert …" : editing ? "Änderungen speichern" : "Zutat speichern und übernehmen"}
+          {pending ? "Wird gespeichert …" : editing ? "Änderungen speichern" : submitLabel}
         </Button>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { ArrowDownUp, LayoutGrid, Rows3 } from "lucide-react";
 import { toast } from "sonner";
 import { setRecipeSortAction, setRecipeViewAction } from "@/app/(app)/rezepte/actions";
+import { SegmentToggle } from "@/components/layout/list-blocks";
 import type { RecipeListItem, RecipeSort, RecipeView } from "@/lib/domain/recipe-filter";
 import { cn } from "@/lib/utils";
 import { RecipeCard } from "./recipe-card";
@@ -100,24 +101,7 @@ export function RecipeList({
               ))}
             </select>
           </label>
-          <div className="flex rounded-full border bg-card p-0.5" role="group" aria-label="Ansicht">
-            {VIEWS.map(({ value, label, icon: Icon }) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={view === value}
-                aria-label={label}
-                title={label}
-                onClick={() => changeView(value)}
-                className={cn(
-                  "grid size-10 place-items-center rounded-full text-muted-foreground transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-                  view === value && "bg-primary/15 text-primary hover:text-primary",
-                )}
-              >
-                <Icon className="size-5" aria-hidden />
-              </button>
-            ))}
-          </div>
+          <SegmentToggle label="Ansicht" value={view} options={VIEWS} onChange={changeView} />
         </div>
       </div>
 

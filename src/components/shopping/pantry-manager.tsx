@@ -1,14 +1,14 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { Check, ChevronDown, GlassWater, ListPlus, Pencil, Plus, Refrigerator, Search, SearchX, Trash2 } from "lucide-react";
+import { Check, ChevronDown, GlassWater, ListPlus, Pencil, Refrigerator, SearchX, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deletePantryItemAction, savePantryItemAction, setOnShoppingListAction } from "@/app/(app)/einkauf/pantry-actions";
 import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
-import { chipClass } from "@/components/recipes/chip-select";
+import { ChipRow, CountChip, groupHeadingClass, ListCard, SearchField } from "@/components/layout/list-blocks";
 import { IngredientPicker } from "@/components/recipes/editor/ingredient-picker";
-import { fabClass } from "@/components/recipes/new-recipe-fab";
+import { FabButton } from "@/components/recipes/new-recipe-fab";
 import { ShoppingTabs } from "@/components/shopping/shopping-tabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -215,35 +215,14 @@ export function PantryManager({
       ) : (
         <div className="space-y-5">
           <div className="space-y-3">
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <Input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Zutat suchen …"
-                aria-label="Zutat im Vorrat suchen"
-                className="h-12 rounded-full pl-10"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Anzeigen">
-              {(Object.entries(SHOW) as [Show, string][]).map(([key, label]) => {
-                const active = show === key;
-                return (
-                  <button key={key} type="button" aria-pressed={active} onClick={() => setShow(key)} className={cn(chipClass(active), "h-11")}>
-                    {label}
-                    <span
-                      className={cn(
-                        "grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-xs font-semibold tabular-nums",
-                        active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {searched.filter((r) => matches(r, key)).length}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <SearchField value={query} onChange={setQuery} placeholder="Zutat suchen …" label="Zutat im Vorrat suchen" />
+            <ChipRow label="Anzeigen">
+              {(Object.entries(SHOW) as [Show, string][]).map(([key, label]) => (
+                <CountChip key={key} active={show === key} count={searched.filter((r) => matches(r, key)).length} onClick={() => setShow(key)}>
+                  {label}
+                </CountChip>
+              ))}
+            </ChipRow>
           </div>
 
           {sections.length === 0 ? (
@@ -267,7 +246,10 @@ export function PantryManager({
                       aria-expanded={open}
                       aria-controls={listId}
                       onClick={() => toggleGroup(label)}
-                      className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-1 text-left font-sans text-sm font-semibold tracking-wide text-muted-foreground uppercase transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                      className={cn(
+                        groupHeadingClass,
+                        "rounded-lg transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                      )}
                     >
                       <span className="truncate">{label}</span>
                       <span className="flex shrink-0 items-center gap-1.5 font-medium tabular-nums">
@@ -277,7 +259,7 @@ export function PantryManager({
                     </button>
                   </h2>
                   {open ? (
-                    <ul id={listId} className="mt-1 divide-y overflow-hidden rounded-2xl border bg-card">
+                    <ListCard id={listId} className="mt-1">
                       {g.shown.map((row) => (
                         <PantryRowItem
                           key={row.item.ingredientId}
@@ -289,7 +271,7 @@ export function PantryManager({
                           onToggleList={() => toggleList(row)}
                         />
                       ))}
-                    </ul>
+                    </ListCard>
                   ) : null}
                 </section>
               );
@@ -309,9 +291,7 @@ export function PantryManager({
         </div>
       )}
 
-      <button type="button" aria-label="Zutat hinzufügen" title="Zutat hinzufügen" onClick={() => setPickerOpen(true)} className={fabClass}>
-        <Plus className="size-7" aria-hidden />
-      </button>
+      <FabButton label="Zutat hinzufügen" onClick={() => setPickerOpen(true)} />
 
       {pickerOpen ? (
         <IngredientPicker

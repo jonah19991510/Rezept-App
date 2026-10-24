@@ -1112,6 +1112,46 @@ Funktionen und Daten wie bisher, außer:
   64 px, der Plus-Knopf verdeckt die letzte Zeile nicht, Filter/Suche/Zuklappen/Grundzutaten/Bar funktionieren.
   Nicht mit echtem Login geprüft (Abhaken, „Liste“, Kurzname speichern).
 
+## Wünsche vom 24.10.2026: Zutaten und Wochenplan im neuen Design
+
+Design-Überarbeitung nach den Entwürfen „Zutaten (neu)“ und „Wochenplan (neu)“, in zwei Schritten (erst Zutaten, nach
+OK des Nutzers Wochenplan). Funktionen, Daten und Schema wie bisher, keine Migration.
+
+### Teil 1: Zutaten (umgesetzt, noch nicht vom Nutzer getestet, nicht gepusht)
+
+- **Gemeinsame Bausteine** in `components/layout/list-blocks.tsx`: `SearchField` (Pille), `ChipRow` (wischbar, ab
+  Tablet umbrechend, `shrink-0` + Mindesthöhe), `CountChip` (Chip mit Zähler-Bubble), `SegmentToggle` (kleiner
+  Umschalter, Icon mit oder ohne Text), `GroupHeading`/`groupHeadingClass`, `ListCard`; dazu `FabButton` neben
+  `NewRecipeFab`. Rezeptliste, Rezept-Filter und Vorrat nutzen sie jetzt auch (vorher kopierter Code). `PageHeader`
+  hat eine Zeile `meta` über die volle Breite. Chips sind jetzt 44 px hoch (vorher 40 px), auch auf der Startseite;
+  die Knöpfe im Ansicht-Umschalter ebenso.
+- **Kopf:** „Zutaten“, darunter eine Zeile: Schloss + „Preise siehst nur du“, rechts „Alle Preise ›“ (→ /preise).
+- **Filter:** Chip-Reihe Alle / In Rezepten / Selbst angelegt / Ohne Preis mit Zählern, am Ende der Kategorie-Chip
+  (native Auswahl im Chip-Look, aktiv wenn gewählt). Zähler berücksichtigen Suche und Kategorie
+  (`filterMyIngredients` kann jetzt auch `group`).
+- **Über der Liste:** Trefferzahl („13 Zutaten“) und Umschalter „A–Z“ | Icon „Nach Kategorie“.
+- **Abschnitte:** A–Z je Anfangsbuchstabe (Ä/Ö/Ü unter A/O/U, Ziffern unter „#“; `groupByInitial`), Anzahl rechts.
+  Nach Kategorie je Zutatengruppe in der Reihenfolge der Spec (`FOOD_GROUP_ORDER`; vorher Supermarkt-Reihenfolge),
+  rechts „x / y mit Preis“. Jeder Abschnitt eine Karte, Zeilen ≥ 68 px.
+- **Zeile:** Name einzeilig mit Ellipse, selbst angelegte mit Label „Eigene“ (statt Stift). Zweite Zeile: Gruppe (nur
+  A–Z) · Quelle (nicht bei eigenen) · „1 Rezept“/„3 Rezepte“/„in keinem Rezept“. Rechts Preis groß („0,65 €“) mit
+  „/ 100 ml“ bzw. „/ 100 g“ (Stück ohne Stückgewicht: Preis pro Stück, „/ Stück“) oder gestrichelter Knopf „+ Preis“;
+  beides öffnet den Dialog im Bereich „Preis“. Die übrige Zeile öffnet den Dialog im Bereich „Angaben“ bzw.
+  „Bearbeiten“ (vorher öffnete jeder Tipp den Bereich „Preis“; der hat jetzt eigene Knöpfe).
+- **Plus-Knopf** „Zutat anlegen“ unten rechts: bestehendes Formular für eine eigene Zutat (Suchbegriff als Name
+  vorbelegt, Knopf „Zutat anlegen“; `IngredientForm` hat dafür `submitLabel`). Auch bei leerer Liste da.
+- **Nichts gefunden:** gestrichelte Karte „Keine Zutat gefunden“ mit Hinweis auf den Plus-Knopf.
+- Geprüft: 322 Tests, Typecheck, Lint, Build grün. Layout bei 375 px in Dark und Light über eine temporäre
+  Vorschauseite mit Beispieldaten (gegen den Produktions-Build, danach gelöscht): kein seitliches Scrollen, Chip-Reihe
+  48 px hoch und wischbar, alle Knöpfe ≥ 44 px, Zeilen 68 px, Kategorie-Filter/Zähler/Umschalter/leerer Zustand/
+  Plus-Dialog funktionieren. Nicht mit echtem Login geprüft (Preis speichern, Zutat anlegen).
+- Hinweis: Der laufende Entwicklungsserver lieferte serverseitig die alten Module aus (Turbopack-Cache, siehe
+  „Bekannte Probleme“); Abhilfe wie dort: stoppen, `.next/dev` löschen, neu starten.
+
+### Teil 2: Wochenplan
+
+Noch offen, wartet auf das OK zu Teil 1.
+
 ## Offene Punkte
 
 - Vorrat: Zugeklappte Gruppen merkt sich die Seite nur bis zum Neuladen.
