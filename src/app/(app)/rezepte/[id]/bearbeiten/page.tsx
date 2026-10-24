@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { toIngredientOption } from "@/lib/domain/ingredient-option";
 import { collectTags } from "@/lib/domain/recipe-filter";
 import { getDilutionConfig, getNutritionThresholds } from "@/lib/server/app-config";
+import { getCategoryNames } from "@/lib/server/categories";
 import { getOwnRecipeList, getRecipeDetail } from "@/lib/server/recipes";
 
 export const metadata: Metadata = { title: "Rezept bearbeiten" };
@@ -16,10 +17,11 @@ export default async function EditRecipePage({ params }: PageProps<"/rezepte/[id
   const { id } = await params;
   if (!UUID.test(id)) notFound();
   const user = await requireUser();
-  const [detail, thresholds, dilution] = await Promise.all([
+  const [detail, thresholds, dilution, categories] = await Promise.all([
     getRecipeDetail(id, user.id),
     getNutritionThresholds(),
     getDilutionConfig(),
+    getCategoryNames(user.id),
   ]);
   // Fremde Rezepte lassen sich nicht bearbeiten (RLS würde das Speichern ohnehin ablehnen)
   if (!detail || !detail.isOwner) notFound();
@@ -35,6 +37,7 @@ export default async function EditRecipePage({ params }: PageProps<"/rezepte/[id
         dilution={dilution}
         tagSuggestions={collectTags(list)}
         sideSuggestions={list.map((r) => r.title)}
+        categories={categories}
         initial={{
           id: recipe.id,
           recipe_type: recipe.recipe_type,
@@ -46,7 +49,7 @@ export default async function EditRecipePage({ params }: PageProps<"/rezepte/[id
           servings: recipe.servings,
           prep_minutes: recipe.prep_minutes,
           cook_minutes: recipe.cook_minutes,
-          category: recipe.category,
+          category: recipe.category_name,
           tags: recipe.tags,
           is_meal_prep: recipe.is_meal_prep,
           source_url: recipe.source_url ?? "",

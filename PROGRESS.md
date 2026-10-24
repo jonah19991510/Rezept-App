@@ -1197,6 +1197,50 @@ OK des Nutzers Wochenplan). Funktionen, Daten und Schema wie bisher, keine Migra
   je Tag richtig, „600 kcal drüber“, „In 2 Wochen“, leere Slots, Einkaufs-Dialog mit 19.10.–25.10. Nicht mit echtem
   Login geprüft (Einplanen aus der Lücken-Karte, Trainings-Schalter speichern, Liste erstellen).
 
+## Wünsche vom 24.10.2026 (Nachtrag): Rezeptseite im neuen Design, eigene Kategorien
+
+**Stand:** umgesetzt und committet, **nicht gepusht**. Die Migration `…20261024130000_custom_categories` muss der
+Nutzer im SQL Editor einspielen, bevor er testet (die neue App liest `recipes.category_name`); erst danach pushen.
+
+### Rezeptseite (Entwurf „Rezept-Detail“)
+
+- Neuer Kopf `components/recipes/recipe-hero.tsx`: oben Pille „← Rezepte/Cocktails/Entdecken“, runde Knöpfe Herz und
+  ⋮ (Duplizieren, Als Markdown, Löschen; `RecipeMenu`). Foto mit rundem Kamera-Knopf (und Entfernen), ohne Foto ein
+  Platzhalter mit Topf bzw. Glas und „Foto hinzufügen“. Darunter Kategorie-Zeile in Akzent (Kategorie · Auto-Tags bzw.
+  Spirituose · Methode), Titel.
+- **Privat | Öffentlich** jetzt direkt unter dem Titel als Segment-Umschalter (aria-pressed) mit einer Zeile Hinweis;
+  der Kasten unten auf der Seite ist weg.
+- Drei Kacheln: Küche Zeit („10 Vorb. · 15 Kochen“) / Portionen / Kosten pro Portion; Bar Glas / Eis (Garnitur) /
+  Stärke („≈ 18 % vol“, nach Verdünnung).
+- „Kochen starten“ bzw. „Mixen starten“ und daneben „Bearbeiten“ (fremde Rezepte: „Übernehmen“ bzw. „Deine Kopie
+  öffnen“), beide 48 px hoch und rund. Nährwert-Karte heißt „Pro Portion“ mit kcal rechts (ohne doppelte kcal-Kachel).
+- Eigene Tags stehen unter den Kacheln, Auto-Tags in der Kategorie-Zeile.
+
+### Eigene Kategorien (Einstellungen → Kategorien)
+
+Entscheidungen des Nutzers: jeder hat seine eigene Liste; beim Löschen wählt man, wohin die Rezepte wandern (oder
+„ohne Kategorie“); auch die 12 bisherigen Kategorien sind löschbar und umbenennbar.
+
+- **Migration** (additiv, die Live-Version läuft weiter): Tabelle `recipe_categories` (RLS nur eigene, Cascade,
+  eindeutig je Nutzer ohne Groß-/Kleinschreibung), Spalte `recipes.category_name` (Text). Die alte Enum-Spalte bleibt;
+  ein Trigger hält beide synchron (alte App schreibt den Schlüssel → Name; neue App schreibt den Namen → Schlüssel, wenn
+  es eine Standard-Kategorie ist). Startliste (11 Küchen-Kategorien, „Getränk“ nur, wo ein Gericht es nutzt) für alle
+  Nutzer und neue Nutzer (`handle_new_user`). `save_recipe`, `duplicate_recipe`, `fork_shared_recipe`,
+  `get_shared_recipe` kennen `category_name`. Funktionen `rename_recipe_category` und `delete_recipe_category`
+  (verschiebt die eigenen Küchen-Rezepte mit). Sammel-Updates lassen „zuletzt geändert“ stehen. Cocktails haben keine
+  Kategorie mehr (vorher intern „Getränk“). Später, wenn die alte App nicht mehr läuft: Enum-Spalte per Migration
+  entfernen.
+- **App:** Kategorie ist überall Text (`domain/categories.ts`: Startliste, alte Schlüssel → Namen, Auswahl, Tests).
+  Abfragen laden `category:category_name`. Editor und Filter zeigen die eigene Liste (plus eine Kategorie, die nicht
+  in der Liste steht, z. B. bei übernommenen Rezepten); Entdecken zeigt die Kategorien der öffentlichen Rezepte.
+  Import (Link, Markdown) übernimmt eine erkannte Kategorie nur, wenn sie in der eigenen Liste steht. Alte Links
+  (`?kategorie=pasta`), alte Sicherungen und geteilte Karten werden umgerechnet. Datenexport enthält die Liste.
+- **Einstellungen → Kategorien:** Liste mit Anzahl Rezepte, Stift (umbenennen, Enter/Escape), Papierkorb (Dialog mit
+  „Rezepte verschieben nach …“), Feld „Neue Kategorie“ + „Hinzufügen“. Doppelte Namen meldet die App.
+- Geprüft: 330 Tests, Typecheck, Lint, Build grün; Layout von Rezeptkopf (Küche, Bar, hell/dunkel) und Kategorien-Liste bei
+  375 px über temporäre Vorschauseiten (gelöscht). **Nicht geprüft:** die Migration selbst (Claude hat keinen
+  Datenbankzugang) und alles mit echtem Login (Speichern, Umbenennen, Löschen mit Verschieben).
+
 ## Offene Punkte
 
 - Vorrat: Zugeklappte Gruppen merkt sich die Seite nur bis zum Neuladen.

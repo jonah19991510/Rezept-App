@@ -7,7 +7,7 @@ import { photoUrl } from "@/lib/domain/photo";
 import { autoTagsFor, totalMinutes, type RecipeListItem, type RecipeView } from "@/lib/domain/recipe-filter";
 import { formatEuro, formatNumber } from "@/lib/format";
 import { formatMinutes } from "@/lib/format-quantity";
-import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS } from "@/lib/labels";
+import { GLASS_LABELS, METHOD_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { FavoriteButton } from "./favorite-button";
 import { MacroDot } from "./macro-dot";
@@ -47,7 +47,7 @@ export function RecipeCard({ recipe, view = "grid" }: { recipe: RecipeListItem; 
       ? [c.glass && c.glass !== "other" ? GLASS_LABELS[c.glass] : null, c.method ? METHOD_LABELS[c.method] : null]
           .filter(Boolean)
           .join(" · ") || (c.baseSpirit ?? "alkoholfrei")
-      : [recipe.category ? CATEGORY_LABELS[recipe.category] : null, minutes].filter(Boolean).join(" · ");
+      : [recipe.category, minutes].filter(Boolean).join(" · ");
     const kcal = recipe.nutrition?.kcal_per_serving;
     return (
       <article className={cn(shell, "flex h-full flex-col")}>
@@ -121,9 +121,7 @@ function ListBody({ recipe, link }: { recipe: RecipeListItem; link: ReactNode })
     ? [c.baseSpirit ?? "alkoholfrei", c.method ? METHOD_LABELS[c.method] : null, c.glass && c.glass !== "other" ? GLASS_LABELS[c.glass] : null]
         .filter(Boolean)
         .join(" · ")
-    : recipe.category
-      ? CATEGORY_LABELS[recipe.category]
-      : null;
+    : recipe.category;
   const hasFooter = minutes || recipe.copied || recipe.avgRating != null || recipe.costPerServing != null;
 
   return (

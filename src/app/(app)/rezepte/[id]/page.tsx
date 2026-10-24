@@ -17,7 +17,7 @@ import { snapshotMacros } from "@/lib/domain/versions";
 import { todayInBerlin } from "@/lib/domain/week";
 import { formatEuro, formatNumber } from "@/lib/format";
 import { formatMinutes } from "@/lib/format-quantity";
-import { AUTO_TAG_LABELS, CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
+import { AUTO_TAG_LABELS, GLASS_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
 import { getCookLogs, getIngredientNutrition, getPrices, getRecipeCost, getRecipeVersions } from "@/lib/server/kitchen-log";
 import { linkSideDishes } from "@/lib/domain/side-dishes";
 import { getOwnRecipeTitles, getRecipeDetail } from "@/lib/server/recipes";
@@ -53,7 +53,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
       ]
         .filter(Boolean)
         .join(" · ")
-    : [recipe.category ? CATEGORY_LABELS[recipe.category] : null, ...autoTags.map((t) => AUTO_TAG_LABELS[t])].filter(Boolean).join(" · ") ||
+    : [recipe.category_name, ...autoTags.map((t) => AUTO_TAG_LABELS[t])].filter(Boolean).join(" · ") ||
       null;
   // Phase 12: Kosten nach eigenen Preisen, eigenes Koch-Log, Versionen (nur Owner)
   const [cost, logs, versions, prices] = await Promise.all([

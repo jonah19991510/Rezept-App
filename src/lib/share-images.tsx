@@ -2,11 +2,11 @@ import "server-only";
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
 import { BRAND_BACKGROUND, BRAND_TERRACOTTA } from "@/lib/app-icon";
-import { sharedMacros, type SharedRecipe } from "@/lib/domain/shared-recipe";
+import { sharedCategory, sharedMacros, type SharedRecipe } from "@/lib/domain/shared-recipe";
 import { formatNumber } from "@/lib/format";
 import { formatMinutes, formatQuantity } from "@/lib/format-quantity";
 import { STORY, STORY_PHOTO_HEIGHT, STORY_WIDTH, storyHeight } from "@/lib/domain/story-layout";
-import { CATEGORY_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
+import { METHOD_LABELS, servingsLabel } from "@/lib/labels";
 
 // Bilder zur geteilten Rezeptkarte (Phase 14), gerendert mit ImageResponse (Satori → PNG):
 // Link-Vorschau (Open Graph, 1200×630) und Rezeptkarte als Bild (1080 breit, ab 1920 hoch, z. B. für Stories).
@@ -23,7 +23,7 @@ function kicker(recipe: SharedRecipe): string | null {
   if (recipe.recipe_type === "cocktail") {
     return ["Cocktail", recipe.cocktail?.method ? METHOD_LABELS[recipe.cocktail.method] : null].filter(Boolean).join(" · ");
   }
-  return recipe.category ? CATEGORY_LABELS[recipe.category] : null;
+  return sharedCategory(recipe);
 }
 
 /**

@@ -48,7 +48,8 @@ export const backupRecipeSchema = z.object({
   servings: z.number().int().min(1).max(100),
   prep_minutes: z.number().int().min(0).max(10000).nullable(),
   cook_minutes: z.number().int().min(0).max(10000).nullable(),
-  category: z.enum(Constants.public.Enums.recipe_category).nullable(),
+  /** Name (seit 24.10.2026) oder Schlüssel der früheren festen Liste („pasta“), beim Import umgerechnet */
+  category: z.string().max(60).nullable(),
   tags: z.array(z.string().trim().min(1).max(30)).max(20),
   is_meal_prep: z.boolean(),
   source_url: z.string().max(2000).nullable(),

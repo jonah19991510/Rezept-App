@@ -658,6 +658,38 @@ export type Database = {
           },
         ]
       }
+      recipe_categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_categories_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_versions: {
         Row: {
           change_note: string | null
@@ -710,6 +742,7 @@ export type Database = {
       recipes: {
         Row: {
           category: Database["public"]["Enums"]["recipe_category"] | null
+          category_name: string | null
           cook_minutes: number | null
           created_at: string
           current_version: number
@@ -732,6 +765,7 @@ export type Database = {
         }
         Insert: {
           category?: Database["public"]["Enums"]["recipe_category"] | null
+          category_name?: string | null
           cook_minutes?: number | null
           created_at?: string
           current_version?: number
@@ -754,6 +788,7 @@ export type Database = {
         }
         Update: {
           category?: Database["public"]["Enums"]["recipe_category"] | null
+          category_name?: string | null
           cook_minutes?: number | null
           created_at?: string
           current_version?: number
@@ -1000,6 +1035,14 @@ export type Database = {
       fork_shared_recipe: { Args: { p_token: string }; Returns: string }
       get_shared_recipe: { Args: { p_token: string }; Returns: Json }
       replace_plan_shopping_items: { Args: { p_items: Json }; Returns: number }
+      delete_recipe_category: {
+        Args: { p_id: string; p_move_to?: string }
+        Returns: number
+      }
+      rename_recipe_category: {
+        Args: { p_id: string; p_name: string }
+        Returns: undefined
+      }
       set_ingredient_display_name: {
         Args: { p_display_name: string; p_ingredient_id: string }
         Returns: undefined

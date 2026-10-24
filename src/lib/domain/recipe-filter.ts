@@ -1,3 +1,4 @@
+import { normalizeCategory, sameCategory } from "./categories";
 import { z } from "zod";
 import { AUTO_TAG_LABELS, type AutoTag } from "@/lib/labels";
 import type { RecipeAuthor } from "./community";
@@ -37,7 +38,7 @@ export type RecipeListItem = {
   id: string;
   title: string;
   description: string | null;
-  category: Enums<"recipe_category"> | null;
+  category: string | null;
   tags: string[];
   is_meal_prep: boolean;
   prep_minutes: number | null;
@@ -105,7 +106,9 @@ const optionalNumber = z
 export const recipeFilterSchema = z.object({
   q: z.string().trim().max(100).optional().catch(undefined),
   kategorie: z
-    .enum(["pasta", "rice", "bowl", "soup", "salad", "casserole", "meat", "fish", "breakfast", "snack", "dessert", "drink"])
+    .string()
+    .max(60)
+    .transform((v) => normalizeCategory(v) ?? undefined)
     .optional()
     .catch(undefined),
   tag: z.string().trim().max(40).optional().catch(undefined),
@@ -175,7 +178,7 @@ export function filterRecipes(items: RecipeListItem[], filter: RecipeFilter, con
 
   const result = items.filter((item) => {
     if (filter.favoriten && !item.isFavorite) return false;
-    if (filter.kategorie && item.category !== filter.kategorie) return false;
+    if (filter.kategorie && !sameCategory(item.category, filter.kategorie)) return false;
     if (filter.basis && (item.cocktail?.baseSpirit ?? "") !== filter.basis) return false;
     if (filter.methode && item.cocktail?.method !== filter.methode) return false;
     if (filter.tag && !matchesTag(item, filter.tag)) return false;

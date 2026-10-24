@@ -1,4 +1,3 @@
-import type { Enums } from "@/lib/supabase/database.types";
 import type { IngredientOption } from "./ingredient-option";
 import { refineUsLine, type ParsedIngredientLine } from "./ingredient-line";
 import type { Unit } from "./units";
@@ -18,7 +17,7 @@ export type ImportDraft = {
   servings: number | null;
   prepMinutes: number | null;
   cookMinutes: number | null;
-  category: Enums<"recipe_category"> | null;
+  category: string | null;
   lines: ImportLine[];
   steps: string[];
 };
@@ -32,7 +31,7 @@ export type DraftEditorInitial = {
   servings: number;
   prep_minutes: number | null;
   cook_minutes: number | null;
-  category: Enums<"recipe_category"> | null;
+  category: string | null;
   tags: string[];
   is_meal_prep: boolean;
   source_url: string;

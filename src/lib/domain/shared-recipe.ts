@@ -1,3 +1,4 @@
+import { normalizeCategory } from "./categories";
 import { z } from "zod";
 import { Constants } from "@/lib/supabase/database.types";
 import { markdownFileName } from "./recipe-markdown";
@@ -14,6 +15,11 @@ export function isShareToken(value: string): boolean {
 
 const num = z.number().nullable();
 
+/** Kategoriename der geteilten Karte (ältere Datenbank-Stände liefern nur den Schlüssel). */
+export function sharedCategory(recipe: { category: string | null; category_name?: string | null }): string | null {
+  return recipe.category_name ?? normalizeCategory(recipe.category);
+}
+
 export const sharedRecipeSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
@@ -21,7 +27,9 @@ export const sharedRecipeSchema = z.object({
   servings: z.number().int().min(1),
   prep_minutes: num,
   cook_minutes: num,
-  category: z.enum(Constants.public.Enums.recipe_category).nullable(),
+  /** alter Schlüssel (Enum); der Name steht in category_name (seit 24.10.2026) */
+  category: z.string().nullable(),
+  category_name: z.string().nullable().optional(),
   tags: z.array(z.string()),
   is_meal_prep: z.boolean(),
   source_url: z.string().nullable(),

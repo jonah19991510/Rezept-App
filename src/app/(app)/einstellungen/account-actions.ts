@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { normalizeCategory } from "@/lib/domain/categories";
 import { backupFileSchema, completeMapping, resolveBackupIngredients, type BackupFile } from "@/lib/domain/recipe-backup";
 import { resolveLineGrams } from "@/lib/domain/units";
 import { deleteUserCompletely } from "@/lib/server/delete-user";
@@ -171,7 +172,8 @@ export async function importRecipeBackupAction(input: BackupFile): Promise<Impor
         servings: recipe.servings,
         prep_minutes: recipe.prep_minutes,
         cook_minutes: recipe.cook_minutes,
-        category: recipe.category,
+        // ältere Sicherungen: Schlüssel der früheren festen Liste („pasta“)
+        category_name: recipe.recipe_type === "cocktail" ? null : normalizeCategory(recipe.category),
         tags: recipe.tags,
         is_meal_prep: recipe.is_meal_prep,
         source_url: recipe.source_url ?? "",

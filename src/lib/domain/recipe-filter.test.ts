@@ -28,18 +28,19 @@ const nutrition = (protein: number, kcal: number, flags: Partial<Record<"hp" | "
 });
 
 const items = [
-  recipe({ id: "1", title: "Spaghetti Bolognese", category: "pasta", tags: ["Klassiker"], prep_minutes: 15, cook_minutes: 45, nutrition: nutrition(40, 800, { hp: true }), updated_at: "2026-10-03T00:00:00Z" }),
-  recipe({ id: "2", title: "Rote-Linsen-Dal", category: "soup", tags: ["Wohlfühlessen"], prep_minutes: 10, cook_minutes: 25, is_meal_prep: true, nutrition: nutrition(18, 300, { veg: true, vegan: true }), isFavorite: true, updated_at: "2026-10-02T00:00:00Z" }),
-  recipe({ id: "3", title: "Shakshuka mit Feta", category: "breakfast", tags: ["Brunch"], prep_minutes: 10, cook_minutes: 20, nutrition: nutrition(23, 420, { lc: true, veg: true }), updated_at: "2026-10-01T00:00:00Z" }),
+  recipe({ id: "1", title: "Spaghetti Bolognese", category: "Pasta", tags: ["Klassiker"], prep_minutes: 15, cook_minutes: 45, nutrition: nutrition(40, 800, { hp: true }), updated_at: "2026-10-03T00:00:00Z" }),
+  recipe({ id: "2", title: "Rote-Linsen-Dal", category: "Suppe/Eintopf", tags: ["Wohlfühlessen"], prep_minutes: 10, cook_minutes: 25, is_meal_prep: true, nutrition: nutrition(18, 300, { veg: true, vegan: true }), isFavorite: true, updated_at: "2026-10-02T00:00:00Z" }),
+  recipe({ id: "3", title: "Shakshuka mit Feta", category: "Frühstück", tags: ["Brunch"], prep_minutes: 10, cook_minutes: 20, nutrition: nutrition(23, 420, { lc: true, veg: true }), updated_at: "2026-10-01T00:00:00Z" }),
 ];
 
 const ids = (list: RecipeListItem[]) => list.map((r) => r.id);
 
 describe("parseRecipeFilter", () => {
   it("liest gültige Werte und verwirft ungültige", () => {
+    // alte Links mit Schlüssel („soup“) ergeben den Namen
     expect(parseRecipeFilter({ q: "dal", kategorie: "soup", protein: "20,5", favoriten: "1", sortierung: "name" })).toEqual({
       q: "dal",
-      kategorie: "soup",
+      kategorie: "Suppe/Eintopf",
       tag: undefined,
       protein: 20.5,
       zeit: undefined,
@@ -49,8 +50,10 @@ describe("parseRecipeFilter", () => {
       bewertung: undefined,
       lange: false,
     });
-    const bad = parseRecipeFilter({ kategorie: "pizza", protein: "viel", sortierung: "x" });
+    const bad = parseRecipeFilter({ kategorie: "  ", protein: "viel", sortierung: "x" });
     expect(bad.kategorie).toBeUndefined();
+    // eigene Kategorien sind freier Text
+    expect(parseRecipeFilter({ kategorie: "Ofengericht" }).kategorie).toBe("Ofengericht");
     expect(bad.protein).toBeUndefined();
     expect(bad.sortierung).toBeUndefined();
   });

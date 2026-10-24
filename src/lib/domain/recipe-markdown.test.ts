@@ -15,7 +15,7 @@ const recipe = (over: Partial<MarkdownRecipe> = {}): MarkdownRecipe => ({
   servings: 4,
   prep_minutes: 10,
   cook_minutes: 25,
-  category: "soup",
+  category: "Suppe/Eintopf",
   tags: ["schnell"],
   is_meal_prep: true,
   source_url: null,
@@ -96,10 +96,10 @@ describe("createSlugger", () => {
 describe("groupByCategory", () => {
   it("sortiert nach Kategorie-Reihenfolge, ohne Kategorie zuletzt, darin alphabetisch", () => {
     const groups = groupByCategory([
-      recipe({ title: "Zucchini-Suppe", category: "soup" }),
+      recipe({ title: "Zucchini-Suppe", category: "Suppe/Eintopf" }),
       recipe({ title: "Brot", category: null }),
-      recipe({ title: "Arrabbiata", category: "pasta" }),
-      recipe({ title: "Äpfel-Suppe", category: "soup" }),
+      recipe({ title: "Arrabbiata", category: "Pasta" }),
+      recipe({ title: "Äpfel-Suppe", category: "Suppe/Eintopf" }),
     ]);
     expect(groups.map((g) => [g.label, g.recipes.map((r) => r.title)])).toEqual([
       ["Pasta", ["Arrabbiata"]],
@@ -112,7 +112,7 @@ describe("groupByCategory", () => {
 describe("bookToMarkdown", () => {
   it("setzt ein Inhaltsverzeichnis mit funktionierenden Sprungmarken oben hin", () => {
     const md = bookToMarkdown(
-      [recipe({ title: "Dal", category: "soup" }), recipe({ title: "Pasta", category: "pasta" }), recipe({ title: "Dal", category: "soup" })],
+      [recipe({ title: "Dal", category: "Suppe/Eintopf" }), recipe({ title: "Pasta", category: "Pasta" }), recipe({ title: "Dal", category: "Suppe/Eintopf" })],
       { title: "Unser Rezeptbuch", exportedAt: EXPORTED },
     );
     const [head] = md.split("\n---\n");

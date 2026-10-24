@@ -2,7 +2,6 @@ import { z } from "zod";
 import { Constants } from "@/lib/supabase/database.types";
 
 const unitEnum = z.enum(Constants.public.Enums.unit);
-const categoryEnum = z.enum(Constants.public.Enums.recipe_category);
 const foodGroupEnum = z.enum(Constants.public.Enums.food_group);
 const dietEnum = z.enum(Constants.public.Enums.ingredient_diet);
 const glassEnum = z.enum(Constants.public.Enums.glass);
@@ -71,7 +70,7 @@ export const recipeInputSchema = z.object({
     .max(100, "Höchstens 100 Portionen."),
   prep_minutes: minutes,
   cook_minutes: minutes,
-  category: categoryEnum.nullable(),
+  category: z.string().trim().min(1).max(40, "Kategorie: höchstens 40 Zeichen.").nullable(),
   tags: z
     .array(tagSchema)
     .max(20, "Höchstens 20 Tags.")

@@ -1,4 +1,4 @@
-import { CATEGORY_LABELS, type AutoTag } from "@/lib/labels";
+import type { AutoTag } from "@/lib/labels";
 import type { Enums } from "@/lib/supabase/database.types";
 import { entryMacros, type DayMacros, type Goals } from "./plan";
 
@@ -7,7 +7,7 @@ import { entryMacros, type DayMacros, type Goals } from "./plan";
 export type StatsRecipe = {
   id: string;
   title: string;
-  category: Enums<"recipe_category"> | null;
+  category: string | null;
   servings: number;
   isMealPrep: boolean;
   ingredientCount: number;
@@ -32,7 +32,10 @@ export function withNutrition(recipes: StatsRecipe[]) {
 // Kategorien (Donut): die größten Kategorien einzeln, der Rest als „Weitere“
 // ---------------------------------------------------------------------------
 
-export type CategoryKey = Enums<"recipe_category"> | "none";
+/** Kategoriename; „“ = ohne Kategorie */
+export type CategoryKey = string;
+
+export const NO_CATEGORY_KEY = "";
 
 export type CategorySlice = {
   key: CategoryKey | "other";
@@ -47,13 +50,13 @@ export type CategorySlice = {
 export const MAX_CATEGORY_SLICES = 5;
 
 export function categoryLabel(key: CategoryKey): string {
-  return key === "none" ? "Ohne Kategorie" : CATEGORY_LABELS[key];
+  return key === NO_CATEGORY_KEY ? "Ohne Kategorie" : key;
 }
 
 export function categorySlices(recipes: StatsRecipe[], maxSlices = MAX_CATEGORY_SLICES): CategorySlice[] {
   const counts = new Map<CategoryKey, number>();
   for (const r of recipes) {
-    const key: CategoryKey = r.category ?? "none";
+    const key: CategoryKey = r.category ?? NO_CATEGORY_KEY;
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1] || categoryLabel(a[0]).localeCompare(categoryLabel(b[0]), "de"));
@@ -84,7 +87,7 @@ export function categorySlices(recipes: StatsRecipe[], maxSlices = MAX_CATEGORY_
 /** Alle Kategorien mit Anzahl (für die Tabelle neben dem Donut). */
 export function categoryTable(recipes: StatsRecipe[]): { key: CategoryKey; label: string; count: number }[] {
   const counts = new Map<CategoryKey, number>();
-  for (const r of recipes) counts.set(r.category ?? "none", (counts.get(r.category ?? "none") ?? 0) + 1);
+  for (const r of recipes) counts.set(r.category ?? NO_CATEGORY_KEY, (counts.get(r.category ?? NO_CATEGORY_KEY) ?? 0) + 1);
   return [...counts.entries()]
     .map(([key, count]) => ({ key, label: categoryLabel(key), count }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "de"));
@@ -304,7 +307,7 @@ export function applySelection(recipes: StatsRecipe[], selection: StatsSelection
   if (!selection) return recipes;
   switch (selection.kind) {
     case "category":
-      return recipes.filter((r) => selection.members.includes(r.category ?? "none"));
+      return recipes.filter((r) => selection.members.includes(r.category ?? NO_CATEGORY_KEY));
     case "tag":
       return recipes.filter((r) => hasAutoTag(r, selection.tag));
     case "recipes":

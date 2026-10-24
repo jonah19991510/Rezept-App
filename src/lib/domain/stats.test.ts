@@ -37,9 +37,9 @@ function recipe(p: Partial<StatsRecipe> & Pick<StatsRecipe, "id">): StatsRecipe 
 describe("categorySlices", () => {
   it("zeigt bis zu 5 Kategorien einzeln", () => {
     const slices = categorySlices([
-      recipe({ id: "a", category: "pasta" }),
-      recipe({ id: "b", category: "pasta" }),
-      recipe({ id: "c", category: "soup" }),
+      recipe({ id: "a", category: "Pasta" }),
+      recipe({ id: "b", category: "Pasta" }),
+      recipe({ id: "c", category: "Suppe/Eintopf" }),
       recipe({ id: "d" }),
     ]);
     expect(slices.map((s) => [s.label, s.count, s.colorSlot])).toEqual([
@@ -58,9 +58,9 @@ describe("categorySlices", () => {
   });
 
   it("liefert für die Tabelle alle Kategorien", () => {
-    expect(categoryTable([recipe({ id: "a", category: "pasta" }), recipe({ id: "b" })])).toEqual([
-      { key: "none", label: "Ohne Kategorie", count: 1 },
-      { key: "pasta", label: "Pasta", count: 1 },
+    expect(categoryTable([recipe({ id: "a", category: "Pasta" }), recipe({ id: "b" })])).toEqual([
+      { key: "", label: "Ohne Kategorie", count: 1 },
+      { key: "Pasta", label: "Pasta", count: 1 },
     ]);
   });
 });
@@ -147,10 +147,10 @@ describe("Wochenplan-Statistik", () => {
 });
 
 describe("applySelection", () => {
-  const list = [recipe({ id: "a", category: "pasta", isVegan: true }), recipe({ id: "b" })];
+  const list = [recipe({ id: "a", category: "Pasta", isVegan: true }), recipe({ id: "b" })];
   it("filtert nach Kategorie, Tag oder Rezept", () => {
-    expect(applySelection(list, { kind: "category", label: "Pasta", members: ["pasta"] }).map((r) => r.id)).toEqual(["a"]);
-    expect(applySelection(list, { kind: "category", label: "Ohne", members: ["none"] }).map((r) => r.id)).toEqual(["b"]);
+    expect(applySelection(list, { kind: "category", label: "Pasta", members: ["Pasta"] }).map((r) => r.id)).toEqual(["a"]);
+    expect(applySelection(list, { kind: "category", label: "Ohne", members: [""] }).map((r) => r.id)).toEqual(["b"]);
     expect(applySelection(list, { kind: "tag", label: "Vegan", tag: "vegan" }).map((r) => r.id)).toEqual(["a"]);
     expect(applySelection(list, { kind: "recipes", label: "b", ids: ["b"] }).map((r) => r.id)).toEqual(["b"]);
     expect(applySelection(list, null)).toHaveLength(2);

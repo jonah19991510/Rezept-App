@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Check, CircleAlert, Link2, Loader2, Pencil, Undo
 import { importFromUrlAction } from "@/app/(app)/rezepte/import/actions";
 import { IngredientPicker } from "@/components/recipes/editor/ingredient-picker";
 import { RecipeEditor } from "@/components/recipes/editor/recipe-editor";
+import { matchCategory } from "@/lib/domain/categories";
 import { FormMessage } from "@/components/forms/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,16 @@ function hostOf(url: string) {
 }
 
 /** Import per Link: Adresse → Zutaten zuordnen → im Editor prüfen und speichern. */
-export function ImportFlow({ thresholds, tagSuggestions }: { thresholds: NutritionThresholds; tagSuggestions: string[] }) {
+export function ImportFlow({
+  thresholds,
+  tagSuggestions,
+  categories,
+}: {
+  thresholds: NutritionThresholds;
+  tagSuggestions: string[];
+  /** eigene Kategorien: eine erratene Kategorie zählt nur, wenn sie in der Liste steht */
+  categories: string[];
+}) {
   const [step, setStep] = useState<Step>("url");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string>();
@@ -127,7 +137,12 @@ export function ImportFlow({ thresholds, tagSuggestions }: { thresholds: Nutriti
           Zurück zur Zuordnung
         </Button>
       </div>
-      <RecipeEditor initial={initial} thresholds={thresholds} tagSuggestions={tagSuggestions} />
+      <RecipeEditor
+        initial={{ ...initial, category: matchCategory(initial.category, categories) }}
+        thresholds={thresholds}
+        tagSuggestions={tagSuggestions}
+        categories={categories}
+      />
     </div>
   );
 }

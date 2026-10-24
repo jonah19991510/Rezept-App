@@ -90,7 +90,8 @@ async function persistRecipe(input: RecipeInput): Promise<SaveRecipeStayResult> 
       servings: recipe.servings,
       prep_minutes: recipe.prep_minutes,
       cook_minutes: recipe.cook_minutes,
-      category: recipe.category,
+      // Name der Kategorie (eigene Liste); die Datenbank setzt die alte Enum-Spalte für die ältere App selbst
+      category_name: recipe.category,
       tags: recipe.tags,
       is_meal_prep: recipe.is_meal_prep,
       source_url: recipe.source_url,
@@ -128,7 +129,8 @@ export async function restoreVersionAction(input: { recipeId: string; version: n
   const [{ data: recipe }, { data: row }] = await Promise.all([
     supabase
       .from("recipes")
-      .select("id, description, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url")
+      // category_name unter diesem Namen: save_recipe liest ihn so (category wäre die alte Enum-Spalte)
+      .select("id, description, prep_minutes, cook_minutes, category_name, tags, is_meal_prep, source_url")
       .eq("id", recipeId)
       .maybeSingle(),
     supabase.from("recipe_versions").select("snapshot").eq("recipe_id", recipeId).eq("version", version).maybeSingle(),

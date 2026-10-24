@@ -34,7 +34,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
   const supabase = await createClient();
   const id = user.id;
   const [
-    profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients,
+    profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, created_at").eq("id", id).maybeSingle(),
     supabase
@@ -55,6 +55,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     supabase.from("cook_logs").select("*, recipes!cook_logs_recipe_id_fkey(title)").eq("user_id", id).order("cooked_at"),
     supabase.from("favorites").select("*, recipes!favorites_recipe_id_fkey(title)").eq("user_id", id),
     supabase.from("ingredients").select("*").eq("created_by", id).order("created_at"),
+    supabase.from("recipe_categories").select("name, position, created_at").eq("user_id", id).order("position"),
   ]);
 
   return {
@@ -75,6 +76,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     koch_log: must(cookLogs, "Koch-Log"),
     favoriten: must(favorites, "Favoriten"),
     eigene_zutaten: must(ownIngredients, "Zutaten"),
+    kategorien: must(categories, "Kategorien"),
   };
 }
 
@@ -84,7 +86,7 @@ export async function buildRecipeBackup(userId: string): Promise<BackupFile> {
   const result = await supabase
     .from("recipes")
     .select(
-      `recipe_type, title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url, side_dishes,
+      `recipe_type, title, description, servings, prep_minutes, cook_minutes, category:category_name, tags, is_meal_prep, source_url, side_dishes,
        recipe_ingredients!recipe_ingredients_recipe_id_fkey(position, amount, unit, grams, note, step_position, is_optional, ingredient:ingredients!recipe_ingredients_ingredient_id_fkey(${BACKUP_INGREDIENT_COLUMNS})),
        recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds),
        cocktail_details!cocktail_details_recipe_id_fkey(glass, method, ice, garnish)`,
@@ -95,7 +97,7 @@ export async function buildRecipeBackup(userId: string): Promise<BackupFile> {
   return toBackupFile(rows, new Date());
 }
 
-const MARKDOWN_SELECT = `id, recipe_type, title, description, servings, prep_minutes, cook_minutes, category, tags, is_meal_prep, source_url, side_dishes,
+const MARKDOWN_SELECT = `id, recipe_type, title, description, servings, prep_minutes, cook_minutes, category:category_name, tags, is_meal_prep, source_url, side_dishes,
   recipe_ingredients!recipe_ingredients_recipe_id_fkey(position, amount, unit, note, is_optional, ingredient:ingredients!recipe_ingredients_ingredient_id_fkey(name)),
   recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds),
   cocktail_details!cocktail_details_recipe_id_fkey(glass, method, ice, garnish)`;

@@ -9,9 +9,11 @@ import { RecipeFilters } from "@/components/recipes/recipe-filters";
 import { RecipeList } from "@/components/recipes/recipe-list";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
+import { categoryOptions } from "@/lib/domain/categories";
 import { cookSummary } from "@/lib/domain/cooklog";
 import { collectTags, filterRecipes, hasActiveFilter, parseRecipeFilter } from "@/lib/domain/recipe-filter";
 import { todayInBerlin } from "@/lib/domain/week";
+import { getCategoryNames } from "@/lib/server/categories";
 import { getCookLogs, getLongNotCookedWeeks, getRecipeCosts } from "@/lib/server/kitchen-log";
 import { countReadyRecipes } from "@/lib/server/pantry";
 import { getOwnRecipeList, getRecipeListSettings } from "@/lib/server/recipes";
@@ -20,7 +22,7 @@ export const metadata: Metadata = { title: "Rezepte" };
 
 export default async function RecipesPage({ searchParams }: PageProps<"/rezepte">) {
   const user = await requireUser();
-  const [list, params, costs, logs, longWeeks, settings, ready] = await Promise.all([
+  const [list, params, costs, logs, longWeeks, settings, ready, categories] = await Promise.all([
     getOwnRecipeList(user.id),
     searchParams,
     getRecipeCosts(),
@@ -28,6 +30,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/rezepte"
     getLongNotCookedWeeks(user.id),
     getRecipeListSettings(user.id, "dish"),
     countReadyRecipes(user.id, "dish"),
+    getCategoryNames(user.id),
   ]);
   // Phase 12: Kosten pro Portion und Koch-Log für Filter und Karten
   const all = list.map((r) => {
@@ -66,7 +69,7 @@ export default async function RecipesPage({ searchParams }: PageProps<"/rezepte"
       ) : (
         <>
           <ReadyBanner kind="kitchen" count={ready} />
-          <RecipeFilters ownTags={collectTags(all)} ownBook />
+          <RecipeFilters ownTags={collectTags(all)} ownBook categories={categoryOptions(categories, all.map((r) => r.category))} />
           <RecipeList
             recipes={recipes}
             initialView={settings.view}

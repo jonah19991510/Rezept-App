@@ -1,4 +1,5 @@
-import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS } from "@/lib/labels";
+import { GLASS_LABELS, METHOD_LABELS } from "@/lib/labels";
+import { LEGACY_CATEGORY_NAMES } from "./categories";
 import type { Enums } from "@/lib/supabase/database.types";
 
 // Markdown-Import (Phase 13): zerlegt eine oder mehrere .md-Dateien in Rezepte, ein Rezept pro Überschrift.
@@ -16,7 +17,7 @@ export type MarkdownImportRecipe = {
   servings: number | null;
   prepMinutes: number | null;
   cookMinutes: number | null;
-  category: Enums<"recipe_category"> | null;
+  category: string | null;
   tags: string[];
   /** Beilagen („**Passt dazu:** Spätzle, Kroketten“), gehören nicht zum Rezept */
   sideDishes: string[];
@@ -128,7 +129,8 @@ function parseServings(input: string): { value: number | null; range: boolean } 
 
 // ---------- Kategorien ----------
 
-const CATEGORY_WORDS: Record<string, Enums<"recipe_category">> = {
+/** Wort → Schlüssel der Standard-Kategorien (LEGACY_CATEGORY_NAMES); Ergebnis ist der Name */
+const CATEGORY_WORDS: Record<string, string> = {
   pasta: "pasta",
   nudeln: "pasta",
   nudelgericht: "pasta",
@@ -190,13 +192,14 @@ export function glassFor(value: string): Enums<"glass"> | null {
 export function methodFor(value: string): Enums<"cocktail_method"> | null {
   return METHOD_WORDS[norm(plainText(value))] ?? null;
 }
-for (const [value, label] of Object.entries(CATEGORY_LABELS)) CATEGORY_WORDS[norm(label)] = value as Enums<"recipe_category">;
+for (const [value, label] of Object.entries(LEGACY_CATEGORY_NAMES)) CATEGORY_WORDS[norm(label)] = value;
 
 /** Werte, die keine eigene Kategorie und kein sinnvoller Tag sind (Notion „Kategorie: Mittag/Abend“). */
 const IGNORED_VALUES = new Set(["mittag/abend", "mittag", "abend", "mittagessen", "abendessen"]);
 
-export function categoryFor(value: string): Enums<"recipe_category"> | null {
-  return CATEGORY_WORDS[norm(value)] ?? null;
+export function categoryFor(value: string): string | null {
+  const key = CATEGORY_WORDS[norm(value)];
+  return key ? LEGACY_CATEGORY_NAMES[key] : null;
 }
 
 /** Notion-Mehrfachauswahl „Frühstück, Mittag/Abend“ → einzelne Werte. */
@@ -506,7 +509,6 @@ function parseRecipe(block: { title: string; lines: string[] }, fileName: string
         recipe.recipeType = "cocktail";
       } else if (/^\*Cocktail\*$/.test(part)) {
         recipe.recipeType = "cocktail";
-        recipe.category ??= "drink";
       } else if (glass && glassFor(glass[1])) {
         recipe.recipeType = "cocktail";
         recipe.cocktail.glass ??= glassFor(glass[1]);
@@ -682,7 +684,8 @@ function parseRecipe(block: { title: string; lines: string[] }, fileName: string
     else if (!category && !IGNORED_VALUES.has(norm(value))) addTag(value);
   }
   if (recipe.prepMinutes == null && recipe.cookMinutes == null && totalMinutes != null) recipe.prepMinutes = totalMinutes;
-  if (recipe.recipeType === "cocktail") recipe.category ??= "drink";
+  // Cocktails haben keine Kategorie (die eigene Liste gilt für die Küche)
+  if (recipe.recipeType === "cocktail") recipe.category = null;
 
   recipe.description = description.join("\n").slice(0, 2000);
   recipe.reference = references.length > 0 ? references.join(" · ").slice(0, 300) : null;

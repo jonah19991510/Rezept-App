@@ -6,13 +6,13 @@ import { ArrowLeft, ArrowRight, ChevronRight, CircleAlert, CircleCheck, FileText
 import { matchMarkdownIngredientsAction } from "@/app/(app)/rezepte/import/actions";
 import { saveRecipesBatchAction } from "@/app/(app)/rezepte/actions";
 import { RecipeEditor } from "@/components/recipes/editor/recipe-editor";
+import { matchCategory } from "@/lib/domain/categories";
 import { FormMessage } from "@/components/forms/form-message";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { initialChoices, type ImportDraft, type ImportLine, type LineChoice } from "@/lib/domain/import-draft";
 import { certainRecipeInput, markdownEditorInitial, reviewReasons, toImportDraft } from "@/lib/domain/markdown-draft";
 import { parseMarkdownFiles, preselect, titleKey, type MarkdownImportRecipe } from "@/lib/domain/markdown-import";
 import type { NutritionThresholds } from "@/lib/domain/nutrition";
-import { CATEGORY_LABELS } from "@/lib/labels";
 import { MarkdownFileError, readMarkdownFiles } from "@/lib/markdown-files";
 import { cn } from "@/lib/utils";
 import { MARKDOWN_MATCH_BATCH } from "@/lib/validation/import";
@@ -37,10 +37,13 @@ export function MarkdownImportFlow({
   thresholds,
   tagSuggestions,
   existingTitles,
+  categories,
 }: {
   thresholds: NutritionThresholds;
   tagSuggestions: string[];
   existingTitles: string[];
+  /** eigene Kategorien: eine erkannte Kategorie zählt nur, wenn sie in der Liste steht */
+  categories: string[];
 }) {
   const [phase, setPhase] = useState<Phase>({ name: "file" });
   const [error, setError] = useState<string>();
@@ -92,8 +95,10 @@ export function MarkdownImportFlow({
         setPhase({ name: "file" });
         return;
       }
-      batch.forEach((recipe, j) => {
+      batch.forEach((parsed, j) => {
         const lines: ImportLine[] = result.lines[j] ?? [];
+        // Erkannte Kategorie nur, wenn sie in der eigenen Liste steht (auch fürs direkte Speichern)
+        const recipe = { ...parsed, category: matchCategory(parsed.category, categories) };
         prepared.push({ recipe, draft: toImportDraft(recipe, lines), reasons: reviewReasons(recipe, lines) });
       });
     }
@@ -177,6 +182,7 @@ export function MarkdownImportFlow({
         item={current}
         thresholds={thresholds}
         tagSuggestions={tagSuggestions}
+        categories={categories}
         onSaved={() => advance({ saved: 1 })}
         onSkip={() => advance({ skipped: 1 })}
       />
@@ -300,7 +306,7 @@ function RecipeSelection({
             r.ingredients.length === 1 ? "1 Zutat" : `${r.ingredients.length} Zutaten`,
             r.steps.length === 1 ? "1 Schritt" : `${r.steps.length} Schritte`,
             r.servings ? `${r.servings} Portionen` : null,
-            r.category ? CATEGORY_LABELS[r.category] : null,
+            r.category,
             ...r.tags,
           ].filter(Boolean);
           return (
@@ -397,12 +403,14 @@ function QueueItem({
   item,
   thresholds,
   tagSuggestions,
+  categories,
   onSaved,
   onSkip,
 }: {
   item: Prepared;
   thresholds: NutritionThresholds;
   tagSuggestions: string[];
+  categories: string[];
   onSaved: () => void;
   onSkip: () => void;
 }) {
@@ -448,6 +456,7 @@ function QueueItem({
         initial={initial}
         thresholds={thresholds}
         tagSuggestions={tagSuggestions}
+        categories={categories}
         onSaved={onSaved}
         cancel={{ label: "Überspringen", onClick: onSkip }}
       />

@@ -44,6 +44,7 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `recipe_versions` | frühere Fassungen eines Rezepts | 12 | nur Owner |
 | `meal_plan_entries`, `meal_prep_batches`, `plan_days` | Wochenplan, Meal Prep, Trainingstage | 3 / 11 | nur Nutzer selbst |
 | `user_goals` | Tagesziele kcal/Protein/KH/Fett | 3 / 11 | nur Nutzer selbst |
+| `recipe_categories` | Eigene Kategorien für Rezepte (Name, Reihenfolge), ab 24.10.2026; am Rezept steht der Name in `recipes.category_name` | Einstellungen → Kategorien | nur Nutzer selbst |
 | `user_settings` | Standard-Trainingstage, Einkaufs-Sortierung, Präferenzen | 1 (leer angelegt) | nur Nutzer selbst |
 | `shopping_list_items` | Einkaufsliste | 4 | nur Nutzer selbst |
 | `pantry_items` | Vorrat (Küche/Bar), Ablaufdatum; Bereich „Bar“ = Bar-Bestand (Spirituosen, Liköre, Sirupe, Säfte) | 10 / 15 | nur Nutzer selbst |
@@ -123,6 +124,11 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 - [ ] noindex-Regeln bewusst überprüft (robots.txt, Meta-Tag, `X-Robots-Tag`): sollen sie bleiben?
 
 ## Änderungsverlauf
+
+- **24.10.2026, eigene Kategorien:** Neue Tabelle `recipe_categories` (Name, Reihenfolge je Nutzer; RLS nur eigene,
+  Cascade über `profiles`), Spalte `recipes.category_name`. Startliste: die bisherigen festen Kategorien. Keine
+  personenbezogenen Daten im engeren Sinn. Datenexport enthält die Liste (`kategorien`), die Rezept-Sicherung den
+  Kategorienamen; Account-Löschung entfernt die Liste per Cascade. Keine neuen Dienstleister.
 
 - **Nach Phase 15:** Seite „Zutaten“ zeigt Zutaten aus eigenen Rezepten und selbst angelegte, mit eigenem Preis;
   selbst angelegte Zutaten lassen sich ändern und löschen, selbst aus Open Food Facts übernommene löschen. Neu nur zwei Trigger: einer

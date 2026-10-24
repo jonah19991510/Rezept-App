@@ -7,6 +7,7 @@ import { MarkdownImportFlow } from "@/components/recipes/import/markdown-import-
 import { requireUser } from "@/lib/auth";
 import { collectTags } from "@/lib/domain/recipe-filter";
 import { getNutritionThresholds } from "@/lib/server/app-config";
+import { getCategoryNames } from "@/lib/server/categories";
 import { getOwnRecipeList } from "@/lib/server/recipes";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +21,7 @@ const TABS = [
 export default async function ImportPage({ searchParams }: PageProps<"/rezepte/import">) {
   const [user, params] = await Promise.all([requireUser(), searchParams]);
   const source = params.quelle === "markdown" ? "markdown" : "link";
-  const [thresholds, list] = await Promise.all([getNutritionThresholds(), getOwnRecipeList(user.id)]);
+  const [thresholds, list, categories] = await Promise.all([getNutritionThresholds(), getOwnRecipeList(user.id), getCategoryNames(user.id)]);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -63,9 +64,10 @@ export default async function ImportPage({ searchParams }: PageProps<"/rezepte/i
           thresholds={thresholds}
           tagSuggestions={collectTags(list)}
           existingTitles={list.map((r) => r.title)}
+          categories={categories}
         />
       ) : (
-        <ImportFlow thresholds={thresholds} tagSuggestions={collectTags(list)} />
+        <ImportFlow thresholds={thresholds} tagSuggestions={collectTags(list)} categories={categories} />
       )}
     </div>
   );

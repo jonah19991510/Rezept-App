@@ -26,7 +26,7 @@ const row: RecipeRowForBackup = {
   servings: 4,
   prep_minutes: 10,
   cook_minutes: 25,
-  category: "soup",
+  category: "Suppe/Eintopf",
   tags: ["Klassiker"],
   is_meal_prep: true,
   source_url: null,

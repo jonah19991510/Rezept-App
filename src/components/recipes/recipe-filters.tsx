@@ -7,7 +7,7 @@ import { ChipRow, SearchField } from "@/components/layout/list-blocks";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { AUTO_TAG_LABELS, CATEGORY_LABELS, METHOD_LABELS } from "@/lib/labels";
+import { AUTO_TAG_LABELS, METHOD_LABELS } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { chipClass, ChipSelect } from "./chip-select";
 
@@ -45,6 +45,7 @@ export function RecipeFilters({
   ownBook = false,
   mode = "kitchen",
   baseSpirits = [],
+  categories = [],
 }: {
   ownTags: string[];
   tagGroupLabel?: string;
@@ -54,6 +55,8 @@ export function RecipeFilters({
   /** Phase 15: Bar mit Basisspirituose und Methode statt Kategorie, Protein und Zeit */
   mode?: "kitchen" | "bar";
   baseSpirits?: string[];
+  /** Kategorien zur Auswahl (eigene Liste bzw. die in Entdecken vorkommenden) */
+  categories?: string[];
 }) {
   const bar = mode === "bar";
   const router = useRouter();
@@ -154,13 +157,13 @@ export function RecipeFilters({
           <ChipSelect
             label="Kategorie"
             value={category}
-            display={category ? (CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] ?? "Kategorie") : "Kategorie"}
+            display={category || "Kategorie"}
             onChange={(v) => update({ kategorie: v })}
           >
             <option value="">Alle Kategorien</option>
-            {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
+            {(category && !categories.includes(category) ? [...categories, category] : categories).map((name) => (
+              <option key={name} value={name}>
+                {name}
               </option>
             ))}
           </ChipSelect>

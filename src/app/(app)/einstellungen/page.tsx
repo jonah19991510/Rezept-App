@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/lib/auth";
+import { getCategoryCounts, getCategoryRows } from "@/lib/server/categories";
 import { getLongNotCookedWeeks } from "@/lib/server/kitchen-log";
 import { getAllGoals, getTrainingWeekdays } from "@/lib/server/plan";
 import { DataSection, DeleteAccount, DisplayNameForm, PasswordForm } from "./account-forms";
+import { CategoriesForm } from "./categories-form";
 import { GoalsForm } from "./goals-form";
 import { LongNotCookedForm } from "./long-not-cooked-form";
 import { TrainingDaysForm } from "./training-days-form";
@@ -12,10 +14,12 @@ export const metadata: Metadata = { title: "Einstellungen" };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [goals, trainingWeekdays, longWeeks] = await Promise.all([
+  const [goals, trainingWeekdays, longWeeks, categories, categoryCounts] = await Promise.all([
     getAllGoals(user.id),
     getTrainingWeekdays(user.id),
     getLongNotCookedWeeks(user.id),
+    getCategoryRows(user.id),
+    getCategoryCounts(user.id),
   ]);
 
   return (
@@ -67,6 +71,19 @@ export default async function SettingsPage() {
           Zum Beispiel mehr Protein und kcal. Leere Felder übernehmen das normale Tagesziel.
         </p>
         <GoalsForm initial={goals.training} goalType="training" />
+      </section>
+
+      <section id="kategorien" className="mb-6 scroll-mt-20 rounded-3xl border bg-card p-5" aria-labelledby="sec-kategorien">
+        <h2 id="sec-kategorien" className="mb-1 text-lg font-semibold">
+          Kategorien
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Deine Kategorien für Rezepte (Küche), z. B. für den Filter auf der Startseite. Umbenennen ändert sie auch in
+          deinen Rezepten; beim Löschen wählst du, wohin die Rezepte wandern.
+        </p>
+        <CategoriesForm
+          items={categories.map((c) => ({ id: c.id, name: c.name, count: categoryCounts.get(c.name.toLocaleLowerCase("de-DE")) ?? 0 }))}
+        />
       </section>
 
       <section className="mb-6 rounded-3xl border bg-card p-5" aria-labelledby="sec-lange">

@@ -21,7 +21,8 @@ import { computeRecipeNutrition, type NutritionThresholds } from "@/lib/domain/n
 import { detectTimers } from "@/lib/domain/timers";
 import { needsManualGrams, resolveLineGrams, type Unit } from "@/lib/domain/units";
 import { formatGrams, formatNumber } from "@/lib/format";
-import { BAR_UNITS, CATEGORY_LABELS, GLASS_LABELS, KITCHEN_UNITS, METHOD_LABELS, UNIT_LABELS, type AutoTag } from "@/lib/labels";
+import { categoryOptions } from "@/lib/domain/categories";
+import { BAR_UNITS, GLASS_LABELS, KITCHEN_UNITS, METHOD_LABELS, UNIT_LABELS, type AutoTag } from "@/lib/labels";
 import type { Enums } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
 import { recipeInputSchema, flattenIssues, type CocktailInput, type RecipeInput } from "@/lib/validation/recipe";
@@ -38,7 +39,7 @@ export type EditorInitial = {
   servings: number;
   prep_minutes: number | null;
   cook_minutes: number | null;
-  category: Enums<"recipe_category"> | null;
+  category: string | null;
   tags: string[];
   is_meal_prep: boolean;
   source_url: string;
@@ -102,6 +103,7 @@ export function RecipeEditor({
   dilution = DEFAULT_DILUTION,
   tagSuggestions,
   sideSuggestions = [],
+  categories = [],
   onSaved,
   cancel,
 }: {
@@ -112,6 +114,8 @@ export function RecipeEditor({
   tagSuggestions: string[];
   /** Vorschläge für Beilagen, z. B. Titel der eigenen Rezepte (werden auf der Rezeptseite verlinkt) */
   sideSuggestions?: string[];
+  /** eigene Kategorien (Einstellungen → Kategorien) */
+  categories?: string[];
   /** Markdown-Import: nach dem Speichern hier weitermachen statt zur Rezeptseite zu wechseln */
   onSaved?: (recipeId: string) => void;
   /** Statt „Abbrechen“ (Link zur Übersicht) eine eigene Aktion, z. B. „Überspringen“ */
@@ -122,7 +126,9 @@ export function RecipeEditor({
   const [servings, setServings] = useState(String(initial.servings));
   const [prep, setPrep] = useState(initial.prep_minutes?.toString() ?? "");
   const [cook, setCook] = useState(initial.cook_minutes?.toString() ?? "");
-  const [category, setCategory] = useState<Enums<"recipe_category"> | "">(initial.category ?? "");
+  const [category, setCategory] = useState(initial.category ?? "");
+  // Eine Kategorie, die nicht (mehr) in der eigenen Liste steht (z. B. übernommenes Rezept), bleibt wählbar
+  const categoryChoices = categoryOptions(categories, [initial.category]);
   const [tags, setTags] = useState(initial.tags);
   const [isMealPrep, setIsMealPrep] = useState(initial.is_meal_prep);
   const [sourceUrl, setSourceUrl] = useState(initial.source_url);
@@ -274,7 +280,7 @@ export function RecipeEditor({
       servings: parseDecimal(servings) ?? Number.NaN,
       prep_minutes: intOrNull(prep),
       cook_minutes: isCocktail ? null : intOrNull(cook),
-      category: isCocktail ? category || "drink" : category || null,
+      category: isCocktail ? null : category || null,
       tags,
       is_meal_prep: isCocktail ? false : isMealPrep,
       source_url: sourceUrl.trim(),
@@ -369,14 +375,21 @@ export function RecipeEditor({
         <div className={cn("grid gap-4 sm:grid-cols-2", isCocktail && "hidden")}>
           <div className="grid gap-1.5">
             <Label htmlFor="category">Kategorie</Label>
-            <NativeSelect id="category" value={category} onChange={(e) => changed(setCategory)(e.target.value as Enums<"recipe_category"> | "")}>
+            <NativeSelect id="category" value={category} onChange={(e) => changed(setCategory)(e.target.value)}>
               <option value="">Keine</option>
-              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
+              {categoryChoices.map((name) => (
+                <option key={name} value={name}>
+                  {name}
                 </option>
               ))}
             </NativeSelect>
+            <p className="text-xs text-muted-foreground">
+              Eigene Kategorien legst du in den{" "}
+              <a href="/einstellungen#kategorien" className="text-primary underline-offset-4 hover:underline">
+                Einstellungen
+              </a>{" "}
+              an.
+            </p>
           </div>
           <label htmlFor="meal-prep" className="flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3 sm:mt-6">
             <span className="text-sm">

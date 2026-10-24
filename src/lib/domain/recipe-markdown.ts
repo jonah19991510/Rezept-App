@@ -1,6 +1,7 @@
 import { formatDate, formatNumber } from "@/lib/format";
 import { formatMinutes, formatQuantity } from "@/lib/format-quantity";
-import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS } from "@/lib/labels";
+import { GLASS_LABELS, METHOD_LABELS } from "@/lib/labels";
+import { DEFAULT_CATEGORIES } from "./categories";
 import type { Enums } from "@/lib/supabase/database.types";
 
 // Markdown-Export (Phase 13): ein einzelnes Rezept oder das ganze Buch als .md-Datei.
@@ -16,7 +17,7 @@ export type MarkdownRecipe = {
   servings: number;
   prep_minutes: number | null;
   cook_minutes: number | null;
-  category: Enums<"recipe_category"> | null;
+  category: string | null;
   tags: string[];
   is_meal_prep: boolean;
   source_url: string | null;
@@ -37,7 +38,7 @@ const COCKTAIL_GROUP = "Cocktails";
 const isCocktail = (r: MarkdownRecipe) => r.recipe_type === "cocktail";
 
 const NO_CATEGORY = "Ohne Kategorie";
-const CATEGORY_ORDER = Object.keys(CATEGORY_LABELS) as Enums<"recipe_category">[];
+const CATEGORY_ORDER: readonly string[] = DEFAULT_CATEGORIES;
 
 /** Zeichen, die Markdown sonst als Formatierung liest. */
 export function escapeMarkdown(text: string): string {
@@ -83,7 +84,7 @@ function metaLine(r: MarkdownRecipe): string {
     if (prep) parts.push(`Zubereitung ${prep}`);
     return parts.join(" · ");
   }
-  if (r.category) parts.push(`*${CATEGORY_LABELS[r.category]}*`);
+  if (r.category) parts.push(`*${escapeMarkdown(r.category)}*`);
   parts.push(`${r.servings} ${r.servings === 1 ? "Portion" : "Portionen"}`);
   const prep = formatMinutes(r.prep_minutes);
   const cook = formatMinutes(r.cook_minutes);
@@ -151,14 +152,24 @@ export function recipeToMarkdown(recipe: MarkdownRecipe): string {
 
 const collator = new Intl.Collator("de-DE", { sensitivity: "base", numeric: true });
 
-/** Rezepte nach Kategorie (Reihenfolge wie im Filter, ohne Kategorie danach, Cocktails zuletzt), darin alphabetisch. */
+/**
+ * Rezepte nach Kategorie (Standard-Kategorien in ihrer Reihenfolge, eigene alphabetisch danach, ohne Kategorie danach,
+ * Cocktails zuletzt), darin alphabetisch.
+ */
 export function groupByCategory(recipes: MarkdownRecipe[]): { label: string; recipes: MarkdownRecipe[] }[] {
-  const rank = (r: MarkdownRecipe) =>
-    isCocktail(r) ? CATEGORY_ORDER.length + 1 : r.category ? CATEGORY_ORDER.indexOf(r.category) : CATEGORY_ORDER.length;
-  const sorted = [...recipes].sort((a, b) => rank(a) - rank(b) || collator.compare(a.title, b.title));
+  const rank = (r: MarkdownRecipe) => {
+    if (isCocktail(r)) return CATEGORY_ORDER.length + 2;
+    if (!r.category) return CATEGORY_ORDER.length + 1;
+    const i = CATEGORY_ORDER.indexOf(r.category);
+    return i >= 0 ? i : CATEGORY_ORDER.length;
+  };
+  const groupOf = (r: MarkdownRecipe) => (isCocktail(r) ? COCKTAIL_GROUP : (r.category ?? NO_CATEGORY));
+  const sorted = [...recipes].sort(
+    (a, b) => rank(a) - rank(b) || collator.compare(groupOf(a), groupOf(b)) || collator.compare(a.title, b.title),
+  );
   const groups: { label: string; recipes: MarkdownRecipe[] }[] = [];
   for (const r of sorted) {
-    const label = isCocktail(r) ? COCKTAIL_GROUP : r.category ? CATEGORY_LABELS[r.category] : NO_CATEGORY;
+    const label = groupOf(r);
     const last = groups.at(-1);
     if (last?.label === label) last.recipes.push(r);
     else groups.push({ label, recipes: [r] });

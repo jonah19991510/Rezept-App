@@ -44,7 +44,7 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   const mondays = Array.from({ length: STATS_WEEKS }, (_, i) => addDays(currentMonday, (i - STATS_WEEKS + 1) * 7));
 
   const [recipes, nutrition, plan, goals, training, allCookLogs, costs, longNotCookedWeeks, cocktails] = await Promise.all([
-    supabase.from("recipes").select("id, title, category, servings, is_meal_prep").eq("owner_id", userId).eq("recipe_type", "dish"),
+    supabase.from("recipes").select("id, title, category:category_name, servings, is_meal_prep").eq("owner_id", userId).eq("recipe_type", "dish"),
     supabase
       .from("recipe_nutrition")
       .select(

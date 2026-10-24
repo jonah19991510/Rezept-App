@@ -1,4 +1,3 @@
-import type { Enums } from "@/lib/supabase/database.types";
 import { convertFahrenheitInText } from "./us-units";
 
 // Import per Link (Phase 7): liest schema.org/Recipe aus den JSON-LD-Blöcken einer Webseite.
@@ -10,7 +9,7 @@ export type ImportedRecipe = {
   servings: number | null;
   prepMinutes: number | null;
   cookMinutes: number | null;
-  category: Enums<"recipe_category"> | null;
+  category: string | null;
   ingredientLines: string[];
   steps: string[];
 };
@@ -162,23 +161,24 @@ export function parseInstructions(value: Json | undefined): string[] {
   return out.map((s) => s.slice(0, 2000)).slice(0, 60);
 }
 
-const CATEGORY_HINTS: [Enums<"recipe_category">, RegExp][] = [
-  ["breakfast", /frühstück|breakfast|porridge|müsli|overnight oats|pancake|pfannkuchen/i],
-  ["dessert", /dessert|nachtisch|nachspeise|kuchen|torte|cake|cookie|kekse|\beis\b|eiscreme|mousse|pudding/i],
-  ["drink", /getränk|drink|cocktail|smoothie|limonade/i],
-  ["soup", /suppe|eintopf|soup|stew|chili con carne/i],
-  ["salad", /salat|salad/i],
-  ["casserole", /auflauf|gratin|casserole|lasagne|lasagna/i],
-  ["pasta", /pasta|nudel|spaghetti|penne|tagliatelle|fusilli|gnocchi|maccheroni|linguine/i],
-  ["rice", /reis|risotto|rice|paella|pilaw/i],
-  ["bowl", /bowl/i],
-  ["fish", /fisch|fish|lachs|salmon|thunfisch|garnele|shrimp/i],
-  ["meat", /fleisch|meat|rind|schwein|hähnchen|huhn|chicken|beef|pork|steak|gulasch/i],
-  ["snack", /snack|fingerfood|dip\b/i],
+/** Hinweise → Name einer Standard-Kategorie (die Bestätigung nimmt nur Kategorien aus der eigenen Liste) */
+const CATEGORY_HINTS: [string, RegExp][] = [
+  ["Frühstück", /frühstück|breakfast|porridge|müsli|overnight oats|pancake|pfannkuchen/i],
+  ["Dessert", /dessert|nachtisch|nachspeise|kuchen|torte|cake|cookie|kekse|\beis\b|eiscreme|mousse|pudding/i],
+  ["Getränk", /getränk|drink|cocktail|smoothie|limonade/i],
+  ["Suppe/Eintopf", /suppe|eintopf|soup|stew|chili con carne/i],
+  ["Salat", /salat|salad/i],
+  ["Auflauf", /auflauf|gratin|casserole|lasagne|lasagna/i],
+  ["Pasta", /pasta|nudel|spaghetti|penne|tagliatelle|fusilli|gnocchi|maccheroni|linguine/i],
+  ["Reis", /reis|risotto|rice|paella|pilaw/i],
+  ["Bowl", /bowl/i],
+  ["Fisch", /fisch|fish|lachs|salmon|thunfisch|garnele|shrimp/i],
+  ["Fleischgericht", /fleisch|meat|rind|schwein|hähnchen|huhn|chicken|beef|pork|steak|gulasch/i],
+  ["Snack", /snack|fingerfood|dip\b/i],
 ];
 
 /** Kategorie aus recipeCategory, Titel und Stichworten erraten (der Nutzer kann sie in der Bestätigung ändern). */
-export function guessCategory(...texts: string[]): Enums<"recipe_category"> | null {
+export function guessCategory(...texts: string[]): string | null {
   for (const source of texts) {
     if (!source) continue;
     for (const [category, re] of CATEGORY_HINTS) if (re.test(source)) return category;

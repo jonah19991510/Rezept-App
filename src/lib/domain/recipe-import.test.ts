@@ -48,9 +48,9 @@ describe("Hilfsfunktionen", () => {
   });
 
   it("Kategorie raten", () => {
-    expect(guessCategory("Hauptspeise", "Spaghetti Carbonara")).toBe("pasta");
-    expect(guessCategory("", "Gebratener Reis mit Ei")).toBe("rice");
-    expect(guessCategory("Dessert")).toBe("dessert");
+    expect(guessCategory("Hauptspeise", "Spaghetti Carbonara")).toBe("Pasta");
+    expect(guessCategory("", "Gebratener Reis mit Ei")).toBe("Reis");
+    expect(guessCategory("Dessert")).toBe("Dessert");
     expect(guessCategory("", "Linsen-Dal")).toBeNull();
   });
 });

@@ -4,6 +4,7 @@ import { KitchenBarSwitch } from "@/components/bar/kitchen-bar-switch";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { RecipeFilters } from "@/components/recipes/recipe-filters";
+import { categoryOptions } from "@/lib/domain/categories";
 import { RecipeList } from "@/components/recipes/recipe-list";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
@@ -58,6 +59,7 @@ export async function DiscoverView({
             searchPlaceholder={`${noun.many} oder Namen suchen …`}
             mode={bar ? "bar" : "kitchen"}
             baseSpirits={bar ? collectBaseSpirits(all) : []}
+            categories={bar ? [] : categoryOptions([], all.map((r) => r.category))}
           />
 
           <RecipeList

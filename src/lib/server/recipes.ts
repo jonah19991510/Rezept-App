@@ -6,7 +6,8 @@ import { toListSort, toRecipeView, type CocktailSummary, type RecipeListItem, ty
 import type { Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
-const LIST_COLUMNS = "id, title, description, category, tags, is_meal_prep, prep_minutes, cook_minutes, updated_at, image_url";
+// Kategorie: Name aus category_name (eigene Kategorien, 24.10.2026), in der App weiter „category“
+const LIST_COLUMNS = "id, title, description, category:category_name, tags, is_meal_prep, prep_minutes, cook_minutes, updated_at, image_url";
 const LIST_NUTRITION =
   "recipe_id, kcal_per_serving, protein_per_serving, carbs_per_serving, fat_per_serving, is_high_protein, is_low_carb, is_vegetarian, is_vegan";
 

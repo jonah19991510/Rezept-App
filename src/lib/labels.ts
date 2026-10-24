@@ -2,21 +2,6 @@ import type { Enums } from "@/lib/supabase/database.types";
 
 // Deutsche Anzeige-Namen für die (englischen) Enum-Werte der Datenbank.
 
-export const CATEGORY_LABELS: Record<Enums<"recipe_category">, string> = {
-  pasta: "Pasta",
-  rice: "Reis",
-  bowl: "Bowl",
-  soup: "Suppe/Eintopf",
-  salad: "Salat",
-  casserole: "Auflauf",
-  meat: "Fleischgericht",
-  fish: "Fisch",
-  breakfast: "Frühstück",
-  snack: "Snack",
-  dessert: "Dessert",
-  drink: "Getränk",
-};
-
 export const FOOD_GROUP_LABELS: Record<Enums<"food_group">, string> = {
   vegetables: "Gemüse",
   fruit: "Obst",

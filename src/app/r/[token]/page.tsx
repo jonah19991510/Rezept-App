@@ -7,10 +7,10 @@ import { ScaledRecipeContent } from "@/components/recipes/scaled-recipe-content"
 import { SharedActions } from "@/components/recipes/shared-actions";
 import { getCurrentUser } from "@/lib/auth";
 import { dilutionNote } from "@/lib/domain/cocktail";
-import { missingGramNames, shareDescription, sharedMacros } from "@/lib/domain/shared-recipe";
+import { missingGramNames, shareDescription, sharedCategory, sharedMacros } from "@/lib/domain/shared-recipe";
 import { formatDate } from "@/lib/format";
 import { formatMinutes } from "@/lib/format-quantity";
-import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
+import { GLASS_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
 import { getSharedRecipe } from "@/lib/server/shared-recipes";
 import { createClient } from "@/lib/supabase/server";
 
@@ -56,9 +56,7 @@ export default async function SharedRecipePage({ params }: PageProps<"/r/[token]
   const cocktail = recipe.cocktail;
   const kicker = isCocktail
     ? ["Cocktail", cocktail?.method ? METHOD_LABELS[cocktail.method] : null].filter(Boolean).join(" · ")
-    : recipe.category
-      ? CATEGORY_LABELS[recipe.category]
-      : null;
+    : sharedCategory(recipe);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 print:max-w-none print:p-0">

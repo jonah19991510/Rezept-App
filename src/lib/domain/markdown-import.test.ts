@@ -161,7 +161,7 @@ describe("parseMarkdownFiles – Notion-Export", () => {
       servings: 4,
       prepMinutes: 10,
       cookMinutes: 30,
-      category: "pasta",
+      category: "Pasta",
       tags: [],
       description: "",
       warnings: [],
@@ -265,7 +265,7 @@ describe("Rundreise mit dem eigenen Markdown-Export", () => {
     servings: 4,
     prep_minutes: 10,
     cook_minutes: 25,
-    category: "soup",
+    category: "Suppe/Eintopf",
     tags: ["schnell", "würzig"],
     is_meal_prep: true,
     source_url: "https://example.org/dal",
@@ -288,7 +288,7 @@ describe("Rundreise mit dem eigenen Markdown-Export", () => {
       servings: 4,
       prepMinutes: 10,
       cookMinutes: 25,
-      category: "soup",
+      category: "Suppe/Eintopf",
       tags: ["schnell", "würzig"],
       isMealPrep: true,
       sourceUrl: "https://example.org/dal",
@@ -316,14 +316,14 @@ describe("Rundreise mit dem eigenen Markdown-Export", () => {
   });
 
   it("ganzes Buch mit Inhaltsverzeichnis", () => {
-    const md = bookToMarkdown([dal, { ...dal, title: "Pasta *speciale*", category: "pasta" }], {
+    const md = bookToMarkdown([dal, { ...dal, title: "Pasta *speciale*", category: "Pasta" }], {
       title: "Rezeptbuch von Jonah",
       exportedAt: new Date("2026-10-20T08:00:00Z"),
     });
     const { recipes, skippedEmpty } = parseMarkdownFiles([file("rezeptbuch-2026-10-20.md", md)]);
     expect(recipes.map((r) => [r.title, r.category])).toEqual([
-      ["Pasta *speciale*", "pasta"],
-      ["Linsen-Dal", "soup"],
+      ["Pasta *speciale*", "Pasta"],
+      ["Linsen-Dal", "Suppe/Eintopf"],
     ]);
     expect(skippedEmpty).toEqual([]);
     expect(recipes[0].steps).toHaveLength(2);
@@ -352,9 +352,9 @@ describe("Hilfsfunktionen", () => {
   });
 
   it("categoryFor", () => {
-    expect(categoryFor("Suppe")).toBe("soup");
-    expect(categoryFor("Auflauf")).toBe("casserole");
-    expect(categoryFor("Frühstück")).toBe("breakfast");
+    expect(categoryFor("Suppe")).toBe("Suppe/Eintopf");
+    expect(categoryFor("Auflauf")).toBe("Auflauf");
+    expect(categoryFor("Frühstück")).toBe("Frühstück");
     expect(categoryFor("Pizza/Flammenkuchen")).toBeNull();
   });
 
@@ -382,7 +382,7 @@ describe("Cocktails (Phase 15)", () => {
     servings: 1,
     prep_minutes: 5,
     cook_minutes: null,
-    category: "drink",
+    category: null,
     tags: ["sauer"],
     is_meal_prep: false,
     source_url: null,
@@ -415,7 +415,7 @@ describe("Cocktails (Phase 15)", () => {
       recipeType: "cocktail",
       servings: 1,
       prepMinutes: 5,
-      category: "drink",
+      category: null,
       cocktail: { glass: "coupette", method: "shaken", ice: "ohne, vorgekühltes Glas", garnish: "Limettenrad" },
       warnings: [],
     });
@@ -424,7 +424,7 @@ describe("Cocktails (Phase 15)", () => {
   });
 
   it("im Buch eigene Gruppe „Cocktails“ am Ende; Gerichte bleiben Gerichte", () => {
-    const dish: MarkdownRecipe = { ...daiquiri, title: "Dal", recipe_type: "dish", cocktail: null, alcohol: null, category: "soup", servings: 4 };
+    const dish: MarkdownRecipe = { ...daiquiri, title: "Dal", recipe_type: "dish", cocktail: null, alcohol: null, category: "Suppe/Eintopf", servings: 4 };
     const md = bookToMarkdown([daiquiri, dish], { title: "Buch", exportedAt: new Date("2026-10-20T10:00:00Z") });
     expect(md.indexOf("**Suppe/Eintopf**")).toBeLessThan(md.indexOf("**Cocktails**"));
     const recipes = parseMarkdownFiles([file("buch.md", md)]).recipes;
@@ -441,7 +441,7 @@ describe("Cocktails (Phase 15)", () => {
         "# Negroni\n\nArt: Cocktail\nGlas: Tumbler\nMethode: gerührt\nGarnitur: Orangenzeste\n\n## Zutaten\n- 3 cl Gin\n\n## Zubereitung\n1. Rühren.\n",
       ),
     ]).recipes;
-    expect(r).toMatchObject({ recipeType: "cocktail", category: "drink", cocktail: { glass: "tumbler", method: "stirred", garnish: "Orangenzeste" } });
+    expect(r).toMatchObject({ recipeType: "cocktail", category: null, cocktail: { glass: "tumbler", method: "stirred", garnish: "Orangenzeste" } });
     expect(r.tags).not.toContain("Cocktail");
   });
 });
