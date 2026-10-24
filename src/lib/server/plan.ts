@@ -14,6 +14,8 @@ export type PlanEntry = {
   position: number;
   recipeId: string;
   recipeTitle: string;
+  /** Speicherpfad des Rezeptfotos (Vorschaubild im Plan), sonst null */
+  imagePath: string | null;
   /** false, wenn das Rezept nicht mehr lesbar ist (ein fremdes Rezept wurde wieder privat gemacht) */
   available: boolean;
   /** Anzeigename bei fremden öffentlichen Rezepten, sonst null */
@@ -31,7 +33,7 @@ export async function getWeekEntries(userId: string, monday: string): Promise<Pl
   const { data, error } = await supabase
     .from("meal_plan_entries")
     .select(
-      "id, date, slot, servings, position, recipe_id, batch_id, is_leftover, recipes!meal_plan_entries_recipe_id_fkey(title, owner_id, profiles!recipes_owner_id_fkey(display_name))",
+      "id, date, slot, servings, position, recipe_id, batch_id, is_leftover, recipes!meal_plan_entries_recipe_id_fkey(title, image_url, owner_id, profiles!recipes_owner_id_fkey(display_name))",
     )
     .eq("user_id", userId)
     .gte("date", monday)
@@ -61,6 +63,7 @@ export async function getWeekEntries(userId: string, monday: string): Promise<Pl
       position: e.position,
       recipeId: e.recipe_id,
       recipeTitle: e.recipes?.title ?? UNAVAILABLE_TITLE,
+      imagePath: e.recipes?.image_url ?? null,
       available: e.recipes != null,
       authorName: e.recipes && e.recipes.owner_id !== userId ? authorName(e.recipes.profiles?.display_name) : null,
       perServing:

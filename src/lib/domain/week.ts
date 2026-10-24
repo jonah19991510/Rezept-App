@@ -88,3 +88,17 @@ export function weekLabel(monday: string): string {
   const sunday = addDays(monday, 6);
   return `KW ${isoWeekNumber(monday)} · ${dayMonth(monday)}–${dayMonth(sunday)}${sunday.slice(0, 4)}`;
 }
+
+/** „KW 43 · 19.10.–25.10.“ (ohne Jahr, für die Wochenleiste) */
+export function weekRangeLabel(monday: string): string {
+  return `KW ${isoWeekNumber(monday)} · ${dayMonth(monday)}–${dayMonth(addDays(monday, 6))}`;
+}
+
+/** „Diese Woche“, „Letzte Woche“, „Nächste Woche“, „In 2 Wochen“, „Vor 3 Wochen“ */
+export function relativeWeekLabel(monday: string, today: string): string {
+  const weeks = Math.round(daysBetween(mondayOf(today), mondayOf(monday)) / 7);
+  if (weeks === 0) return "Diese Woche";
+  if (weeks === -1) return "Letzte Woche";
+  if (weeks === 1) return "Nächste Woche";
+  return weeks > 1 ? `In ${weeks} Wochen` : `Vor ${-weeks} Wochen`;
+}

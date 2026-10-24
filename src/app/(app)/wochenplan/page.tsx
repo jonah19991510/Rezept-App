@@ -1,19 +1,17 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { CopyWeekDialog } from "@/components/plan/copy-week-dialog";
 import { WeekPlanner } from "@/components/plan/week-planner";
-import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { planRecipeOptions } from "@/lib/domain/community";
 import { longNotCooked } from "@/lib/domain/cooklog";
 import { leftoverIdeas, type LeftoverIdea } from "@/lib/domain/leftovers";
 import { isTrainingDay } from "@/lib/domain/training";
-import { addDays, mondayOf, resolveWeekParam, todayInBerlin, weekDays, weekLabel } from "@/lib/domain/week";
+import { addDays, resolveWeekParam, todayInBerlin, weekDays } from "@/lib/domain/week";
 import { getAllGoals, getPlannedBefore, getRecipeBases, getTrainingDays, getWeekBatches, getWeekEntries } from "@/lib/server/plan";
 import { getCookLogs, getLongNotCookedWeeks, getRecipeCosts } from "@/lib/server/kitchen-log";
 import { getOwnRecipeList, getPublicRecipeList } from "@/lib/server/recipes";
+import { hasPlanShoppingItems } from "@/lib/server/shopping";
 
 export const metadata: Metadata = { title: "Wochenplan" };
 
@@ -24,7 +22,7 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
   const monday = resolveWeekParam(woche, today);
   const days = weekDays(monday);
 
-  const [entries, goals, training, batches, before, ownRecipes, publicRecipes, logs, weeks] = await Promise.all([
+  const [entries, goals, training, batches, before, ownRecipes, publicRecipes, logs, weeks, planOnList] = await Promise.all([
     getWeekEntries(user.id, monday),
     getAllGoals(user.id),
     getTrainingDays(user.id, monday, addDays(monday, 6)),
@@ -34,6 +32,7 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
     getPublicRecipeList(user.id),
     getCookLogs(user.id),
     getLongNotCookedWeeks(user.id),
+    hasPlanShoppingItems(user.id),
   ]);
 
   // Eigenes Buch und öffentliche Rezepte anderer (Phase 6)
@@ -57,39 +56,15 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
     .map((l) => ({ id: l.recipeId, title: titles.get(l.recipeId)!, weeksAgo: l.weeksAgo, avgRating: l.avgRating }));
 
   const trainingDays = Object.fromEntries(days.map((d) => [d, isTrainingDay(d, training.weekdays, training.overrides)]));
-  const isCurrentWeek = monday === mondayOf(today);
 
   return (
     <>
-      <PageHeader title="Wochenplan" description={weekLabel(monday)} actions={<CopyWeekDialog monday={monday} hasEntries={entries.length > 0} />} />
-
-      <nav className="mb-5 flex items-center gap-2" aria-label="Wochen">
-        <Link
-          href={`/wochenplan?woche=${addDays(monday, -7)}`}
-          className={buttonVariants({ variant: "outline", size: "icon" })}
-          aria-label="Vorherige Woche"
-        >
-          <ChevronLeft aria-hidden />
-        </Link>
-        <Link
-          href="/wochenplan"
-          className={buttonVariants({ variant: isCurrentWeek ? "secondary" : "outline" })}
-          aria-current={isCurrentWeek ? "page" : undefined}
-        >
-          Diese Woche
-        </Link>
-        <Link
-          href={`/wochenplan?woche=${addDays(monday, 7)}`}
-          className={buttonVariants({ variant: "outline", size: "icon" })}
-          aria-label="Nächste Woche"
-        >
-          <ChevronRight aria-hidden />
-        </Link>
-      </nav>
+      <PageHeader title="Wochenplan" actions={<CopyWeekDialog monday={monday} hasEntries={entries.length > 0} />} />
 
       {/* key: bei Wochenwechsel den gewählten Tag neu bestimmen */}
       <WeekPlanner
         key={monday}
+        monday={monday}
         days={days}
         today={today}
         entries={entries}
@@ -100,6 +75,7 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
         recipes={recipeOptions}
         costs={costPerServing}
         longNotCooked={{ items: longAgo, weeks }}
+        hasPlanShoppingItems={planOnList}
       />
     </>
   );

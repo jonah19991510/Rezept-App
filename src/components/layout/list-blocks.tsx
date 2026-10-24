@@ -142,6 +142,21 @@ export function GroupHeading({ children, aside }: { children: ReactNode; aside?:
   );
 }
 
+/** Kleines Label neben einem Namen, z. B. „Eigene“, „Heute“ (Akzent) oder „Rest“ (Salbei). */
+export function TagLabel({ tone = "accent", icon: Icon, children }: { tone?: "accent" | "sage"; icon?: LucideIcon; children: ReactNode }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 font-sans text-xs font-semibold",
+        tone === "sage" ? "bg-sage/15 text-sage" : "bg-primary/15 text-primary",
+      )}
+    >
+      {Icon ? <Icon className="size-3" aria-hidden /> : null}
+      {children}
+    </span>
+  );
+}
+
 /** Abgerundete Karte mit Listenzeilen, getrennt durch feine Linien. */
 export function ListCard({ children, id, className }: { children: ReactNode; id?: string; className?: string }) {
   return (

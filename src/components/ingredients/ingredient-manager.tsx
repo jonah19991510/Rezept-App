@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { setIngredientDisplayNameAction } from "@/app/(app)/einkauf/pantry-actions";
 import { deleteIngredientAction } from "@/app/(app)/zutaten/actions";
 import { EmptyState } from "@/components/layout/empty-state";
-import { ChipRow, CountChip, GroupHeading, ListCard, SearchField, SegmentToggle } from "@/components/layout/list-blocks";
+import { ChipRow, CountChip, GroupHeading, ListCard, SearchField, SegmentToggle, TagLabel } from "@/components/layout/list-blocks";
 import { PriceForm, type PriceDraft } from "@/components/prices/price-manager";
 import { ChipSelect } from "@/components/recipes/chip-select";
 import { IngredientForm } from "@/components/recipes/editor/ingredient-form";
@@ -394,9 +394,7 @@ function IngredientRow({
       >
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate font-medium">{name}</span>
-          {item.isOwn ? (
-            <span className="shrink-0 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-semibold text-primary">Eigene</span>
-          ) : null}
+          {item.isOwn ? <TagLabel>Eigene</TagLabel> : null}
         </span>
         <span className="truncate text-xs text-muted-foreground">{sub}</span>
       </button>

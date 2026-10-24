@@ -1,9 +1,10 @@
 "use client";
 
 import { useOptimistic, useTransition } from "react";
-import { Boxes, Dumbbell, Lightbulb, Plus, Repeat } from "lucide-react";
+import { Boxes, Dumbbell, Plus, Repeat, Target } from "lucide-react";
 import { toast } from "sonner";
-import { addLeftoverAction, setTrainingDayAction } from "@/app/(app)/wochenplan/actions";
+import { addLeftoverAction, addPlanEntryAction, setTrainingDayAction } from "@/app/(app)/wochenplan/actions";
+import { chipClass } from "@/components/recipes/chip-select";
 import { Button } from "@/components/ui/button";
 import { BASE_LABELS, type LeftoverIdea } from "@/lib/domain/leftovers";
 import { openBatchesFor } from "@/lib/domain/mealprep";
@@ -27,7 +28,10 @@ function relativeDay(from: string, to: string): string {
   return diff === 1 ? "gestern" : diff === 2 ? "vorgestern" : `vor ${diff} Tagen`;
 }
 
-/** Hantel-Schalter: Tag als Trainingstag (eigenes Zielset). */
+/** Ab so viel fehlendem Protein erscheint der Lücken-Hinweis über den Mahlzeiten */
+const MIN_PROTEIN_GAP = 25;
+
+/** Hantel-Schalter: Tag als Trainingstag (eigenes Zielset); an = Akzent-Rahmen und getönte Fläche. */
 export function TrainingToggle({ date, training, compact = false }: { date: string; training: boolean; compact?: boolean }) {
   const [optimistic, setOptimistic] = useOptimistic(training);
   const [, startTransition] = useTransition();
@@ -47,9 +51,9 @@ export function TrainingToggle({ date, training, compact = false }: { date: stri
       aria-pressed={optimistic}
       title={optimistic ? "Trainingstag – antippen zum Ausschalten" : "Als Trainingstag markieren"}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-full border text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-        compact ? "size-8" : "min-h-11 px-3",
-        optimistic ? "border-primary bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground",
+        chipClass(optimistic),
+        !optimistic && "text-muted-foreground hover:text-foreground",
+        compact ? "size-8 justify-center px-0" : "px-3",
       )}
     >
       <Dumbbell className="size-4" aria-hidden />
@@ -58,89 +62,89 @@ export function TrainingToggle({ date, training, compact = false }: { date: stri
   );
 }
 
-/** Unter dem Tagesfortschritt: was zum Ziel fehlt (mit Vorschlägen), übrige Meal-Prep-Portionen, Reste-Ideen. */
-export function DayExtras({
+/**
+ * Lücke beim Protein: Fehlen noch mindestens 25 g, der beste Vorschlag aus dem eigenen Buch (bzw. öffentlichen
+ * Rezepten) mit Knopf „Einplanen“: direkt in den Abend-Slot, oder als Snack, falls am Abend schon etwas steht.
+ */
+export function ProteinGapCard({
   date,
   actual,
   goals,
   dayEntries,
   recipes,
-  batches,
-  ideas,
-  onPlan,
 }: {
   date: string;
   actual: DayMacros;
   goals: Goals;
   dayEntries: PlanEntry[];
   recipes: PlanRecipeChoices;
+}) {
+  const [pending, startTransition] = useTransition();
+  const gap = dayGap(actual, goals);
+  if (!gap?.protein || gap.protein < MIN_PROTEIN_GAP) return null;
+  const plannedIds = new Set(dayEntries.map((e) => e.recipeId));
+  const [best] = gapSuggestions(actual, goals, [...recipes.own, ...recipes.community].filter((r) => !plannedIds.has(r.id)), 1);
+  const slot: MealSlot = dayEntries.some((e) => e.slot === "dinner") ? "snack" : "dinner";
+
+  function plan() {
+    if (!best) return;
+    startTransition(async () => {
+      const result = await addPlanEntryAction({ date, slot, recipe_id: best.id, servings: best.servings });
+      if (result.ok) toast.success(`${best.title} eingeplant (${SLOT_LABELS[slot]}).`);
+      else toast.error(result.message);
+    });
+  }
+
+  return (
+    <section className="flex items-center gap-3 rounded-3xl border border-primary/30 bg-primary/10 p-3.5" aria-label="Lücke beim Protein">
+      <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground">
+        <Target className="size-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="leading-snug font-semibold">Noch {formatNumber(Math.round(gap.protein), 0)} g Protein offen</p>
+        {best ? (
+          <p className="truncate text-sm text-primary">
+            {best.title} · {best.servings === 0.5 ? "½ Portion · " : ""}+{formatNumber(Math.round(best.adds.protein), 0)} g ·{" "}
+            {SLOT_LABELS[slot]}
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">In deinem Buch passt gerade nichts, ohne über das Ziel zu kommen.</p>
+        )}
+      </div>
+      {best ? (
+        <button
+          type="button"
+          onClick={plan}
+          disabled={pending}
+          aria-label={`${best.title} einplanen (${SLOT_LABELS[slot]})`}
+          className="inline-flex h-11 shrink-0 items-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60"
+        >
+          Einplanen
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
+/** Unter dem Tagesziel: übrige Meal-Prep-Portionen und Reste-Ideen. */
+export function DayExtras({
+  date,
+  dayEntries,
+  batches,
+  ideas,
+  onPlan,
+}: {
+  date: string;
+  dayEntries: PlanEntry[];
   batches: PlanBatch[];
   ideas: LeftoverIdea[];
   onPlan: (target: SlotTarget) => void;
 }) {
-  const gap = dayGap(actual, goals);
-  const plannedIds = new Set(dayEntries.map((e) => e.recipeId));
-  const suggestions = gap
-    ? gapSuggestions(
-        actual,
-        goals,
-        [...recipes.own, ...recipes.community].filter((r) => !plannedIds.has(r.id)),
-      )
-    : [];
   const open = openBatchesFor(date, batches);
-  if (!gap && open.length === 0 && ideas.length === 0) return null;
+  if (open.length === 0 && ideas.length === 0) return null;
 
   return (
     <div className="grid grid-cols-1 gap-3">
-      {gap ? (
-        <section className="rounded-3xl border bg-card p-4" aria-label="Lücke zum Ziel">
-          <p className="flex items-start gap-2 text-sm">
-            <Lightbulb className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-            <span className="min-w-0">
-              Bis zum Ziel fehlen noch{" "}
-              <span className="font-semibold">
-                {[
-                  gap.protein != null ? `${formatNumber(Math.round(gap.protein), 0)} g Protein` : null,
-                  gap.kcal != null ? `${formatNumber(Math.round(gap.kcal), 0)} kcal` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-              .
-            </span>
-          </p>
-          {suggestions.length > 0 ? (
-            <ul className="mt-3 divide-y rounded-2xl border">
-              {suggestions.map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                  <span className="min-w-0 flex-1">
-                    {/* Zeilenumbruch statt Abschneiden: lange Titel bleiben lesbar und sprengen die Breite nicht */}
-                    <span className="block text-sm font-medium wrap-anywhere">{s.title}</span>
-                    <span className="block text-xs text-muted-foreground tabular-nums">
-                      {s.servings === 0.5 ? "½ Portion · " : ""}+{formatNumber(Math.round(s.adds.protein), 0)} g Protein · +
-                      {formatNumber(Math.round(s.adds.kcal), 0)} kcal
-                    </span>
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() => onPlan({ date, slot: suggestSlot(dayEntries, s.adds.kcal), recipeId: s.id, servings: s.servings })}
-                    aria-label={`${s.title} einplanen`}
-                  >
-                    <Plus aria-hidden />
-                    Einplanen
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-2 text-xs text-muted-foreground">In deinem Buch passt gerade nichts, ohne über das Ziel zu kommen.</p>
-          )}
-        </section>
-      ) : null}
-
       {open.map((b) => (
         <LeftoverBatch key={b.id} batch={b} date={date} slot={suggestSlot(dayEntries, null)} />
       ))}

@@ -49,9 +49,19 @@ export function CopyWeekDialog({ monday, hasEntries }: { monday: string; hasEntr
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" disabled={!hasEntries} />}>
+      <DialogTrigger
+        render={
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={!hasEntries}
+            aria-label="Woche kopieren"
+            title="Woche kopieren"
+            className="rounded-full bg-card [&_svg:not([class*='size-'])]:size-5"
+          />
+        }
+      >
         <Copy aria-hidden />
-        Woche kopieren
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

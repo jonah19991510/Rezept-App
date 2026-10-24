@@ -1,11 +1,16 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useRef, useState, type TouchEvent } from "react";
-import { Boxes, ChevronLeft, ChevronRight, Dumbbell, Plus, Repeat } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Boxes, ChevronLeft, ChevronRight, CookingPot, Dumbbell, Plus, Repeat } from "lucide-react";
+import { GroupHeading, ListCard, TagLabel } from "@/components/layout/list-blocks";
+import { GenerateDialog } from "@/components/shopping/generate-dialog";
 import {
   entryMacros,
   goalProgress,
+  inKcalTarget,
+  kcalBar,
   MEAL_SLOTS,
   SLOT_LABELS,
   summarizeWeek,
@@ -14,20 +19,24 @@ import {
   type MealSlot,
 } from "@/lib/domain/plan";
 import type { LeftoverIdea } from "@/lib/domain/leftovers";
+import { photoUrl } from "@/lib/domain/photo";
 import { goalsForDay } from "@/lib/domain/training";
-import { dayMonth, weekdayLong, weekdayShort } from "@/lib/domain/week";
+import { addDays, dayMonth, relativeWeekLabel, weekdayLong, weekdayShort, weekRangeLabel } from "@/lib/domain/week";
 import { formatEuro, formatNumber } from "@/lib/format";
 import type { PlanBatch, PlanEntry } from "@/lib/server/plan";
 import { cn } from "@/lib/utils";
 import { AddEntryDialog } from "./add-entry-dialog";
-import { DayExtras, suggestSlot, TrainingToggle } from "./day-extras";
+import { DayExtras, ProteinGapCard, suggestSlot, TrainingToggle } from "./day-extras";
+import { GoalCard } from "./goal-card";
 import { LongNotCooked, type LongNotCookedItem } from "./long-not-cooked";
 import { EntryDialog } from "./entry-dialog";
-import { GoalProgress } from "./goal-progress";
 import { MacroDot } from "@/components/recipes/macro-dot";
 import type { PlanRecipeChoices, SlotTarget } from "./types";
 
+type Cost = { total: number; complete: boolean } | null;
+
 export function WeekPlanner({
+  monday,
   days,
   today,
   entries,
@@ -38,7 +47,9 @@ export function WeekPlanner({
   recipes,
   costs = {},
   longNotCooked = { items: [], weeks: 6 },
+  hasPlanShoppingItems = false,
 }: {
+  monday: string;
   days: string[];
   today: string;
   entries: PlanEntry[];
@@ -51,6 +62,8 @@ export function WeekPlanner({
   /** Phase 12: Kosten pro Portion je Rezept (nur Rezepte mit mindestens einem Preis) */
   costs?: Record<string, { perServing: number; complete: boolean }>;
   longNotCooked?: { items: LongNotCookedItem[]; weeks: number };
+  /** Einkaufsliste hat schon Einträge aus dem Plan (Hinweis „werden ersetzt“) */
+  hasPlanShoppingItems?: boolean;
 }) {
   const [selectedDay, setSelectedDay] = useState(days.includes(today) ? today : days[0]);
   const [addTarget, setAddTarget] = useState<SlotTarget | null>(null);
@@ -60,10 +73,9 @@ export function WeekPlanner({
   const plannedDates = useMemo(() => new Set(entries.map((e) => e.date)), [entries]);
   const summary = useMemo(() => summarizeWeek(byDay, plannedDates), [byDay, plannedDates]);
   const goalsFor = (day: string) => goalsForDay(trainingDays[day] ?? false, goals.default, goals.training);
-  // Wochenschnitt gegen den Schnitt der Tagesziele (Trainingstage haben andere Ziele)
-  const averageGoals = averageOf([...plannedDates].filter((d) => days.includes(d)).map(goalsFor));
+  const daysInTarget = days.filter((d) => plannedDates.has(d) && inKcalTarget(byDay[d].kcal, goalsFor(d).kcal)).length;
   // Kosten: Summe der Einträge mit Preis; „mindestens“, wenn Einträgen oder Zutaten ein Preis fehlt
-  const costOf = (list: PlanEntry[]) => {
+  const costOf = (list: PlanEntry[]): Cost => {
     let total = 0;
     let complete = list.length > 0;
     for (const e of list) {
@@ -82,7 +94,9 @@ export function WeekPlanner({
     setAddTarget({ date: selectedDay, slot: suggestSlot(entries.filter((e) => e.date === selectedDay), null), recipeId });
 
   const entriesFor = (date: string, slot: MealSlot) => entries.filter((e) => e.date === date && e.slot === slot);
+  const dayEntries = entries.filter((e) => e.date === selectedDay);
   const selectedIndex = days.indexOf(selectedDay);
+  const isCurrentWeek = days.includes(today);
 
   // Wischen zwischen den Tagen (Handy)
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -100,44 +114,41 @@ export function WeekPlanner({
     if (next >= 0 && next < days.length) setSelectedDay(days[next]);
   }
 
+  const dayDetail = (
+    <>
+      <GoalCard actual={byDay[selectedDay]} goals={goalsFor(selectedDay)} training={trainingDays[selectedDay] ?? false}>
+        <CostLine cost={dayCost(selectedDay)} label="Kosten an diesem Tag" />
+      </GoalCard>
+      <ProteinGapCard
+        key={selectedDay}
+        date={selectedDay}
+        actual={byDay[selectedDay]}
+        goals={goalsFor(selectedDay)}
+        dayEntries={dayEntries}
+        recipes={recipes}
+      />
+      <DayExtras date={selectedDay} dayEntries={dayEntries} batches={batches} ideas={leftoverIdeas[selectedDay] ?? []} onPlan={setAddTarget} />
+    </>
+  );
+
   return (
     <>
+      <WeekNav monday={monday} today={today} onToday={() => isCurrentWeek && setSelectedDay(today)} />
+
       {/* Handy und Tablet: Tagesansicht */}
       <div className="lg:hidden">
-        <div className="-mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 pb-1" role="tablist" aria-label="Wochentage">
-          {days.map((day) => {
-            const p = goalProgress(byDay[day].kcal, goalsFor(day).kcal, "kcal");
-            const active = day === selectedDay;
-            return (
-              <button
-                key={day}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setSelectedDay(day)}
-                className={cn(
-                  "relative flex min-h-14 min-w-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl border px-2 text-sm transition-colors",
-                  active ? "border-primary bg-primary text-primary-foreground" : "bg-card",
-                  day === today && !active && "border-primary",
-                )}
-              >
-                {trainingDays[day] ? (
-                  <Dumbbell className="absolute top-1 right-0.5 size-2.5 opacity-80" aria-label="Trainingstag" />
-                ) : null}
-                <span className="font-medium">{weekdayShort(day)}</span>
-                <span className={cn("text-xs", active ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                  {dayMonth(day).slice(0, 3)}
-                </span>
-                <span
-                  className={cn(
-                    "h-1 w-6 rounded-full",
-                    plannedDates.has(day) ? (p.state === "over" ? "bg-destructive" : active ? "bg-primary-foreground" : "bg-sage") : "bg-transparent",
-                  )}
-                  aria-hidden
-                />
-              </button>
-            );
-          })}
+        <div className="mb-5 grid grid-cols-7 gap-1" role="tablist" aria-label="Wochentage">
+          {days.map((day) => (
+            <DayTile
+              key={day}
+              day={day}
+              active={day === selectedDay}
+              isToday={day === today}
+              training={trainingDays[day] ?? false}
+              bar={kcalBar(byDay[day].kcal, goalsFor(day).kcal, plannedDates.has(day))}
+              onSelect={() => setSelectedDay(day)}
+            />
+          ))}
         </div>
 
         <section
@@ -146,67 +157,28 @@ export function WeekPlanner({
           onTouchEnd={onTouchEnd}
           aria-label={`${weekdayLong(selectedDay)}, ${dayMonth(selectedDay)}`}
         >
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setSelectedDay(days[selectedIndex - 1])}
-              disabled={selectedIndex === 0}
-              aria-label="Vorheriger Tag"
-            >
-              <ChevronLeft aria-hidden />
-            </Button>
-            <h2 className="min-w-0 text-center text-xl font-semibold">
-              {weekdayLong(selectedDay)}, {dayMonth(selectedDay)}
-              {selectedDay === today ? <span className="ml-2 text-sm font-normal text-primary">heute</span> : null}
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+            <h2 className="flex min-w-0 items-center gap-2 text-xl font-semibold">
+              <span className="truncate">
+                {weekdayLong(selectedDay)}, {dayMonth(selectedDay)}
+              </span>
+              {selectedDay === today ? <TagLabel>Heute</TagLabel> : null}
             </h2>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => setSelectedDay(days[selectedIndex + 1])}
-              disabled={selectedIndex === days.length - 1}
-              aria-label="Nächster Tag"
-            >
-              <ChevronRight aria-hidden />
-            </Button>
-          </div>
-
-          <div className="rounded-3xl border bg-card p-4">
-            <div className="mb-3 flex justify-end">
+            <div className="ml-auto">
               <TrainingToggle key={selectedDay} date={selectedDay} training={trainingDays[selectedDay] ?? false} />
             </div>
-            <GoalProgress actual={byDay[selectedDay]} goals={goalsFor(selectedDay)} />
-            <CostLine cost={dayCost(selectedDay)} label="Kosten an diesem Tag" />
           </div>
 
-          <DayExtras
-            date={selectedDay}
-            actual={byDay[selectedDay]}
-            goals={goalsFor(selectedDay)}
-            dayEntries={entries.filter((e) => e.date === selectedDay)}
-            recipes={recipes}
-            batches={batches}
-            ideas={leftoverIdeas[selectedDay] ?? []}
-            onPlan={setAddTarget}
-          />
+          {dayDetail}
 
           {MEAL_SLOTS.map((slot) => (
-            <div key={slot} className="space-y-2">
-              <h3 className="text-sm font-medium text-muted-foreground">{SLOT_LABELS[slot]}</h3>
-              {entriesFor(selectedDay, slot).map((entry) => (
-                <EntryCard key={entry.id} entry={entry} onClick={() => setEditEntry(entry)} />
-              ))}
-              <button
-                type="button"
-                onClick={() => setAddTarget({ date: selectedDay, slot })}
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-dashed text-sm text-muted-foreground hover:border-primary hover:text-primary"
-              >
-                <Plus className="size-4" aria-hidden />
-                {SLOT_LABELS[slot]} planen
-              </button>
-            </div>
+            <SlotSection
+              key={slot}
+              slot={slot}
+              entries={entriesFor(selectedDay, slot)}
+              onAdd={() => setAddTarget({ date: selectedDay, slot })}
+              onEdit={setEditEntry}
+            />
           ))}
         </section>
       </div>
@@ -257,10 +229,7 @@ export function WeekPlanner({
                 ) : null}
                 {p.state !== "none" ? (
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
-                    <div
-                      className={cn("h-full rounded-full", p.state === "over" ? "bg-destructive" : "bg-macro-kcal")}
-                      style={{ width: `${Math.min(100, p.ratio * 100)}%` }}
-                    />
+                    <div className="h-full rounded-full bg-macro-kcal" style={{ width: `${Math.min(100, p.ratio * 100)}%` }} />
                   </div>
                 ) : null}
               </div>
@@ -272,85 +241,57 @@ export function WeekPlanner({
           ))}
         </div>
 
-        {/* Gewählter Tag im Detail: Ziele, Lücke, Reste */}
+        {/* Gewählter Tag im Detail: Ziel, Lücke, Reste */}
         <section className="mt-6 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" aria-label={`${weekdayLong(selectedDay)} im Detail`}>
-          <div className="rounded-3xl border bg-card p-4">
-            <h2 className="mb-3 text-lg font-semibold">
+          <div className="space-y-4">
+            <h2 className="flex items-center gap-2 text-2xl font-semibold">
               {weekdayLong(selectedDay)}, {dayMonth(selectedDay)}
-              {trainingDays[selectedDay] ? <span className="ml-2 text-sm font-normal text-primary">Trainingstag</span> : null}
+              {selectedDay === today ? <TagLabel>Heute</TagLabel> : null}
             </h2>
-            <GoalProgress actual={byDay[selectedDay]} goals={goalsFor(selectedDay)} />
-            <CostLine cost={dayCost(selectedDay)} label="Kosten an diesem Tag" />
+            <GoalCard actual={byDay[selectedDay]} goals={goalsFor(selectedDay)} training={trainingDays[selectedDay] ?? false}>
+              <CostLine cost={dayCost(selectedDay)} label="Kosten an diesem Tag" />
+            </GoalCard>
           </div>
-          <DayExtras
-            date={selectedDay}
-            actual={byDay[selectedDay]}
-            goals={goalsFor(selectedDay)}
-            dayEntries={entries.filter((e) => e.date === selectedDay)}
-            recipes={recipes}
-            batches={batches}
-            ideas={leftoverIdeas[selectedDay] ?? []}
-            onPlan={setAddTarget}
-          />
+          <div className="space-y-4 md:pt-12">
+            <ProteinGapCard
+              key={selectedDay}
+              date={selectedDay}
+              actual={byDay[selectedDay]}
+              goals={goalsFor(selectedDay)}
+              dayEntries={dayEntries}
+              recipes={recipes}
+            />
+            <DayExtras date={selectedDay} dayEntries={dayEntries} batches={batches} ideas={leftoverIdeas[selectedDay] ?? []} onPlan={setAddTarget} />
+          </div>
         </section>
       </div>
 
       {/* Wochenübersicht */}
       <section className="mt-8 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="woche-summe">
-        <h2 id="woche-summe" className="mb-1 text-xl font-semibold">
-          Diese Woche
+        <h2 id="woche-summe" className="mb-3 text-xl font-semibold">
+          {relativeWeekLabel(monday, today)}
         </h2>
-        {summary.plannedDays === 0 ? (
-          <p className="text-sm text-muted-foreground">Noch nichts geplant. Tipp auf „planen“, um ein Rezept einzutragen.</p>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <p className="mb-3 text-sm text-muted-foreground">
-                Durchschnitt pro geplantem Tag ({summary.plannedDays} {summary.plannedDays === 1 ? "Tag" : "Tage"})
-              </p>
-              <GoalProgress actual={summary.averagePerPlannedDay} goals={averageGoals} compact />
-              <CostLine cost={weekCost} label="Kosten diese Woche" />
-            </div>
-            <dl className="grid grid-cols-2 content-start gap-3 text-sm">
-              <div className="rounded-2xl bg-muted/60 p-3">
-                <dt className="flex items-center gap-1.5 text-muted-foreground">
-                  <MacroDot macro="kcal" />
-                  kcal gesamt
-                </dt>
-                <dd className="font-heading text-xl font-semibold">
-                  {formatNumber(Math.round(summary.total.kcal), 0)}
-                </dd>
-              </div>
-              <div className="rounded-2xl bg-muted/60 p-3">
-                <dt className="flex items-center gap-1.5 text-muted-foreground">
-                  <MacroDot macro="protein" />
-                  Protein gesamt
-                </dt>
-                <dd className="font-heading text-xl font-semibold">
-                  {formatNumber(summary.total.protein, 0)} g
-                </dd>
-              </div>
-              <div className="rounded-2xl bg-muted/60 p-3">
-                <dt className="flex items-center gap-1.5 text-muted-foreground">
-                  <MacroDot macro="carbs" />
-                  Kohlenhydrate
-                </dt>
-                <dd className="font-heading text-xl font-semibold">
-                  {formatNumber(summary.total.carbs, 0)} g
-                </dd>
-              </div>
-              <div className="rounded-2xl bg-muted/60 p-3">
-                <dt className="flex items-center gap-1.5 text-muted-foreground">
-                  <MacroDot macro="fat" />
-                  Fett
-                </dt>
-                <dd className="font-heading text-xl font-semibold">
-                  {formatNumber(summary.total.fat, 0)} g
-                </dd>
-              </div>
-            </dl>
-          </div>
-        )}
+        <dl className="grid grid-cols-3 gap-2">
+          <Stat label="Ø kcal / Tag" value={summary.plannedDays ? formatNumber(Math.round(summary.averagePerPlannedDay.kcal), 0) : "–"} />
+          <Stat
+            label="Ø Protein / Tag"
+            value={summary.plannedDays ? `${formatNumber(Math.round(summary.averagePerPlannedDay.protein), 0)} g` : "–"}
+          />
+          <Stat label="Tage im Ziel" value={`${daysInTarget} / ${days.length}`} />
+        </dl>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {summary.plannedDays === 0
+            ? "Noch nichts geplant. Tipp auf „Rezept einplanen“, um ein Rezept einzutragen."
+            : `Durchschnitt über ${summary.plannedDays} ${summary.plannedDays === 1 ? "Tag" : "Tage"} mit Einträgen. Im Ziel: 90–110 % der kcal.`}
+        </p>
+        <CostLine cost={weekCost} label="Kosten diese Woche" />
+        <GenerateDialog
+          presets={[{ label: relativeWeekLabel(monday, today), from: monday, to: addDays(monday, 6) }]}
+          hasPlanItems={hasPlanShoppingItems}
+          triggerLabel="Einkaufsliste aus dieser Woche"
+          triggerClassName="mt-4 w-full rounded-full"
+          openListAfter
+        />
       </section>
 
       <LongNotCooked items={longNotCooked.items} weeks={longNotCooked.weeks} onPlan={planFromList} />
@@ -358,6 +299,193 @@ export function WeekPlanner({
       <AddEntryDialog target={addTarget} days={days} recipes={recipes} onClose={() => setAddTarget(null)} />
       <EntryDialog entry={editEntry} days={days} batches={batches} onClose={() => setEditEntry(null)} />
     </>
+  );
+}
+
+/**
+ * Wochenwechsel als eine Leiste: Pfeile links und rechts, in der Mitte KW mit Zeitraum und „Diese Woche“ bzw.
+ * „Nächste Woche“ usw. Die Mitte führt zur aktuellen Woche und zum heutigen Tag.
+ */
+function WeekNav({ monday, today, onToday }: { monday: string; today: string; onToday: () => void }) {
+  const relative = relativeWeekLabel(monday, today);
+  const current = relative === "Diese Woche";
+  const arrowClass =
+    "grid size-11 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
+  return (
+    <nav className="mb-4 grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-1 rounded-full border bg-card p-1" aria-label="Wochen">
+      <Link href={`/wochenplan?woche=${addDays(monday, -7)}`} className={arrowClass} aria-label="Vorherige Woche">
+        <ChevronLeft className="size-5" aria-hidden />
+      </Link>
+      <Link
+        href="/wochenplan"
+        onClick={onToday}
+        aria-current={current ? "page" : undefined}
+        title="Zur aktuellen Woche und zu heute"
+        className="flex min-h-12 min-w-0 flex-col items-center justify-center rounded-full px-2 text-center transition hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      >
+        <span className="truncate text-sm font-semibold tabular-nums">{weekRangeLabel(monday)}</span>
+        <span className={cn("text-xs font-medium", current ? "text-primary" : "text-muted-foreground")}>{relative}</span>
+      </Link>
+      <Link href={`/wochenplan?woche=${addDays(monday, 7)}`} className={arrowClass} aria-label="Nächste Woche">
+        <ChevronRight className="size-5" aria-hidden />
+      </Link>
+    </nav>
+  );
+}
+
+/** Kachel der Tagesleiste: Wochentag, Tagesnummer, kleiner kcal-Balken; Hantel bei Trainingstagen. */
+function DayTile({
+  day,
+  active,
+  isToday,
+  training,
+  bar,
+  onSelect,
+}: {
+  day: string;
+  active: boolean;
+  isToday: boolean;
+  training: boolean;
+  bar: ReturnType<typeof kcalBar>;
+  onSelect: () => void;
+}) {
+  const fill =
+    bar.state === "target"
+      ? "bg-sage"
+      : bar.state === "over"
+        ? active
+          ? "bg-primary-foreground"
+          : "bg-primary"
+        : active
+          ? "bg-primary-foreground/60"
+          : "bg-muted-foreground/50";
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      aria-label={`${weekdayLong(day)}, ${dayMonth(day)}${isToday ? ", heute" : ""}${training ? ", Trainingstag" : ""}`}
+      onClick={onSelect}
+      className={cn(
+        "relative flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl border bg-card transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+        active && "border-primary bg-primary text-primary-foreground",
+        isToday && !active && "border-primary",
+      )}
+    >
+      {training ? <Dumbbell className="absolute top-1 right-0.5 size-3 opacity-80" aria-hidden /> : null}
+      <span className={cn("text-xs font-medium", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{weekdayShort(day)}</span>
+      <span className="text-lg leading-none font-semibold tabular-nums">{day.slice(8)}</span>
+      <span
+        className={cn(
+          "h-1 w-6 overflow-hidden rounded-full",
+          bar.state === "empty" ? "bg-transparent" : active ? "bg-primary-foreground/25" : "bg-muted",
+        )}
+        aria-hidden
+      >
+        {bar.state !== "empty" ? <span className={cn("block h-full rounded-full", fill)} style={{ width: `${bar.ratio * 100}%` }} /> : null}
+      </span>
+    </button>
+  );
+}
+
+/** Ein Slot der Tagesansicht: Überschrift mit kcal-Summe, Einträge in einer Karte oder ein gestrichelter Knopf. */
+function SlotSection({
+  slot,
+  entries,
+  onAdd,
+  onEdit,
+}: {
+  slot: MealSlot;
+  entries: PlanEntry[];
+  onAdd: () => void;
+  onEdit: (e: PlanEntry) => void;
+}) {
+  const kcal = entries.reduce((sum, e) => sum + (e.perServing ? entryMacros(e).kcal : 0), 0);
+  return (
+    <section aria-label={SLOT_LABELS[slot]}>
+      <GroupHeading aside={entries.length > 0 ? `${formatNumber(Math.round(kcal), 0)} kcal` : undefined}>{SLOT_LABELS[slot]}</GroupHeading>
+      {entries.length > 0 ? (
+        <ListCard className="mt-1">
+          {entries.map((entry) => (
+            <li key={entry.id}>
+              <PlanEntryRow entry={entry} onClick={() => onEdit(entry)} />
+            </li>
+          ))}
+          <li>
+            <button
+              type="button"
+              onClick={onAdd}
+              aria-label={`Hinzufügen (${SLOT_LABELS[slot]})`}
+              className="flex min-h-12 w-full items-center justify-center gap-1.5 text-sm font-medium text-primary transition hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset"
+            >
+              <Plus className="size-4" aria-hidden />
+              Hinzufügen
+            </button>
+          </li>
+        </ListCard>
+      ) : (
+        <button
+          type="button"
+          onClick={onAdd}
+          aria-label={`Rezept einplanen (${SLOT_LABELS[slot]})`}
+          className="mt-1 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-dashed text-sm font-medium text-muted-foreground transition hover:border-primary/60 hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        >
+          <Plus className="size-4" aria-hidden />
+          Rezept einplanen
+        </button>
+      )}
+    </section>
+  );
+}
+
+/** Labels für Meal Prep: „Rest“ bei Folge-Einträgen, „Meal Prep“ am Kochtag. */
+function EntryLabels({ entry }: { entry: PlanEntry }) {
+  if (!entry.batchId) return null;
+  return entry.isLeftover ? (
+    <TagLabel tone="sage" icon={Repeat}>
+      Rest
+    </TagLabel>
+  ) : (
+    <TagLabel tone="sage" icon={Boxes}>
+      Meal Prep
+    </TagLabel>
+  );
+}
+
+/** Zeile eines Eintrags: Vorschaubild, Name, Portionen und Protein, rechts die kcal. Antippen öffnet die Bearbeitung. */
+function PlanEntryRow({ entry, onClick }: { entry: PlanEntry; onClick: () => void }) {
+  const m = entryMacros(entry);
+  const servings = `${formatNumber(entry.servings, 2)} ${entry.servings === 1 ? "Portion" : "Portionen"}`;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-17 w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none focus-visible:ring-inset"
+    >
+      <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-muted">
+        {entry.imagePath ? (
+          <Image src={photoUrl(entry.imagePath, "klein")} alt="" fill unoptimized sizes="48px" className="object-cover" />
+        ) : (
+          <CookingPot className="size-6 text-muted-foreground/60" strokeWidth={1.5} aria-hidden />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className={cn("truncate font-medium", !entry.available && "text-muted-foreground italic")}>{entry.recipeTitle}</span>
+          <EntryLabels entry={entry} />
+        </span>
+        <span className="block truncate text-xs text-muted-foreground tabular-nums">
+          {servings}
+          {entry.perServing ? ` · ${formatNumber(Math.round(m.protein), 0)} g Protein` : " · keine Nährwerte"}
+        </span>
+      </span>
+      {entry.perServing ? (
+        <span className="shrink-0 text-right tabular-nums">
+          <span className="block font-semibold">{formatNumber(Math.round(m.kcal), 0)}</span>
+          <span className="block text-xs text-muted-foreground">kcal</span>
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -376,11 +504,11 @@ function SlotRow({
 }) {
   return (
     <>
-      <div className="flex items-start pt-2 text-sm font-medium text-muted-foreground">{SLOT_LABELS[slot]}</div>
+      <div className="flex items-start pt-2 font-sans text-xs font-semibold tracking-wide text-muted-foreground uppercase">{SLOT_LABELS[slot]}</div>
       {days.map((day) => (
         <div key={day} className="flex min-h-20 flex-col gap-1 rounded-2xl bg-muted/40 p-1">
           {entriesFor(day, slot).map((entry) => (
-            <EntryCard key={entry.id} entry={entry} onClick={() => onEdit(entry)} compact />
+            <CompactEntry key={entry.id} entry={entry} onClick={() => onEdit(entry)} />
           ))}
           <button
             type="button"
@@ -396,58 +524,42 @@ function SlotRow({
   );
 }
 
-function EntryCard({ entry, onClick, compact = false }: { entry: PlanEntry; onClick: () => void; compact?: boolean }) {
+/** Eintrag in der Desktop-Wochenansicht (schmale Spalte). */
+function CompactEntry({ entry, onClick }: { entry: PlanEntry; onClick: () => void }) {
   const m = entryMacros(entry);
   return (
     <button
       type="button"
       onClick={onClick}
-      className={cn(
-        "w-full rounded-xl border bg-card text-left shadow-sm shadow-foreground/5 transition hover:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-        compact ? "p-2" : "flex min-h-14 items-center justify-between gap-3 px-3 py-2",
-      )}
+      className="w-full rounded-xl border bg-card p-2 text-left shadow-sm shadow-foreground/5 transition hover:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
-      <span
-        className={cn(
-          "block font-medium",
-          compact ? "line-clamp-3 text-xs leading-snug" : "min-w-0 truncate",
-          !entry.available && "text-muted-foreground italic",
-        )}
-      >
-        {entry.batchId ? (
-          entry.isLeftover ? (
-            <Repeat className="mr-1 inline size-3.5 align-[-2px] text-sage" aria-label="Reste" />
-          ) : (
-            <Boxes className="mr-1 inline size-3.5 align-[-2px] text-sage" aria-label="Meal Prep, Kochtag" />
-          )
-        ) : null}
+      <span className={cn("line-clamp-3 block text-xs leading-snug font-medium", !entry.available && "text-muted-foreground italic")}>
         {entry.recipeTitle}
       </span>
-      <span className={cn("block text-muted-foreground tabular-nums", compact ? "mt-1 text-[0.7rem]" : "shrink-0 text-right text-xs")}>
+      {entry.batchId ? (
+        <span className="mt-1 block">
+          <EntryLabels entry={entry} />
+        </span>
+      ) : null}
+      <span className="mt-1 block text-[0.7rem] text-muted-foreground tabular-nums">
         {entry.servings !== 1 ? `${formatNumber(entry.servings, 2)} × · ` : ""}
-        {entry.perServing ? `${formatNumber(Math.round(m.kcal), 0)} kcal` : "–"}
-        {!compact && entry.perServing ? (
-          <>
-            <br />
-            {formatNumber(m.protein, 0)} g P
-          </>
-        ) : null}
+        {entry.perServing ? `${formatNumber(Math.round(m.kcal), 0)} kcal · ${formatNumber(Math.round(m.protein), 0)} g P` : "–"}
       </span>
     </button>
   );
 }
 
-/** Durchschnitt der Tagesziele; ein Feld bleibt leer, wenn es an keinem Tag ein Ziel gibt. */
-function averageOf(list: Goals[]): Goals {
-  const avg = (key: keyof Goals) => {
-    const values = list.map((g) => g[key]).filter((v): v is number => v != null);
-    return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
-  };
-  return { kcal: avg("kcal"), protein: avg("protein"), carbs: avg("carbs"), fat: avg("fat") };
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 flex-col justify-between gap-1 rounded-2xl bg-muted/60 p-3">
+      <dt className="text-xs leading-snug text-muted-foreground">{label}</dt>
+      <dd className="font-heading text-xl font-semibold tabular-nums">{value}</dd>
+    </div>
+  );
 }
 
 /** „Kosten an diesem Tag: ca. 6,40 €“ (oder „mindestens“, wenn Preise fehlen); ohne Preise nichts. */
-function CostLine({ cost, label }: { cost: { total: number; complete: boolean } | null; label: string }) {
+function CostLine({ cost, label }: { cost: Cost; label: string }) {
   if (!cost) return null;
   return (
     <p className="mt-3 border-t pt-3 text-sm">

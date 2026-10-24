@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarRange } from "lucide-react";
 import { toast } from "sonner";
 import { generateFromPlanAction } from "@/app/(app)/einkauf/actions";
@@ -22,8 +23,25 @@ import { cn } from "@/lib/utils";
 
 export type RangePreset = { label: string; from: string; to: string };
 
-/** Zeitraum wählen und die Einkaufsliste aus dem Wochenplan erstellen. */
-export function GenerateDialog({ presets, hasPlanItems }: { presets: RangePreset[]; hasPlanItems: boolean }) {
+/**
+ * Zeitraum wählen und die Einkaufsliste aus dem Wochenplan erstellen. Im Wochenplan mit eigenem Knopf
+ * („Einkaufsliste aus dieser Woche“); danach geht es dort zur Liste.
+ */
+export function GenerateDialog({
+  presets,
+  hasPlanItems,
+  triggerLabel = "Aus Wochenplan",
+  triggerClassName,
+  openListAfter = false,
+}: {
+  presets: RangePreset[];
+  hasPlanItems: boolean;
+  triggerLabel?: string;
+  triggerClassName?: string;
+  /** nach dem Erstellen zur Einkaufsliste wechseln */
+  openListAfter?: boolean;
+}) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [from, setFrom] = useState(presets[0].from);
   const [to, setTo] = useState(presets[0].to);
@@ -35,15 +53,16 @@ export function GenerateDialog({ presets, hasPlanItems }: { presets: RangePreset
       if (result.ok) {
         toast.success(result.message ?? "Einkaufsliste erstellt.");
         setOpen(false);
+        if (openListAfter) router.push("/einkauf");
       } else toast.error(result.message);
     });
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>
+      <DialogTrigger render={<Button variant={triggerClassName ? "outline" : "default"} className={triggerClassName} />}>
         <CalendarRange aria-hidden />
-        Aus Wochenplan
+        {triggerLabel}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

@@ -8,7 +8,9 @@ import {
   resolveWeekParam,
   todayInBerlin,
   weekDays,
+  relativeWeekLabel,
   weekLabel,
+  weekRangeLabel,
   weekdayShort,
 } from "./week";
 
@@ -63,5 +65,22 @@ describe("Kalender", () => {
   it("bestimmt heute in deutscher Zeit", () => {
     // 23:30 UTC am 18.10. ist in Berlin (Sommerzeit) schon der 19.10.
     expect(todayInBerlin(new Date("2026-10-18T23:30:00Z"))).toBe("2026-10-19");
+  });
+});
+
+describe("Wochenleiste", () => {
+  it("KW und Zeitraum ohne Jahr", () => {
+    expect(weekRangeLabel("2026-10-19")).toBe("KW 43 · 19.10.–25.10.");
+  });
+
+  it("Woche relativ zu heute", () => {
+    const today = "2026-10-24";
+    expect(relativeWeekLabel("2026-10-19", today)).toBe("Diese Woche");
+    expect(relativeWeekLabel("2026-10-12", today)).toBe("Letzte Woche");
+    expect(relativeWeekLabel("2026-10-26", today)).toBe("Nächste Woche");
+    expect(relativeWeekLabel("2026-11-02", today)).toBe("In 2 Wochen");
+    expect(relativeWeekLabel("2026-09-28", today)).toBe("Vor 3 Wochen");
+    // über den Jahreswechsel
+    expect(relativeWeekLabel("2027-01-04", "2026-12-31")).toBe("Nächste Woche");
   });
 });

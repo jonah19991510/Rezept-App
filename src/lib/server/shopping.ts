@@ -56,3 +56,15 @@ export async function getOpenShoppingIngredientIds(userId: string): Promise<stri
   if (error) throw new Error(`Einkaufsliste konnte nicht geladen werden (${error.code})`);
   return [...new Set(data.flatMap((r) => (r.ingredient_id ? [r.ingredient_id] : [])))];
 }
+
+/** Stehen schon Einträge aus dem Plan auf der Liste? (Hinweis „werden ersetzt“ im Wochenplan) */
+export async function hasPlanShoppingItems(userId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("shopping_list_items")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("source", "plan");
+  if (error) throw new Error(`Einkaufsliste konnte nicht geladen werden (${error.code})`);
+  return (count ?? 0) > 0;
+}

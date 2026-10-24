@@ -1117,7 +1117,7 @@ Funktionen und Daten wie bisher, außer:
 Design-Überarbeitung nach den Entwürfen „Zutaten (neu)“ und „Wochenplan (neu)“, in zwei Schritten (erst Zutaten, nach
 OK des Nutzers Wochenplan). Funktionen, Daten und Schema wie bisher, keine Migration.
 
-### Teil 1: Zutaten (umgesetzt, noch nicht vom Nutzer getestet, nicht gepusht)
+### Teil 1: Zutaten (Commit `ce8f6b5`, vom Nutzer freigegeben, nicht gepusht)
 
 - **Gemeinsame Bausteine** in `components/layout/list-blocks.tsx`: `SearchField` (Pille), `ChipRow` (wischbar, ab
   Tablet umbrechend, `shrink-0` + Mindesthöhe), `CountChip` (Chip mit Zähler-Bubble), `SegmentToggle` (kleiner
@@ -1146,11 +1146,48 @@ OK des Nutzers Wochenplan). Funktionen, Daten und Schema wie bisher, keine Migra
   48 px hoch und wischbar, alle Knöpfe ≥ 44 px, Zeilen 68 px, Kategorie-Filter/Zähler/Umschalter/leerer Zustand/
   Plus-Dialog funktionieren. Nicht mit echtem Login geprüft (Preis speichern, Zutat anlegen).
 - Hinweis: Der laufende Entwicklungsserver lieferte serverseitig die alten Module aus (Turbopack-Cache, siehe
-  „Bekannte Probleme“); Abhilfe wie dort: stoppen, `.next/dev` löschen, neu starten.
+  „Bekannte Probleme“); Abhilfe wie dort: stoppen, `.next/dev` löschen, neu starten (am 24.10. zweimal nötig).
 
-### Teil 2: Wochenplan
+### Teil 2: Wochenplan (umgesetzt, noch nicht vom Nutzer getestet, nicht gepusht)
 
-Noch offen, wartet auf das OK zu Teil 1.
+- **Kopf:** „Wochenplan“, rechts runder Icon-Knopf „Woche kopieren“ (44 px, aria-label; derselbe Dialog wie bisher).
+- **Wochenwechsel:** eine Leiste wie der Küche/Bar-Umschalter: Pfeile links/rechts, Mitte „KW 43 · 19.10.–25.10.“ und
+  darunter „Diese Woche“ (Akzent) bzw. grau „Letzte Woche“, „Nächste Woche“, „In 2 Wochen“, „Vor 3 Wochen“
+  (`weekRangeLabel`, `relativeWeekLabel`, Tests). Die Mitte führt zur aktuellen Woche und wählt heute. Die Leiste
+  sitzt jetzt im `WeekPlanner` (Client), damit der Sprung zu heute auch in der aktuellen Woche wirkt.
+- **Tagesleiste:** 7 gleich breite Kacheln im Grid (46 × 64 px bei 375 px, kein Scrollen): Wochentag, Tagesnummer,
+  Balken 24 × 4 px mit kcal/Tagesziel (`kcalBar`: grün 90–110 %, Akzent darüber, grau darunter, leer ohne Einträge;
+  ohne kcal-Ziel voll grau). Hantel oben rechts an Trainingstagen, gewählt = Akzent-Fläche, heute = Akzent-Rahmen.
+  Die Pfeile „Vorheriger/Nächster Tag“ neben dem Datum sind entfallen (Kacheln und Wischen bleiben).
+- **Tageskopf:** Datum in Fraunces, Label „Heute“; rechts der Trainings-Schalter als Pill (aria-pressed): an
+  „Trainingstag“ mit Akzent-Rahmen und getönter Fläche (wie aktive Chips), aus grau „Kein Training“. Bei langen
+  Wochentagen (Donnerstag) rutscht er rechtsbündig in die nächste Zeile.
+- **Ziel-Karte** (`plan/goal-card.tsx`, ersetzt `goal-progress.tsx`): „Ziel Ruhetag/Trainingstag“, kcal groß mit
+  „/ 2.400 kcal“, rechts „noch … kcal“ bzw. „… kcal drüber“ (Akzent), breiter Balken; darunter Protein,
+  Kohlenhydrate („Kohlenh.“), Fett in drei Spalten mit Farbpunkt, „47 / 170 g“, schmalem Balken und „noch … g“
+  (Protein über dem Ziel: „Ziel erreicht“, sonst „… g drüber“). Kosten des Tages unten in der Karte. Balken bleiben in
+  den Makrofarben (vorher rot ab 110 %).
+- **Lücken-Hinweis** (Phase 11 gibt es): ab 25 g fehlendem Protein getönte Karte „Noch 124 g Protein offen“ mit dem
+  besten Vorschlag aus `gapSuggestions` (Titel, ggf. ½ Portion, +Protein, Ziel-Slot) und Knopf „Einplanen“: trägt
+  direkt ein (`addPlanEntryAction`), in „Abend“ oder als „Snack“, wenn am Abend schon etwas steht. Passt nichts, steht
+  dort ein Hinweis statt des Knopfs. **Ersetzt** die alte Lücken-Box (bis zu 3 Vorschläge, auch für kcal-Lücken, mit
+  Einplanen-Dialog); Meal-Prep-Reste und Reste-Ideen bleiben darunter wie bisher.
+- **Mahlzeiten:** Überschrift im Stil der Gruppen-Überschriften mit kcal-Summe rechts. Mit Einträgen eine Karte:
+  48-px-Vorschaubild (Rezeptfoto, sonst Topf-Symbol; `PlanEntry.imagePath` aus `recipes.image_url`, nur Abfrage
+  erweitert), Name, „1 Portion · 47 g Protein“, rechts kcal; Labels „Rest“ (grün, Kreis-Pfeil) und „Meal Prep“ am
+  Kochtag; unten „+ Hinzufügen“. Leerer Slot: gestrichelter Knopf „Rezept einplanen“. Antippen öffnet die
+  Bearbeitung wie bisher. Gemeinsames Label `TagLabel` (auch „Eigene“, „Heute“).
+- **Wochenübersicht** (Titel relativ, z. B. „Diese Woche“): Ø kcal/Tag, Ø Protein/Tag (nur Tage mit Einträgen) und
+  „Tage im Ziel“ (kcal 90–110 % des jeweiligen Tagesziels, `inKcalTarget`, Tests), Kosten der Woche wie bisher, Knopf
+  „Einkaufsliste aus dieser Woche“: öffnet den bestehenden Dialog mit Mo–So dieser Woche vorbelegt, danach geht es zur
+  Einkaufsliste (`GenerateDialog` mit `triggerLabel`/`openListAfter`; Hinweis „werden ersetzt“ per
+  `hasPlanShoppingItems`). Die vier Summen-Kacheln und der Durchschnitts-Fortschritt sind dafür entfallen.
+- **Desktop** (ab 1024 px): Raster Mo–So bleibt, mit Slot-Überschriften im neuen Stil, Labels „Rest“/„Meal Prep“ und
+  darunter Ziel-Karte und Lücken-Karte des gewählten Tags.
+- Geprüft: 326 Tests, Typecheck, Lint, Build grün. Layout über eine temporäre Vorschauseite mit Beispieldaten (danach
+  gelöscht) bei 375 px in Dark und Light und bei 1280 px: kein seitliches Scrollen, alle Knöpfe ≥ 44 px, Balkenfarben
+  je Tag richtig, „600 kcal drüber“, „In 2 Wochen“, leere Slots, Einkaufs-Dialog mit 19.10.–25.10. Nicht mit echtem
+  Login geprüft (Einplanen aus der Lücken-Karte, Trainings-Schalter speichern, Liste erstellen).
 
 ## Offene Punkte
 

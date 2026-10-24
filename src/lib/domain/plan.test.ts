@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampServings, entryMacros, goalProgress, summarizeWeek, totalsByDay } from "./plan";
+import { clampServings, entryMacros, goalProgress, inKcalTarget, kcalBar, summarizeWeek, totalsByDay } from "./plan";
 
 const bowl = { kcal: 557, protein: 46, carbs: 67, fat: 10 };
 const oats = { kcal: 462, protein: 29, carbs: 53, fat: 11 };
@@ -57,5 +57,21 @@ describe("clampServings", () => {
     expect(clampServings(0)).toBe(0.25);
     expect(clampServings(99)).toBe(20);
     expect(clampServings(Number.NaN)).toBe(1);
+  });
+});
+
+describe("Tagesziel in der Tagesleiste", () => {
+  it("im Ziel bei 90–110 %, ohne Ziel nie", () => {
+    expect([2160, 2400, 2640].map((k) => inKcalTarget(k, 2400))).toEqual([true, true, true]);
+    expect([2159, 2641].map((k) => inKcalTarget(k, 2400))).toEqual([false, false]);
+    expect(inKcalTarget(2000, null)).toBe(false);
+  });
+
+  it("Balken: leer ohne Einträge, grün im Ziel, Akzent darüber, grau darunter", () => {
+    expect(kcalBar(0, 2400, false)).toEqual({ state: "empty", ratio: 0 });
+    expect(kcalBar(1200, 2400, true)).toEqual({ state: "low", ratio: 0.5 });
+    expect(kcalBar(2400, 2400, true).state).toBe("target");
+    expect(kcalBar(3000, 2400, true)).toEqual({ state: "over", ratio: 1 });
+    expect(kcalBar(800, null, true)).toEqual({ state: "low", ratio: 1 });
   });
 });
