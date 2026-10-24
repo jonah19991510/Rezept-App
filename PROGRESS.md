@@ -1199,7 +1199,11 @@ OK des Nutzers Wochenplan). Funktionen, Daten und Schema wie bisher, keine Migra
 
 ## Wünsche vom 24.10.2026 (Nachtrag): Rezeptseite im neuen Design, eigene Kategorien
 
-**Stand:** umgesetzt und committet, **nicht gepusht**. Migration `custom_categories` am 24.10.2026 von Claude über die
+**Live** seit 24.10.2026: vom Nutzer am Handy getestet; Push `e14c0d0` (mit `596e656`, `fb366a4`) → Deployment
+`dpl_4d91oRcimEwCK7DKPsqSneL5CpKE` (`production`, `fra1`, `source: git`, nach ca. 43 s „READY“, auf
+unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft).
+
+**Datenbank:** Migration `custom_categories` am 24.10.2026 von Claude über die
 Supabase-Verbindung eingespielt (mit Freigabe des Nutzers). Geprüft per SQL: 12 Kategorien (11 Standard + „Getränk“,
 weil ein Gericht es nutzt), alle 19 Gerichte zugeordnet, keine Abweichung Enum/Name, kein `updated_at` verändert;
 Test als Nutzer (zurückgerollt): Umbenennen, Löschen mit Verschieben, Sync alte/neue App, doppelte Namen abgelehnt.
