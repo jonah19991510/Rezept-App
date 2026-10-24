@@ -15,6 +15,15 @@ export const pantryItemSchema = z
 
 export type PantryItemInput = z.input<typeof pantryItemSchema>;
 
+/** Vorrat: fehlende Zutat auf die Einkaufsliste setzen bzw. wieder herunternehmen. */
+export const shoppingToggleSchema = z.object({ ingredientId: z.uuid("Ungültige Zutat."), onList: z.boolean() });
+
+/** Kurzname einer Zutat (leer = automatisch), wie die Spalte ingredients.display_name. */
+export const displayNameSchema = z.object({
+  ingredientId: z.uuid("Ungültige Zutat."),
+  displayName: z.string().trim().max(60, "Höchstens 60 Zeichen."),
+});
+
 export const recipeIdSchema = z.object({ recipeId: z.uuid("Ungültiges Rezept.") });
 
 /** Nach dem Kochen: ausgewählte Vorrats-Einträge um die verbrauchte Menge verringern bzw. als aufgebraucht entfernen. */

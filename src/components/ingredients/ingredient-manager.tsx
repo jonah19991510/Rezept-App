@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ArrowDownAZ, Carrot, LayoutList, Pencil, Search, SearchX, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { setIngredientDisplayNameAction } from "@/app/(app)/einkauf/pantry-actions";
 import { deleteIngredientAction } from "@/app/(app)/zutaten/actions";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PriceForm, type PriceDraft } from "@/components/prices/price-manager";
@@ -13,7 +14,9 @@ import { IngredientForm } from "@/components/recipes/editor/ingredient-form";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { defaultPriceUnit, pricePer100, type IngredientWeights } from "@/lib/domain/costs";
+import { ingredientLabel } from "@/lib/domain/ingredient-name";
 import {
   filterMyIngredients,
   groupByFoodGroup,
@@ -60,7 +63,14 @@ function priceDraft(item: MyIngredient): PriceDraft {
 const recipeWord = (n: number) => (n === 1 ? "1 Rezept" : `${n} Rezepte`);
 
 /** Seite „Zutaten“: Liste mit Suche und Ansichten, Antippen öffnet Preis, Angaben und Rezepte der Zutat. */
-export function IngredientManager({ items }: { items: MyIngredient[] }) {
+export function IngredientManager({
+  items,
+  displayNames = {},
+}: {
+  items: MyIngredient[];
+  /** Kurznamen von Hand (ingredients.display_name) */
+  displayNames?: Record<string, string>;
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<IngredientView>("alle");
@@ -229,6 +239,10 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
               {tab === "preis" ? <PriceForm key={open.ingredient.id} initial={priceDraft(open)} onDone={done} hideHeader /> : null}
 
               {tab === "angaben" ? (
+                <DisplayNameForm key={`kurz-${open.ingredient.id}`} item={open} current={displayNames[open.ingredient.id] ?? ""} onSaved={() => router.refresh()} />
+              ) : null}
+
+              {tab === "angaben" ? (
                 open.isOwn ? (
                   <div className="space-y-3">
                     <p className="text-xs text-muted-foreground">
@@ -285,6 +299,45 @@ export function IngredientManager({ items }: { items: MyIngredient[] }) {
           ) : null}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/**
+ * Kurzname im Vorrat (z. B. „Staudensellerie“ statt „Bio Staudensellerie Klasse II (Edeka)“). Leer = automatisch.
+ * Geht auch bei Open-Food-Facts-Zutaten und gilt für alle, die die Zutat nutzen.
+ */
+function DisplayNameForm({ item, current, onSaved }: { item: MyIngredient; current: string; onSaved: () => void }) {
+  const [value, setValue] = useState(current);
+  const [error, setError] = useState<string>();
+  const [pending, startTransition] = useTransition();
+  const auto = ingredientLabel({ name: item.ingredient.name, source: item.ingredient.source }).short;
+  const id = `kurzname-${item.ingredient.id}`;
+
+  function save() {
+    setError(undefined);
+    startTransition(async () => {
+      const result = await setIngredientDisplayNameAction({ ingredientId: item.ingredient.id, displayName: value });
+      if (result.ok) {
+        toast.success(value.trim() ? `Kurzname „${value.trim()}“ gespeichert.` : "Kurzname wieder automatisch.");
+        onSaved();
+      } else setError(result.message);
+    });
+  }
+
+  return (
+    <div className="grid gap-1.5 rounded-2xl border p-3">
+      <Label htmlFor={id}>Kurzname im Vorrat</Label>
+      <div className="flex gap-2">
+        <Input id={id} value={value} maxLength={60} placeholder={auto} onChange={(e) => setValue(e.target.value)} className="min-w-0 flex-1" />
+        <Button type="button" variant="outline" onClick={save} disabled={pending || value.trim() === current.trim()}>
+          Speichern
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Leer lassen für „{auto}“ (automatisch). Gilt für alle, die diese Zutat nutzen.
+      </p>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }

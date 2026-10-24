@@ -5,6 +5,7 @@ import {
   cookability,
   coverShoppingItem,
   defaultLocation,
+  expiryLabel,
   expiryStatus,
   mergeIntoPantry,
   neededInUnit,
@@ -181,5 +182,27 @@ describe("pantryChecklist", () => {
     expect(pantryChecklist(candidates, entries, "bar").map((r) => r.item.name)).toEqual(["Gin"]);
     const ginInKitchen = [{ ...c("2", "Gin", "spirits"), id: "e2", location: "kitchen" as const }];
     expect(pantryChecklist(candidates, ginInKitchen, "bar")).toEqual([]);
+  });
+
+  it("blendet Grundzutaten nur auf Wunsch ein, auch vorhandene", () => {
+    const withSalt = [...entries, { ...c("3", "Salz", "spices_sauces", true), id: "e3", location: "kitchen" as const }];
+    expect(pantryChecklist(candidates, withSalt, "kitchen").map((r) => r.item.name)).toEqual(["Butter", "Lachs"]);
+    expect(pantryChecklist(candidates, withSalt, "kitchen", { includeStaples: true }).map((r) => [r.item.name, r.entry?.id ?? null])).toEqual([
+      ["Butter", "e4"],
+      ["Lachs", null],
+      ["Salz", "e3"],
+    ]);
+    expect(pantryChecklist(candidates, entries, "kitchen", { includeStaples: true }).map((r) => r.item.name)).toContain("Salz");
+  });
+});
+
+describe("expiryLabel", () => {
+  it("nennt die Tage bis zum Ablauf, höchstens 3 Tage vorher", () => {
+    expect(expiryLabel("2026-10-24", "2026-10-24")).toBe("Läuft heute ab");
+    expect(expiryLabel("2026-10-25", "2026-10-24")).toBe("Läuft morgen ab");
+    expect(expiryLabel("2026-10-27", "2026-10-24")).toBe("Läuft in 3 Tagen ab");
+    expect(expiryLabel("2026-10-28", "2026-10-24")).toBeNull();
+    expect(expiryLabel("2026-10-23", "2026-10-24")).toBe("Abgelaufen");
+    expect(expiryLabel(null, "2026-10-24")).toBeNull();
   });
 });

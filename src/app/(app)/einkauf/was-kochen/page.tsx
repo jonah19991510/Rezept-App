@@ -49,7 +49,7 @@ export default async function WhatToCookPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="Einkauf" description="Was kann ich mit meinem Vorrat kochen?" />
-      <ShoppingTabs active="/einkauf/was-kochen" />
+      <ShoppingTabs active="kochen" />
       <KitchenBarSwitch active="kitchen" kitchenHref="/einkauf/was-kochen" barHref="/einkauf/was-mixen" />
       {pantry.length === 0 ? (
         <EmptyState

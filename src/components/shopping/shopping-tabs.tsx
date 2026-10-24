@@ -1,30 +1,31 @@
 import Link from "next/link";
-import { ChefHat, ListChecks, Refrigerator } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const TABS = [
-  { href: "/einkauf", label: "Liste", icon: ListChecks },
-  { href: "/einkauf/vorrat", label: "Vorrat", icon: Refrigerator },
-  { href: "/einkauf/was-kochen", label: "Was kochen?", icon: ChefHat },
-] as const;
+type Tab = "liste" | "vorrat" | "kochen";
 
-/** Unterseiten von „Einkauf“: Einkaufsliste, Vorratsschrank, „Was kann ich kochen?“. */
-export function ShoppingTabs({ active }: { active: (typeof TABS)[number]["href"] }) {
+/**
+ * Unterseiten von „Einkauf“ als Tab-Leiste mit Unterstrich: Einkaufsliste, Vorratsschrank, „Was kann ich kochen?“.
+ * In der Bar heißt der dritte Tab „Was mixen?“ und der Vorrat öffnet direkt die Bar.
+ */
+export function ShoppingTabs({ active, bar = false }: { active: Tab; bar?: boolean }) {
+  const tabs: { key: Tab; href: string; label: string }[] = [
+    { key: "liste", href: "/einkauf", label: "Liste" },
+    { key: "vorrat", href: bar ? "/einkauf/vorrat?bereich=bar" : "/einkauf/vorrat", label: "Vorrat" },
+    { key: "kochen", href: bar ? "/einkauf/was-mixen" : "/einkauf/was-kochen", label: bar ? "Was mixen?" : "Was kochen?" },
+  ];
   return (
-    <nav className="mb-6 grid grid-cols-3 gap-1 rounded-2xl bg-muted p-1" aria-label="Einkauf">
-      {TABS.map(({ href, label, icon: Icon }) => (
+    <nav className="mb-5 flex border-b" aria-label="Einkauf">
+      {tabs.map(({ key, href, label }) => (
         <Link
-          key={href}
+          key={key}
           href={href}
-          aria-current={href === active ? "page" : undefined}
+          aria-current={key === active ? "page" : undefined}
           className={cn(
-            "flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-            href === active && "bg-card text-foreground shadow-sm",
+            "relative flex min-h-12 flex-1 items-center justify-center px-2 text-base font-medium whitespace-nowrap text-muted-foreground transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            key === active && "font-semibold text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-[3px] after:rounded-full after:bg-primary",
           )}
         >
-          {/* Auf schmalen Handys ohne Icon, damit „Was kochen?“ ganz hineinpasst */}
-          <Icon className="size-4 shrink-0 max-[400px]:hidden" aria-hidden />
-          <span className="truncate">{label}</span>
+          {label}
         </Link>
       ))}
     </nav>

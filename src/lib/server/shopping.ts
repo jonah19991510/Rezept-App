@@ -43,3 +43,16 @@ export async function getShoppingList(userId: string): Promise<{ items: Shopping
     })),
   };
 }
+
+/** Zutaten, die offen (nicht abgehakt) auf der Einkaufsliste stehen; für „Auf Liste“ im Vorrat. */
+export async function getOpenShoppingIngredientIds(userId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("shopping_list_items")
+    .select("ingredient_id")
+    .eq("user_id", userId)
+    .eq("checked", false)
+    .not("ingredient_id", "is", null);
+  if (error) throw new Error(`Einkaufsliste konnte nicht geladen werden (${error.code})`);
+  return [...new Set(data.flatMap((r) => (r.ingredient_id ? [r.ingredient_id] : [])))];
+}

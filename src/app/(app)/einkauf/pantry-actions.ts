@@ -8,7 +8,14 @@ import { scaleFactor } from "@/lib/domain/scaling";
 import { aggregateShopping, formatShoppingAmount } from "@/lib/domain/shopping";
 import { getPantry, getRecipeLinesForPantry, neededForEntry } from "@/lib/server/pantry";
 import { createClient } from "@/lib/supabase/server";
-import { consumeSchema, pantryItemSchema, recipeIdSchema, type PantryItemInput } from "@/lib/validation/pantry";
+import {
+  consumeSchema,
+  displayNameSchema,
+  pantryItemSchema,
+  recipeIdSchema,
+  shoppingToggleSchema,
+  type PantryItemInput,
+} from "@/lib/validation/pantry";
 
 export type PantryResult = { ok: true; message?: string } | { ok: false; message: string };
 
@@ -49,6 +56,73 @@ export async function deletePantryItemAction(id: string): Promise<PantryResult> 
   const { error } = await supabase.from("pantry_items").delete().eq("id", id).eq("user_id", user.id);
   if (error) return { ok: false, message: "Der Eintrag konnte nicht gelöscht werden." };
   revalidatePantry();
+  return { ok: true };
+}
+
+/**
+ * Vorrat, Knopf „Liste“: fehlende Zutat auf die Einkaufsliste setzen (wie „Fehlende auf die Liste“ ohne Menge,
+ * nie doppelt) bzw. mit „Auf Liste“ wieder herunternehmen. Herunter gehen nur offene Einträge dieser Zutat;
+ * schon Abgehaktes bleibt für „In Vorrat übernehmen“ stehen.
+ */
+export async function setOnShoppingListAction(input: { ingredientId: string; onList: boolean }): Promise<PantryResult> {
+  const user = await requireUser();
+  const parsed = shoppingToggleSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Ungültige Zutat." };
+  const { ingredientId, onList } = parsed.data;
+  const supabase = await createClient();
+
+  if (!onList) {
+    const { error } = await supabase
+      .from("shopping_list_items")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("ingredient_id", ingredientId)
+      .eq("checked", false);
+    if (error) return { ok: false, message: "Die Einkaufsliste konnte nicht geändert werden." };
+    revalidatePantry();
+    return { ok: true };
+  }
+
+  const [existing, ingredient] = await Promise.all([
+    supabase
+      .from("shopping_list_items")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("ingredient_id", ingredientId)
+      .eq("checked", false)
+      .limit(1),
+    supabase.from("ingredients").select("name").eq("id", ingredientId).maybeSingle(),
+  ]);
+  if (existing.error || ingredient.error) return { ok: false, message: "Die Einkaufsliste konnte nicht gelesen werden." };
+  if (!ingredient.data) return { ok: false, message: "Die Zutat gibt es nicht mehr." };
+  if (existing.data.length === 0) {
+    const { error } = await supabase.from("shopping_list_items").insert({
+      user_id: user.id,
+      ingredient_id: ingredientId,
+      name: ingredient.data.name,
+      // „manual“: bleibt stehen, wenn die Liste neu aus dem Wochenplan erstellt wird
+      source: "manual",
+    });
+    if (error) return { ok: false, message: "Die Einkaufsliste konnte nicht ergänzt werden." };
+  }
+  revalidatePantry();
+  return { ok: true };
+}
+
+/** Kurznamen einer Zutat setzen; leer = wieder automatisch. Die Datenbankfunktion prüft, ob man die Zutat nutzt. */
+export async function setIngredientDisplayNameAction(input: { ingredientId: string; displayName: string }): Promise<PantryResult> {
+  await requireUser();
+  const parsed = displayNameSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Ungültige Eingabe." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_ingredient_display_name", {
+    p_ingredient_id: parsed.data.ingredientId,
+    p_display_name: parsed.data.displayName,
+  });
+  if (error?.code === "42501") return { ok: false, message: "Diese Zutat kannst du nicht umbenennen." };
+  if (error) return { ok: false, message: "Der Kurzname konnte nicht gespeichert werden." };
+  revalidatePantry();
+  revalidatePath("/zutaten");
   return { ok: true };
 }
 

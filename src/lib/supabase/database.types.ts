@@ -246,6 +246,7 @@ export type Database = {
           created_by: string | null
           density_g_per_ml: number | null
           diet: Database["public"]["Enums"]["ingredient_diet"]
+          display_name: string | null
           external_id: string | null
           fat: number
           fiber: number
@@ -266,6 +267,7 @@ export type Database = {
           created_by?: string | null
           density_g_per_ml?: number | null
           diet: Database["public"]["Enums"]["ingredient_diet"]
+          display_name?: string | null
           external_id?: string | null
           fat?: number
           fiber?: number
@@ -286,6 +288,7 @@ export type Database = {
           created_by?: string | null
           density_g_per_ml?: number | null
           diet?: Database["public"]["Enums"]["ingredient_diet"]
+          display_name?: string | null
           external_id?: string | null
           fat?: number
           fiber?: number
@@ -997,6 +1000,10 @@ export type Database = {
       fork_shared_recipe: { Args: { p_token: string }; Returns: string }
       get_shared_recipe: { Args: { p_token: string }; Returns: Json }
       replace_plan_shopping_items: { Args: { p_items: Json }; Returns: number }
+      set_ingredient_display_name: {
+        Args: { p_display_name: string; p_ingredient_id: string }
+        Returns: undefined
+      }
       save_recipe: {
         Args: {
           p_change_note?: string
@@ -1015,6 +1022,7 @@ export type Database = {
           created_by: string | null
           density_g_per_ml: number | null
           diet: Database["public"]["Enums"]["ingredient_diet"]
+          display_name: string | null
           external_id: string | null
           fat: number
           fiber: number

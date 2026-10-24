@@ -32,20 +32,21 @@ export type PantryCandidate = { ingredientId: string; name: string; foodGroup: F
 
 /**
  * Abhakliste eines Bereichs: alles, was dort im Vorrat steht, plus die eigenen Zutaten, die in diesen Bereich
- * gehören und nirgends vorhanden sind (ohne Grundzutaten wie Salz, die bei „Was kann ich kochen?“ nie fehlen).
- * Alphabetisch.
+ * gehören und nirgends vorhanden sind. Grundzutaten wie Salz (fehlen bei „Was kann ich kochen?“ nie) nur mit
+ * includeStaples, dann auch vorhandene. Alphabetisch.
  */
 export function pantryChecklist<E extends PantryCandidate & { location: PantryLocation }>(
   candidates: PantryCandidate[],
   entries: E[],
   area: PantryLocation,
+  { includeStaples = false }: { includeStaples?: boolean } = {},
 ): { item: PantryCandidate; entry: E | null }[] {
   const present = new Set(entries.map((e) => e.ingredientId));
   const rows: { item: PantryCandidate; entry: E | null }[] = entries
-    .filter((e) => e.location === area)
+    .filter((e) => e.location === area && (includeStaples || !e.isStaple))
     .map((e) => ({ item: e, entry: e }));
   for (const c of candidates) {
-    if (present.has(c.ingredientId) || c.isStaple || defaultLocation(c.foodGroup) !== area) continue;
+    if (present.has(c.ingredientId) || (c.isStaple && !includeStaples) || defaultLocation(c.foodGroup) !== area) continue;
     present.add(c.ingredientId);
     rows.push({ item: c, entry: null });
   }
@@ -60,6 +61,15 @@ export function expiryStatus(expiresOn: string | null, today: string): "expired"
   const days = daysBetween(today, expiresOn);
   if (days < 0) return "expired";
   return days <= EXPIRY_SOON_DAYS ? "soon" : "ok";
+}
+
+/** Zusatzzeile im Vorrat: „Läuft heute ab“, „Läuft morgen ab“, „Läuft in 3 Tagen ab“, „Abgelaufen“; früher nichts. */
+export function expiryLabel(expiresOn: string | null, today: string): string | null {
+  if (!expiresOn) return null;
+  const days = daysBetween(today, expiresOn);
+  if (days < 0) return "Abgelaufen";
+  if (days > EXPIRY_SOON_DAYS) return null;
+  return days === 0 ? "Läuft heute ab" : days === 1 ? "Läuft morgen ab" : `Läuft in ${days} Tagen ab`;
 }
 
 function roundPantry(amount: number, unit: PantryUnit): number {

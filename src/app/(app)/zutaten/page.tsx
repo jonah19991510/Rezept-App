@@ -4,13 +4,14 @@ import { IngredientManager } from "@/components/ingredients/ingredient-manager";
 import { PageHeader } from "@/components/layout/page-header";
 import { requireUser } from "@/lib/auth";
 import { getMyIngredients } from "@/lib/server/my-ingredients";
+import { getIngredientDisplayNames } from "@/lib/server/pantry";
 
 export const metadata: Metadata = { title: "Zutaten" };
 
 /** Profilmenü → Zutaten: Zutaten aus eigenen Rezepten und selbst angelegte, mit Preis; eigene sind bearbeitbar. */
 export default async function IngredientsPage() {
   const user = await requireUser();
-  const items = await getMyIngredients(user.id);
+  const [items, displayNames] = await Promise.all([getMyIngredients(user.id), getIngredientDisplayNames()]);
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -26,7 +27,7 @@ export default async function IngredientsPage() {
           </>
         }
       />
-      <IngredientManager items={items} />
+      <IngredientManager items={items} displayNames={displayNames} />
     </div>
   );
 }

@@ -24,7 +24,7 @@
 `dpl_FmC9e9SW7UtQPKKZvh1dC8tstMtq`, `source: git`, `target: production`, `fra1`, nach ca. 57 s „READY“, auf
 unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft).
 
-**Nächster Schritt:** Gesamttest am Handy auf der Live-Seite (Anleitung unter „Wie der Nutzer Phase 15 testet“),
+**Nächster Schritt:** Migration `…20261024090000_ingredient_display_name` im SQL Editor einspielen, Vorrat im neuen Design (24.10.) testen und pushen. Danach: Gesamttest am Handy auf der Live-Seite (Anleitung unter „Wie der Nutzer Phase 15 testet“),
 danach nur noch Wünsche des Nutzers und die offenen Punkte unten.
 
 **WhatsApp-Vorschau (20.10.2026):** Funktioniert (über mobile Daten getestet). Im Heim-WLAN fehlte sie, weil Vercel
@@ -1071,8 +1071,51 @@ Vercel-Connector geprüft).
   Beispieldaten: 2 → 4 Portionen, 4,70 € → 9,40 €.
 - 312 Tests, Typecheck, Lint, Build grün.
 
+## Wünsche vom 24.10.2026: Vorrat im neuen Design
+
+**Noch nicht live:** Commit lokal, nicht gepusht. Vor dem Push muss die Migration
+`…20261024090000_ingredient_display_name` in der Datenbank sein (Supabase → SQL Editor, Inhalt der Datei ausführen;
+Claude hatte in dieser Sitzung keinen Datenbank-Zugang). Ohne sie läuft der Vorrat trotzdem (nur automatische
+Kürzung), nur das Speichern eines Kurznamens meldet einen Fehler.
+
+Design-Überarbeitung des Tabs „Vorrat“ nach dem Entwurf „Einkauf – Vorrat (neu)“, mit den Bausteinen der Rezeptliste.
+Funktionen und Daten wie bisher, außer:
+
+- **Seitenkopf:** Titel „Einkauf“ und Untertitel sind im Vorrat weg. Die Tabs Liste | Vorrat | Was kochen? sind jetzt
+  eine Tab-Leiste mit Unterstrich (aktiv hell mit 3 px Akzent-Linie, sonst grau), auf allen drei Einkauf-Seiten
+  (`ShoppingTabs`, eine Komponente). In der Bar heißt der dritte Tab „Was mixen?“ (auch auf der Seite „Was mixen?“,
+  vorher stand dort „Was kochen?“). Liste und „Was kochen?“ behalten ihren Seitenkopf.
+- **Küche | Bar:** derselbe Umschalter wie auf der Rezepte-Startseite (`KitchenBarSwitch`, jetzt wahlweise als Knöpfe
+  ohne Seitenwechsel und mit Zähler „vorhanden / gesamt“). Der Bereich steht in der Adresse (`?bereich=bar`).
+- **Plus-Knopf** unten rechts („Zutat hinzufügen“, gleiche Klasse `fabClass` wie „Neues Rezept“) statt „Andere
+  Zutat“; öffnet denselben Dialog, mit dem Suchbegriff vorbelegt. Hinweistext „Tipp eine Zutat an …“ entfernt.
+- **Filter-Chips** Alle / Vorhanden / Fehlt im Stil der Startseite mit Zähler (zählen die Suchtreffer).
+- **Gruppen** auf- und zuklappbar (Überschrift als Knopf mit „5 / 8“ und Pfeil); ohne Treffer ausgeblendet; beim
+  Suchen immer offen.
+- **Zeilen:** runder Haken (28 px, ganze linke Fläche, `role="checkbox"`, mind. 64 px hoch), ohne „vorhanden“/„fehlt“.
+  Vorhanden: Menge + Stift. Fehlt: grauer Name und Knopf „Liste“ → setzt die Zutat auf die Einkaufsliste
+  (`setOnShoppingListAction`, Eintrag ohne Menge, Quelle „manual“, nie doppelt), danach „Auf Liste“; erneut tippen
+  nimmt offene Einträge dieser Zutat wieder herunter (abgehakte bleiben). Zweite Zeile: Zusatzinfo bzw. „Läuft heute/
+  morgen/in X Tagen ab“ (bis 3 Tage vorher, Akzentfarbe; abgelaufen: „Abgelaufen“ in Rot, `expiryLabel`). Der Hinweis
+  „Bald verbrauchen: …“ über der Liste ist dafür entfallen.
+- **Grundzutaten** in der Küche standardmäßig aus, gestrichelter Knopf „Grundzutaten (Salz, Pfeffer, Öl …)
+  einblenden/ausblenden“ am Ende (auch vorhandene; `pantryChecklist(…, { includeStaples })`). Die Bar zeigt alles.
+- **Nichts gefunden:** gestrichelte Karte mit Hinweis auf den Plus-Knopf.
+- **Kurznamen:** Neue Spalte `ingredients.display_name` (optional, 1–60 Zeichen). Leer = automatisch: Open-Food-Facts-
+  Namen werden per Regeln gekürzt (`domain/ingredient-name.ts`, Tests: Bio/Demeter …, Handelsklasse, Mengen wie
+  „500 g“, Teile nach Komma/Gedankenstrich, Klammern wie die Marke → graue Zusatzzeile „Bio · Klasse II · Edeka“);
+  gilt sofort für alle schon importierten Zutaten. Von Hand änderbar unter Zutaten → Zutat → Angaben/Bearbeiten
+  („Kurzname im Vorrat“), auch bei Open-Food-Facts-Zutaten, über die Funktion `set_ingredient_display_name`
+  (Security Definer, ändert nur dieses Feld; erlaubt für selbst angelegte und selbst genutzte Zutaten; gilt für alle
+  Nutzer gleich). Keine personenbezogenen Daten, daher keine Änderung an Export oder `DATENVERARBEITUNG.md`.
+- Geprüft: 320 Tests, Typecheck, Lint, Build grün. Layout bei 375 px in Dark und Light über eine temporäre
+  Vorschauseite mit Beispieldaten (ohne Login, danach gelöscht): kein seitliches Scrollen, alle Knöpfe ≥ 44 px, Zeilen
+  64 px, der Plus-Knopf verdeckt die letzte Zeile nicht, Filter/Suche/Zuklappen/Grundzutaten/Bar funktionieren.
+  Nicht mit echtem Login geprüft (Abhaken, „Liste“, Kurzname speichern).
+
 ## Offene Punkte
 
+- Vorrat: Zugeklappte Gruppen merkt sich die Seite nur bis zum Neuladen.
 - Meal Prep: „Woche kopieren“ übernimmt Kochtag und Reste als normale Einträge (ohne Batch), d. h. in der Zielwoche
   zählt die Einkaufsliste jeden Eintrag einzeln. „Ersetzen“ beim Kopieren löscht Einträge, lässt aber den Batch der
   Zielwoche stehen (er wird ignoriert, weil sein Kochtag fehlt). Bei Gelegenheit `copy_plan_week` per Migration

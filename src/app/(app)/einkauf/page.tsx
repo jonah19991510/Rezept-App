@@ -57,7 +57,7 @@ export default async function ShoppingPage() {
         description={items.length > 0 ? `${openCount} ${openCount === 1 ? "Sache" : "Sachen"} noch zu besorgen` : undefined}
         actions={generate}
       />
-      <ShoppingTabs active="/einkauf" />
+      <ShoppingTabs active="liste" />
       {estimate.priced > 0 ? (
         <p className="mb-4 rounded-2xl bg-muted/60 px-4 py-2.5 text-sm">
           Geschätzt {missing ? "mindestens" : "ca."} <span className="font-semibold">{formatEuro(estimate.total)}</span>

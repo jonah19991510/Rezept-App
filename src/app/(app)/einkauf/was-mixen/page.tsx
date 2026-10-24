@@ -54,7 +54,7 @@ export default async function WhatToMixPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="Einkauf" description="Was kann ich mit meiner Bar mixen?" />
-      <ShoppingTabs active="/einkauf/was-kochen" />
+      <ShoppingTabs active="kochen" bar />
       <KitchenBarSwitch active="bar" kitchenHref="/einkauf/was-kochen" barHref="/einkauf/was-mixen" />
       {recipes.data.length === 0 ? (
         <EmptyState

@@ -2,16 +2,17 @@ import "server-only";
 import { cookability, isPantryUnit, neededInUnit, type PantryEntry } from "@/lib/domain/pantry";
 import type { FoodGroup } from "@/lib/domain/shopping";
 import type { Unit } from "@/lib/domain/units";
+import type { Enums } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
-export type PantryRow = PantryEntry & { name: string; foodGroup: FoodGroup; isStaple: boolean };
+export type PantryRow = PantryEntry & { name: string; foodGroup: FoodGroup; isStaple: boolean; source?: Enums<"ingredient_source"> };
 
 /** Alle Vorrats-Einträge des Nutzers mit Zutatenname und -gruppe. */
 export async function getPantry(userId: string): Promise<PantryRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("pantry_items")
-    .select("id, ingredient_id, amount, unit, location, expires_on, ingredients!pantry_items_ingredient_id_fkey(name, food_group, is_staple)")
+    .select("id, ingredient_id, amount, unit, location, expires_on, ingredients!pantry_items_ingredient_id_fkey(name, food_group, is_staple, source)")
     .eq("user_id", userId);
   if (error) throw new Error(`Vorrat konnte nicht geladen werden (${error.code})`);
   return data
@@ -25,8 +26,20 @@ export async function getPantry(userId: string): Promise<PantryRow[]> {
       name: row.ingredients.name,
       foodGroup: row.ingredients.food_group,
       isStaple: row.ingredients.is_staple,
+      source: row.ingredients.source,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
+}
+
+/**
+ * Kurznamen von Hand (ingredients.display_name). Es sind wenige, deshalb alle auf einmal. Fehlt die Spalte noch
+ * (Migration …20261024090000 nicht eingespielt), bleibt es bei der automatischen Kürzung statt eines Fehlers.
+ */
+export async function getIngredientDisplayNames(): Promise<Record<string, string>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("ingredients").select("id, display_name").not("display_name", "is", null);
+  if (error) return {};
+  return Object.fromEntries(data.flatMap((r) => (r.display_name ? [[r.id, r.display_name] as const] : [])));
 }
 
 /** Banner über der Rezeptliste: wie viele eigene Rezepte bzw. Cocktails der Vorrat sofort abdeckt. */
