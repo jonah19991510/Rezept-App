@@ -310,9 +310,9 @@ function WeekNav({ monday, today, onToday }: { monday: string; today: string; on
   const relative = relativeWeekLabel(monday, today);
   const current = relative === "Diese Woche";
   const arrowClass =
-    "grid size-11 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
+    "grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none";
   return (
-    <nav className="mb-4 grid grid-cols-[2.75rem_minmax(0,1fr)_2.75rem] items-center gap-1 rounded-full border bg-card p-1" aria-label="Wochen">
+    <nav className="mb-4 flex items-center gap-1 rounded-full border bg-card p-1" aria-label="Wochen">
       <Link href={`/wochenplan?woche=${addDays(monday, -7)}`} className={arrowClass} aria-label="Vorherige Woche">
         <ChevronLeft className="size-5" aria-hidden />
       </Link>
@@ -321,7 +321,7 @@ function WeekNav({ monday, today, onToday }: { monday: string; today: string; on
         onClick={onToday}
         aria-current={current ? "page" : undefined}
         title="Zur aktuellen Woche und zu heute"
-        className="flex min-h-12 min-w-0 flex-col items-center justify-center rounded-full px-2 text-center transition hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center rounded-full px-2 text-center transition hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
         <span className="truncate text-sm font-semibold tabular-nums">{weekRangeLabel(monday)}</span>
         <span className={cn("text-xs font-medium", current ? "text-primary" : "text-muted-foreground")}>{relative}</span>

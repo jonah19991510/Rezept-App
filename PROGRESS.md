@@ -1155,6 +1155,10 @@ OK des Nutzers Wochenplan). Funktionen, Daten und Schema wie bisher, keine Migra
   darunter „Diese Woche“ (Akzent) bzw. grau „Letzte Woche“, „Nächste Woche“, „In 2 Wochen“, „Vor 3 Wochen“
   (`weekRangeLabel`, `relativeWeekLabel`, Tests). Die Mitte führt zur aktuellen Woche und wählt heute. Die Leiste
   sitzt jetzt im `WeekPlanner` (Client), damit der Sprung zu heute auch in der aktuellen Woche wirkt.
+  Nachtrag: Am Handy war die Leiste zuerst riesig (Pfeile übereinander), weil das Handy eine veraltete CSS-Datei
+  ohne die neue Spalten-Regel hatte (vermutlich durch `next build` neben dem laufenden Dev-Server). Die Leiste nutzt
+  jetzt Flex statt einer eigenen Grid-Regel. Regel für später: `next build` nicht neben dem LAN-Server laufen lassen
+  bzw. danach am Handy neu laden.
 - **Tagesleiste:** 7 gleich breite Kacheln im Grid (46 × 64 px bei 375 px, kein Scrollen): Wochentag, Tagesnummer,
   Balken 24 × 4 px mit kcal/Tagesziel (`kcalBar`: grün 90–110 %, Akzent darüber, grau darunter, leer ohne Einträge;
   ohne kcal-Ziel voll grau). Hantel oben rechts an Trainingstagen, gewählt = Akzent-Fläche, heute = Akzent-Rahmen.
