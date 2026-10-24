@@ -1114,10 +1114,14 @@ Funktionen und Daten wie bisher, außer:
 
 ## Wünsche vom 24.10.2026: Zutaten und Wochenplan im neuen Design
 
+**Live** seit 24.10.2026: Push `77de69b` (mit `ce8f6b5`, `4666deb`) → Deployment `dpl_HetNyYBXnBw5gK2vM3Yjv9j2rMLY`
+(`production`, `fra1`, `source: git`, nach ca. 43 s „READY“, auf unser-rezeptbuch.vercel.app geschaltet; per
+Vercel-Connector geprüft). Vom Nutzer am Handy über den LAN-Server getestet und freigegeben.
+
 Design-Überarbeitung nach den Entwürfen „Zutaten (neu)“ und „Wochenplan (neu)“, in zwei Schritten (erst Zutaten, nach
 OK des Nutzers Wochenplan). Funktionen, Daten und Schema wie bisher, keine Migration.
 
-### Teil 1: Zutaten (Commit `ce8f6b5`, vom Nutzer freigegeben, nicht gepusht)
+### Teil 1: Zutaten (Commit `ce8f6b5`, live)
 
 - **Gemeinsame Bausteine** in `components/layout/list-blocks.tsx`: `SearchField` (Pille), `ChipRow` (wischbar, ab
   Tablet umbrechend, `shrink-0` + Mindesthöhe), `CountChip` (Chip mit Zähler-Bubble), `SegmentToggle` (kleiner
@@ -1148,7 +1152,7 @@ OK des Nutzers Wochenplan). Funktionen, Daten und Schema wie bisher, keine Migra
 - Hinweis: Der laufende Entwicklungsserver lieferte serverseitig die alten Module aus (Turbopack-Cache, siehe
   „Bekannte Probleme“); Abhilfe wie dort: stoppen, `.next/dev` löschen, neu starten (am 24.10. zweimal nötig).
 
-### Teil 2: Wochenplan (umgesetzt, noch nicht vom Nutzer getestet, nicht gepusht)
+### Teil 2: Wochenplan (Commits `4666deb`, `77de69b`, live)
 
 - **Kopf:** „Wochenplan“, rechts runder Icon-Knopf „Woche kopieren“ (44 px, aria-label; derselbe Dialog wie bisher).
 - **Wochenwechsel:** eine Leiste wie der Küche/Bar-Umschalter: Pfeile links/rechts, Mitte „KW 43 · 19.10.–25.10.“ und
