@@ -24,7 +24,7 @@
 `dpl_FmC9e9SW7UtQPKKZvh1dC8tstMtq`, `source: git`, `target: production`, `fra1`, nach ca. 57 s „READY“, auf
 unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft).
 
-**Nächster Schritt:** Migration `…20261024090000_ingredient_display_name` im SQL Editor einspielen, Vorrat im neuen Design (24.10.) testen und pushen. Danach: Gesamttest am Handy auf der Live-Seite (Anleitung unter „Wie der Nutzer Phase 15 testet“),
+**Nächster Schritt:** Gesamttest am Handy auf der Live-Seite (Anleitung unter „Wie der Nutzer Phase 15 testet“),
 danach nur noch Wünsche des Nutzers und die offenen Punkte unten.
 
 **WhatsApp-Vorschau (20.10.2026):** Funktioniert (über mobile Daten getestet). Im Heim-WLAN fehlte sie, weil Vercel
@@ -1073,10 +1073,9 @@ Vercel-Connector geprüft).
 
 ## Wünsche vom 24.10.2026: Vorrat im neuen Design
 
-**Noch nicht live:** Commit lokal, nicht gepusht. Vor dem Push muss die Migration
-`…20261024090000_ingredient_display_name` in der Datenbank sein (Supabase → SQL Editor, Inhalt der Datei ausführen;
-Claude hatte in dieser Sitzung keinen Datenbank-Zugang). Ohne sie läuft der Vorrat trotzdem (nur automatische
-Kürzung), nur das Speichern eines Kurznamens meldet einen Fehler.
+**Live** seit 24.10.2026: Migration `…20261024090000_ingredient_display_name` vom Nutzer im SQL Editor eingespielt,
+am Handy über den LAN-Server getestet; Push `9c3c9ac` → Deployment `dpl_6CAznDm3FKSF84xnL7CSC8shfZ2a` (`production`,
+`fra1`, nach ca. 88 s „READY“, auf unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft).
 
 Design-Überarbeitung des Tabs „Vorrat“ nach dem Entwurf „Einkauf – Vorrat (neu)“, mit den Bausteinen der Rezeptliste.
 Funktionen und Daten wie bisher, außer:
