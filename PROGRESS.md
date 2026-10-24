@@ -1199,8 +1199,12 @@ OK des Nutzers Wochenplan). Funktionen, Daten und Schema wie bisher, keine Migra
 
 ## Wünsche vom 24.10.2026 (Nachtrag): Rezeptseite im neuen Design, eigene Kategorien
 
-**Stand:** umgesetzt und committet, **nicht gepusht**. Die Migration `…20261024130000_custom_categories` muss der
-Nutzer im SQL Editor einspielen, bevor er testet (die neue App liest `recipes.category_name`); erst danach pushen.
+**Stand:** umgesetzt und committet, **nicht gepusht**. Migration `custom_categories` am 24.10.2026 von Claude über die
+Supabase-Verbindung eingespielt (mit Freigabe des Nutzers). Geprüft per SQL: 12 Kategorien (11 Standard + „Getränk“,
+weil ein Gericht es nutzt), alle 19 Gerichte zugeordnet, keine Abweichung Enum/Name, kein `updated_at` verändert;
+Test als Nutzer (zurückgerollt): Umbenennen, Löschen mit Verschieben, Sync alte/neue App, doppelte Namen abgelehnt.
+Security-Advisor: nichts Neues. **Nachtrag:** Die Kurznamen-Migration `…20261024090000_ingredient_display_name` war
+entgegen dem Eintrag unten nie in der Datenbank (die App fing das ab); ebenfalls am 24.10. von Claude eingespielt.
 
 ### Rezeptseite (Entwurf „Rezept-Detail“)
 
