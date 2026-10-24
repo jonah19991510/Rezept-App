@@ -23,6 +23,7 @@ export function MacroSummary({
   caption = "pro Portion",
   totalLabel = "gesamt",
   compact = false,
+  hideKcal = false,
   className,
 }: {
   values: MacroValues;
@@ -31,14 +32,16 @@ export function MacroSummary({
   /** Beschriftung der Gesamtwerte, z. B. „für 6 Portionen“ */
   totalLabel?: string;
   compact?: boolean;
+  /** kcal stehen schon in der Überschrift (Rezeptseite): nur Protein, Kohlenhydrate, Fett */
+  hideKcal?: boolean;
   className?: string;
 }) {
   const energyFromMacros = MACROS.reduce((sum, m) => sum + values[m.key] * m.kcalPerGram, 0);
 
   return (
     <div className={cn("space-y-3", className)}>
-      <div className={cn("grid grid-cols-4 gap-2", compact && "gap-1.5")}>
-        <Tile label="kcal" macro="kcal" value={formatNumber(Math.round(values.kcal), 0)} compact={compact} />
+      <div className={cn("grid gap-2", hideKcal ? "grid-cols-3" : "grid-cols-4", compact && "gap-1.5")}>
+        {hideKcal ? null : <Tile label="kcal" macro="kcal" value={formatNumber(Math.round(values.kcal), 0)} compact={compact} />}
         {MACROS.map((m) => (
           <Tile
             key={m.key}

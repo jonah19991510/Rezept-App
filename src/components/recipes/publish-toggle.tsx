@@ -1,27 +1,24 @@
 "use client";
 
 import { useOptimistic, useTransition } from "react";
-import Link from "next/link";
 import { Globe, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { setRecipePublicAction } from "@/app/(app)/rezepte/actions";
-import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import { setRecipePublicSchema } from "@/lib/validation/community";
 
-/** Schalter „Veröffentlichen“ auf der eigenen Rezeptseite. Wirkt sofort. */
-export function PublishToggle({
-  recipeId,
-  isPublic,
-  displayName,
-}: {
-  recipeId: string;
-  isPublic: boolean;
-  displayName: string;
-}) {
+const OPTIONS = [
+  { value: false, label: "Privat", icon: Lock },
+  { value: true, label: "Öffentlich", icon: Globe },
+] as const;
+
+/** Umschalter Privat | Öffentlich oben auf der eigenen Rezeptseite, mit einer Zeile Erklärung. Wirkt sofort. */
+export function PublishToggle({ recipeId, isPublic }: { recipeId: string; isPublic: boolean }) {
   const [optimistic, setOptimistic] = useOptimistic(isPublic);
   const [pending, startTransition] = useTransition();
 
-  function toggle(next: boolean) {
+  function select(next: boolean) {
+    if (next === optimistic) return;
     const parsed = setRecipePublicSchema.safeParse({ recipeId, isPublic: next });
     if (!parsed.success) return;
     startTransition(async () => {
@@ -32,46 +29,32 @@ export function PublishToggle({
     });
   }
 
-  const Icon = optimistic ? Globe : Lock;
-
   return (
-    <section aria-labelledby="sichtbarkeit" className="rounded-3xl border bg-card p-4 md:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <span className="space-y-1">
-          <span id="sichtbarkeit" className="flex items-center gap-2 font-semibold">
-            <Icon className="size-4 text-primary" aria-hidden />
-            {optimistic ? "Öffentlich" : "Privat"}
-          </span>
-          <span id="sichtbarkeit-hinweis" className="block text-sm text-muted-foreground">
-            {optimistic ? (
-              <>
-                Alle aus der Runde sehen das Rezept unter{" "}
-                <Link href="/entdecken" className="text-primary underline-offset-4 hover:underline">
-                  Entdecken
-                </Link>
-                , mit deinem Anzeigenamen „{displayName}“. Sie können es einplanen und eine eigene Kopie übernehmen.
-              </>
-            ) : (
-              "Nur du siehst dieses Rezept. Veröffentlichen zeigt es allen aus der Runde mit deinem Anzeigenamen, nie mit deiner E-Mail-Adresse."
-            )}
-          </span>
-          {optimistic ? (
-            <span className="block text-xs text-muted-foreground">
-              Machst du es wieder privat, verschwindet es aus Entdecken und aus fremden Wochenplänen. Kopien, die andere
-              schon übernommen haben, bleiben bei ihnen.
-            </span>
-          ) : null}
-        </span>
-        <span className="flex min-h-11 items-center">
-          <Switch
-            checked={optimistic}
-            onCheckedChange={toggle}
-            disabled={pending}
-            aria-label="Rezept veröffentlichen"
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-1 rounded-full border bg-card p-1" role="group" aria-label="Sichtbarkeit">
+        {OPTIONS.map(({ value, label, icon: Icon }) => (
+          <button
+            key={label}
+            type="button"
+            aria-pressed={optimistic === value}
             aria-describedby="sichtbarkeit-hinweis"
-          />
-        </span>
+            disabled={pending}
+            onClick={() => select(value)}
+            className={cn(
+              "flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-transparent px-4 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              optimistic === value && "border-primary/60 bg-primary/15 text-primary hover:text-primary",
+            )}
+          >
+            <Icon className="size-4" aria-hidden />
+            {label}
+          </button>
+        ))}
       </div>
-    </section>
+      <p id="sichtbarkeit-hinweis" className="px-1 text-sm text-muted-foreground">
+        {optimistic
+          ? "Für alle unter „Entdecken“ sichtbar – nur mit deinem Anzeigenamen."
+          : "Nur du siehst dieses Rezept."}
+      </p>
+    </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { BookCheck, Copy, EllipsisVertical, FileDown, Pencil, Trash2 } from "lucide-react";
+import { BookCheck, Copy, EllipsisVertical, FileDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteRecipeAction, duplicateRecipeAction, forkRecipeAction } from "@/app/(app)/rezepte/actions";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -21,24 +21,59 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 const ITEM = "min-h-11 gap-2.5 px-2.5";
 
+/** Runder Knopf oben auf der Rezeptseite (Herz, Menü) */
+export const roundIconClass = "rounded-full bg-card";
+
 /**
- * Aktionen auf der Rezeptseite. Bearbeiten/Löschen nur für den Owner.
- * Fremde (öffentliche) Rezepte: übernehmen bzw. die schon übernommene Kopie öffnen.
+ * Fremde (öffentliche) Rezepte: übernehmen bzw. die schon übernommene Kopie öffnen. Steht neben „Kochen starten“.
  */
-export function RecipeActions({
+export function ForkActions({
   recipeId,
-  title,
-  isOwner,
   ownCopyId = null,
+  className,
 }: {
   recipeId: string;
-  title: string;
-  isOwner: boolean;
   ownCopyId?: string | null;
+  /** Größe und Form wie „Kochen starten“ */
+  className?: string;
 }) {
+  const [pending, startTransition] = useTransition();
+
+  function fork() {
+    startTransition(async () => {
+      const result = await forkRecipeAction(recipeId);
+      if (result && !result.ok) toast.error(result.message);
+    });
+  }
+
+  if (ownCopyId) {
+    return (
+      <>
+        <Link href={`/rezepte/${ownCopyId}`} className={cn(buttonVariants({ variant: "outline" }), className)}>
+          <BookCheck aria-hidden />
+          Deine Kopie öffnen
+        </Link>
+        <Button type="button" variant="outline" onClick={fork} disabled={pending} className={className}>
+          <Copy aria-hidden />
+          {pending ? "Wird übernommen …" : "Noch einmal übernehmen"}
+        </Button>
+      </>
+    );
+  }
+  return (
+    <Button type="button" variant="outline" onClick={fork} disabled={pending} className={className} aria-label="In mein Rezeptbuch übernehmen">
+      <Copy aria-hidden />
+      {pending ? "Wird übernommen …" : "Übernehmen"}
+    </Button>
+  );
+}
+
+/** Menü ⋮ oben auf der eigenen Rezeptseite: Duplizieren, Als Markdown, Löschen (mit Rückfrage). */
+export function RecipeMenu({ recipeId, title }: { recipeId: string; title: string }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition();
 
@@ -56,44 +91,10 @@ export function RecipeActions({
     });
   }
 
-  function fork() {
-    startTransition(async () => {
-      const result = await forkRecipeAction(recipeId);
-      if (result && !result.ok) toast.error(result.message);
-    });
-  }
-
-  if (!isOwner) {
-    if (ownCopyId) {
-      return (
-        <>
-          <Link href={`/rezepte/${ownCopyId}`} className={buttonVariants()}>
-            <BookCheck aria-hidden />
-            Deine Kopie öffnen
-          </Link>
-          <Button type="button" variant="outline" onClick={fork} disabled={pending}>
-            <Copy aria-hidden />
-            {pending ? "Wird übernommen …" : "Noch einmal übernehmen"}
-          </Button>
-        </>
-      );
-    }
-    return (
-      <Button type="button" onClick={fork} disabled={pending}>
-        <Copy aria-hidden />
-        {pending ? "Wird übernommen …" : "In mein Rezeptbuch übernehmen"}
-      </Button>
-    );
-  }
-
   return (
     <>
-      <Link href={`/rezepte/${recipeId}/bearbeiten`} className={buttonVariants()}>
-        <Pencil aria-hidden />
-        Bearbeiten
-      </Link>
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Weitere Aktionen" disabled={pending} />}>
+        <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Weitere Aktionen" disabled={pending} className={roundIconClass} />}>
           <EllipsisVertical aria-hidden />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52 rounded-xl p-1.5">

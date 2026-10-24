@@ -3,10 +3,9 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Camera, ImagePlus, Loader2, Trash2 } from "lucide-react";
+import { Camera, CookingPot, Loader2, Martini, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { preparePhotoUploadAction, removeRecipePhotoAction, setRecipePhotoAction } from "@/app/(app)/rezepte/photo-actions";
-import { Button } from "@/components/ui/button";
 import { checkPhotoFile, photoUrl } from "@/lib/domain/photo";
 import { compressPhoto } from "@/lib/photo-compress";
 import { RECIPE_PHOTO_BUCKET } from "@/lib/storage";
@@ -20,17 +19,26 @@ const STATUS_TEXT: Record<Exclude<Status, "idle">, string> = {
   uploading: "Foto wird hochgeladen …",
 };
 
-/** Foto auf der Rezeptseite. Der Owner kann es hinzufügen, ändern und entfernen. */
+/** Runder Knopf auf dem Foto (Kamera, Entfernen) */
+const photoButtonClass =
+  "grid size-11 place-items-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition hover:bg-background focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60 [&_svg]:size-5";
+
+/**
+ * Foto auf der Rezeptseite; ohne Foto ein Platzhalter mit Topf bzw. Glas. Der Owner kann es über den runden
+ * Kamera-Knopf hinzufügen oder ändern und es entfernen.
+ */
 export function RecipePhoto({
   recipeId,
   imagePath,
   title,
   isOwner,
+  cocktail = false,
 }: {
   recipeId: string;
   imagePath: string | null;
   title: string;
   isOwner: boolean;
+  cocktail?: boolean;
 }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
@@ -42,8 +50,6 @@ export function RecipePhoto({
   useEffect(() => () => {
     if (preview) URL.revokeObjectURL(preview);
   }, [preview]);
-
-  if (!imagePath && !isOwner) return null;
 
   async function upload(file: File) {
     const problem = checkPhotoFile(file);
@@ -121,26 +127,34 @@ export function RecipePhoto({
   ) : null;
 
   if (!src) {
+    const Placeholder = cocktail ? Martini : CookingPot;
     return (
-      <div>
-        {fileInput}
-        <button
-          type="button"
-          onClick={() => input.current?.click()}
-          disabled={busy}
-          className="flex min-h-28 w-full flex-col items-center justify-center gap-1.5 rounded-3xl border-2 border-dashed bg-card/50 p-4 text-center text-muted-foreground transition hover:border-primary hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-60"
-        >
-          {busy ? <Loader2 className="size-6 animate-spin" aria-hidden /> : <ImagePlus className="size-6 text-primary" aria-hidden />}
-          <span className="font-medium text-foreground">{busy ? STATUS_TEXT[status as Exclude<Status, "idle">] : "Foto hinzufügen"}</span>
-          <span className="text-xs">Wird verkleinert. Standort und andere Kameradaten werden vorher entfernt.</span>
-        </button>
+      <div className="relative grid aspect-[3/2] place-items-center overflow-hidden rounded-3xl border bg-muted sm:aspect-[16/9]">
+        <Placeholder className="size-16 text-muted-foreground/50" strokeWidth={1.25} aria-hidden />
+        {isOwner ? (
+          <>
+            {fileInput}
+            <span className="absolute bottom-4 left-4 font-sans text-xs font-semibold tracking-wide text-muted-foreground uppercase" aria-live="polite">
+              {busy ? STATUS_TEXT[status as Exclude<Status, "idle">] : "Foto hinzufügen"}
+            </span>
+            <button
+              type="button"
+              onClick={() => input.current?.click()}
+              disabled={busy}
+              aria-label="Foto hinzufügen (wird verkleinert, Standort und Kameradaten werden entfernt)"
+              className={cn(photoButtonClass, "absolute right-3 bottom-3")}
+            >
+              {busy ? <Loader2 className="animate-spin" aria-hidden /> : <Camera aria-hidden />}
+            </button>
+          </>
+        ) : null}
       </div>
     );
   }
 
   return (
     <figure className="relative overflow-hidden rounded-3xl border bg-muted shadow-sm shadow-foreground/5">
-      <div className="relative aspect-[4/3] sm:aspect-[16/9]">
+      <div className="relative aspect-[3/2] sm:aspect-[16/9]">
         <Image
           src={src}
           alt={`Foto: ${title}`}
@@ -163,13 +177,12 @@ export function RecipePhoto({
       {isOwner && status === "idle" ? (
         <div className="absolute right-3 bottom-3 flex gap-2">
           {fileInput}
-          <Button type="button" variant="secondary" onClick={() => input.current?.click()} disabled={busy} className="shadow-sm">
-            <Camera aria-hidden />
-            Ändern
-          </Button>
-          <Button type="button" variant="secondary" size="icon" onClick={remove} disabled={busy} aria-label="Foto entfernen" className="shadow-sm">
+          <button type="button" onClick={remove} disabled={busy} aria-label="Foto entfernen" className={photoButtonClass}>
             <Trash2 aria-hidden />
-          </Button>
+          </button>
+          <button type="button" onClick={() => input.current?.click()} disabled={busy} aria-label="Foto ändern" className={photoButtonClass}>
+            <Camera aria-hidden />
+          </button>
         </div>
       ) : null}
     </figure>

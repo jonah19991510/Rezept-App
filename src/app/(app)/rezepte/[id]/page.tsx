@@ -1,29 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CircleCheck, Clock, ExternalLink, GitFork, GlassWater, Snowflake, Sparkles, Users } from "lucide-react";
+import { ExternalLink, Pencil } from "lucide-react";
 import { CookLogSection } from "@/components/recipes/cook-log-section";
-import { FavoriteButton } from "@/components/recipes/favorite-button";
-import { PublishToggle } from "@/components/recipes/publish-toggle";
-import { RecipePhoto } from "@/components/recipes/recipe-photo";
-import { RecipeActions } from "@/components/recipes/recipe-actions";
-import { RecipeTags } from "@/components/recipes/recipe-tags";
-import { ScaledRecipeContent } from "@/components/recipes/scaled-recipe-content";
+import { ForkActions } from "@/components/recipes/recipe-actions";
+import { RecipeHero, type RecipeFact } from "@/components/recipes/recipe-hero";
+import { ScaledRecipeContent, sideActionClass } from "@/components/recipes/scaled-recipe-content";
 import { ShareLink } from "@/components/recipes/share-link";
 import { VersionHistory } from "@/components/recipes/version-history";
+import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { baseSpirit, dilutionNote } from "@/lib/domain/cocktail";
-import { authorName } from "@/lib/domain/community";
 import { defaultPriceUnit, unpricedIngredients } from "@/lib/domain/costs";
 import { autoTagsFor } from "@/lib/domain/recipe-filter";
 import { snapshotMacros } from "@/lib/domain/versions";
 import { todayInBerlin } from "@/lib/domain/week";
+import { formatEuro, formatNumber } from "@/lib/format";
 import { formatMinutes } from "@/lib/format-quantity";
-import { CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
+import { AUTO_TAG_LABELS, CATEGORY_LABELS, GLASS_LABELS, METHOD_LABELS, servingsLabel } from "@/lib/labels";
 import { getCookLogs, getIngredientNutrition, getPrices, getRecipeCost, getRecipeVersions } from "@/lib/server/kitchen-log";
 import { linkSideDishes } from "@/lib/domain/side-dishes";
 import { getOwnRecipeTitles, getRecipeDetail } from "@/lib/server/recipes";
 import { getSiteUrl } from "@/lib/site-url";
+import { cn } from "@/lib/utils";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -45,6 +44,7 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const { recipe, nutrition, ingredients, steps, cocktail, alcohol } = detail;
   // Phase 15: Cocktails mit Drinks und Alkoholgehalt
   const isCocktail = recipe.recipe_type === "cocktail";
+  const autoTags = isCocktail ? [] : autoTagsFor({ is_meal_prep: recipe.is_meal_prep, nutrition });
   const kicker = isCocktail
     ? [
         baseSpirit(ingredients.filter((l) => !l.is_optional).map((l) => ({ name: l.ingredient.name, amount: l.amount, unit: l.unit, ingredient: l.ingredient }))) ??
@@ -53,9 +53,8 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
       ]
         .filter(Boolean)
         .join(" · ")
-    : recipe.category
-      ? CATEGORY_LABELS[recipe.category]
-      : null;
+    : [recipe.category ? CATEGORY_LABELS[recipe.category] : null, ...autoTags.map((t) => AUTO_TAG_LABELS[t])].filter(Boolean).join(" · ") ||
+      null;
   // Phase 12: Kosten nach eigenen Preisen, eigenes Koch-Log, Versionen (nur Owner)
   const [cost, logs, versions, prices] = await Promise.all([
     getRecipeCost(recipe.id),
@@ -105,102 +104,67 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
   const back = !detail.isOwner
     ? { href: isCocktail ? "/entdecken/bar" : "/entdecken", label: "Entdecken" }
     : isCocktail
-      ? { href: "/rezepte/bar", label: "Alle Cocktails" }
-      : { href: "/rezepte", label: "Alle Rezepte" };
+      ? { href: "/rezepte/bar", label: "Cocktails" }
+      : { href: "/rezepte", label: "Rezepte" };
+  // Drei Kacheln unter dem Titel: Küche Zeit/Portionen/Kosten, Bar Glas/Eis/Stärke
+  const unit = servingsLabel(1, recipe.recipe_type);
+  const facts: RecipeFact[] = isCocktail
+    ? [
+        { label: "Glas", value: cocktail?.glass ? GLASS_LABELS[cocktail.glass] : "–", sub: `${recipe.servings} ${servingsLabel(recipe.servings, "cocktail")}` },
+        { label: "Eis", value: cocktail?.ice || "ohne", sub: cocktail?.garnish ? `Garnitur: ${cocktail.garnish}` : null },
+        {
+          label: "Stärke",
+          value: alcohol?.abv_percent != null ? `≈ ${formatNumber(alcohol.abv_percent, 0)} % vol` : "–",
+          sub: alcohol?.abv_percent != null ? "nach Verdünnung" : null,
+        },
+      ]
+    : [
+        // „10 Vorb. · 15 Kochen“ (ohne „Min.“, damit es in die Kachel passt)
+        { label: "Zeit", value: total ?? "–", sub: prep && cook ? `${prep.replace(/ Min\.$/, "")} Vorb. · ${cook.replace(/ Min\.$/, "")} Kochen` : (prep ?? cook ?? null) },
+        { label: "Portionen", value: String(recipe.servings), sub: "Grundrezept" },
+        {
+          label: "Kosten",
+          value: cost && cost.priced > 0 ? formatEuro(cost.perServing) : "–",
+          sub: cost && cost.priced > 0 ? `${cost.priced < cost.count ? "mind., " : ""}pro ${unit}` : "keine Preise",
+        },
+      ];
 
   return (
     <article className="space-y-8">
-      <div className="space-y-4">
-        <Link
-          href={back.href}
-          className="inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          {back.label}
-        </Link>
-
-        {justForked ? (
-          <p
-            role="status"
-            className="flex items-start gap-2 rounded-2xl border border-sage/40 bg-sage/10 px-4 py-3 text-sm"
-          >
-            <CircleCheck className="mt-0.5 size-4 shrink-0 text-sage" aria-hidden />
-            In dein Rezeptbuch übernommen. Das ist jetzt deine eigene, private Kopie: Du kannst sie frei bearbeiten.
-          </p>
-        ) : null}
-
-        <RecipePhoto recipeId={recipe.id} imagePath={recipe.image_url} title={recipe.title} isOwner={detail.isOwner} />
-
-        <header className="space-y-3">
-          {kicker ? <p className="text-sm font-medium tracking-wide text-primary uppercase">{kicker}</p> : null}
-          <h1 className="text-3xl font-semibold text-balance md:text-4xl">{recipe.title}</h1>
-          {!detail.isOwner ? <p className="text-sm text-muted-foreground">von {authorName(detail.authorName)}</p> : null}
-          {detail.isOwner && detail.forkedFrom ? (
-            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-              <GitFork className="size-4" aria-hidden />
-              <span>
-                Übernommen von {detail.forkedFrom.authorName}:{" "}
-                <Link href={`/rezepte/${detail.forkedFrom.id}`} className="text-primary underline-offset-4 hover:underline">
-                  {detail.forkedFrom.title}
-                </Link>
-              </span>
-            </p>
-          ) : null}
-          {recipe.description ? <p className="max-w-prose text-muted-foreground">{recipe.description}</p> : null}
-
-          <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
-            <li className="flex items-center gap-1.5">
-              <Users className="size-4" aria-hidden />
-              {recipe.servings} {servingsLabel(recipe.servings, recipe.recipe_type)}
-            </li>
-            {cocktail?.glass ? (
-              <li className="flex items-center gap-1.5">
-                <GlassWater className="size-4" aria-hidden />
-                {GLASS_LABELS[cocktail.glass]}
-              </li>
-            ) : null}
-            {cocktail?.ice ? (
-              <li className="flex items-center gap-1.5">
-                <Snowflake className="size-4" aria-hidden />
-                Eis: {cocktail.ice}
-              </li>
-            ) : null}
-            {cocktail?.garnish ? (
-              <li className="flex items-center gap-1.5">
-                <Sparkles className="size-4" aria-hidden />
-                Garnitur: {cocktail.garnish}
-              </li>
-            ) : null}
-            {total ? (
-              <li className="flex items-center gap-1.5">
-                <Clock className="size-4" aria-hidden />
-                {total}
-                {prep && cook ? ` (${prep} Vorbereitung, ${cook} Kochen)` : ""}
-              </li>
-            ) : null}
-          </ul>
-
-          <RecipeTags
-            autoTags={isCocktail ? [] : autoTagsFor({ is_meal_prep: recipe.is_meal_prep, nutrition })}
-            tags={recipe.tags}
-          />
-        </header>
-
-        <div className="flex flex-wrap gap-2">
-          <RecipeActions
-            recipeId={recipe.id}
-            title={recipe.title}
-            isOwner={detail.isOwner}
-            ownCopyId={detail.ownCopyId}
-          />
-          <FavoriteButton recipeId={recipe.id} isFavorite={detail.isFavorite} />
-        </div>
-      </div>
+      <RecipeHero
+        recipe={{
+          id: recipe.id,
+          title: recipe.title,
+          image_url: recipe.image_url,
+          is_public: recipe.is_public,
+          description: recipe.description,
+          tags: recipe.tags,
+          cocktail: isCocktail,
+        }}
+        back={back}
+        kicker={kicker}
+        facts={facts}
+        isOwner={detail.isOwner}
+        isFavorite={detail.isFavorite}
+        author={detail.authorName}
+        forkedFrom={detail.forkedFrom}
+        justForked={justForked}
+      />
 
       <ScaledRecipeContent
         recipeId={recipe.id}
         servings={recipe.servings}
         kind={recipe.recipe_type}
+        actions={
+          detail.isOwner ? (
+            <Link href={`/rezepte/${recipe.id}/bearbeiten`} className={cn(buttonVariants({ variant: "outline", size: "lg" }), sideActionClass)}>
+              <Pencil aria-hidden />
+              Bearbeiten
+            </Link>
+          ) : (
+            <ForkActions recipeId={recipe.id} ownCopyId={detail.ownCopyId} className={cn("h-12", sideActionClass)} />
+          )
+        }
         cocktail={
           isCocktail && alcohol
             ? {
@@ -265,10 +229,6 @@ export default async function RecipePage({ params, searchParams }: PageProps<"/r
           currentVersion={recipe.current_version}
           versions={versions.map((v) => ({ ...v, macros: snapshotMacros(v.snapshot, versionNutrition) }))}
         />
-      ) : null}
-
-      {detail.isOwner ? (
-        <PublishToggle recipeId={recipe.id} isPublic={recipe.is_public} displayName={user.displayName} />
       ) : null}
 
       {detail.isOwner ? (

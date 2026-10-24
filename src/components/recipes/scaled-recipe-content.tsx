@@ -37,6 +37,9 @@ export type ScalableLine = {
   optional?: boolean;
 };
 
+/** Knöpfe neben „Kochen starten“ (Bearbeiten, Übernehmen): gleiche Höhe, etwas schmaler */
+export const sideActionClass = "h-12 flex-[2_1_8rem] rounded-full";
+
 /** Beilage als Vorschlag; href, wenn es ein passendes Rezept gibt */
 export type SideDishLink = { name: string; href: string | null };
 
@@ -52,6 +55,7 @@ export function ScaledRecipeContent({
   missingGramsNames,
   steps,
   showCookButton = true,
+  actions = null,
   kind = "dish",
   cocktail = null,
   sideDishes = [],
@@ -65,6 +69,8 @@ export function ScaledRecipeContent({
   steps: ReactNode;
   /** Geteilte Rezeptkarte: ohne Kochmodus (braucht Login und ein lesbares Rezept) */
   showCookButton?: boolean;
+  /** neben „Kochen starten“, z. B. Bearbeiten (Klasse `sideActionClass`) */
+  actions?: ReactNode;
   /** Phase 15: Cocktail mit Drinks, Mix-Modus und Alkoholgehalt */
   kind?: Enums<"recipe_type">;
   cocktail?: CocktailFacts | null;
@@ -103,19 +109,24 @@ export function ScaledRecipeContent({
 
   return (
     <>
-      {showCookButton ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <Link href={`/kochen/${recipeId}?portionen=${target}`} className={buttonVariants({ size: "lg" })}>
-            {isCocktail ? <Martini aria-hidden /> : <ChefHat aria-hidden />}
-            {w.start}
-          </Link>
+      {showCookButton || actions ? (
+        // dicht unter dem Kopf der Rezeptseite (der Seitenabstand dort ist größer)
+        <div className="-mt-4 flex flex-wrap gap-2">
+          {showCookButton ? (
+            <Link href={`/kochen/${recipeId}?portionen=${target}`} className={cn(buttonVariants({ size: "lg" }), "h-12 flex-[3_1_10rem] rounded-full")}>
+              {isCocktail ? <Martini aria-hidden /> : <ChefHat aria-hidden />}
+              {w.start}
+            </Link>
+          ) : null}
+          {actions}
         </div>
       ) : null}
 
       {cocktail ? (
         <section aria-labelledby="alkohol" className="rounded-3xl border bg-card p-4 md:p-5">
-          <h2 id="alkohol" className="mb-3 text-xl font-semibold">
+          <h2 id="alkohol" className="mb-3 flex items-baseline justify-between gap-3 text-xl font-semibold">
             Pro Drink
+            {perServing ? <KcalAside kcal={perServing.kcal} /> : null}
           </h2>
           <dl className="grid grid-cols-3 gap-3">
             <div>
@@ -136,6 +147,7 @@ export function ScaledRecipeContent({
             <div className="mt-4 border-t pt-4">
               <MacroSummary
                 values={perServing}
+                hideKcal
                 caption="pro Drink"
                 total={{
                   kcal: perServing.kcal * target,
@@ -150,11 +162,13 @@ export function ScaledRecipeContent({
         </section>
       ) : perServing ? (
         <section aria-labelledby="makros" className="rounded-3xl border bg-card p-4 md:p-5">
-          <h2 id="makros" className="mb-3 text-xl font-semibold">
-            Nährwerte
+          <h2 id="makros" className="mb-3 flex items-baseline justify-between gap-3 text-xl font-semibold">
+            Pro Portion
+            <KcalAside kcal={perServing.kcal} />
           </h2>
           <MacroSummary
             values={perServing}
+            hideKcal
             total={{
               kcal: perServing.kcal * target,
               protein: perServing.protein * target,
@@ -260,5 +274,14 @@ export function ScaledRecipeContent({
         />
       ) : null}
     </>
+  );
+}
+
+/** „780 kcal“ rechts in der Überschrift der Nährwert-Karte */
+function KcalAside({ kcal }: { kcal: number }) {
+  return (
+    <span className="shrink-0 tabular-nums">
+      {formatNumber(Math.round(kcal), 0)} <span className="font-sans text-sm font-normal text-muted-foreground">kcal</span>
+    </span>
   );
 }
