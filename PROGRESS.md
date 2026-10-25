@@ -1312,7 +1312,12 @@ neue Spalte; App-Kopf im Editor am Handy ausblenden.
 **Befund:** Entfernen, Ersetzen und Rezept löschen haben die Dateien schon vorher serverseitig gelöscht. Live-Abgleich
 (nur lesend): 68 Dateien im Bucket = 34 Rezeptfotos mit Vorschaubild, keine verwaisten Dateien, keine fehlenden.
 
-**Absicherung** (committet, noch nicht gepusht), ohne Migration:
+**Live** seit 25.10.2026: vom Nutzer am LAN-Server getestet (Foto ersetzen, Rezept löschen); danach Bucket per SQL
+geprüft: 68 Dateien = 34 Fotos mit Vorschaubild, nichts verwaist, nichts fehlt. Push `b667ec7` → Deployment
+`dpl_Bb8GApMoKi6HrxJptCTPMpN6Kc32` (`production`, `fra1`, `source: git`, nach ca. 39 s „READY“, auf
+unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft).
+
+**Absicherung** (ohne Migration):
 - **Rezept löschen:** erst das Rezept, dann den Foto-Ordner leeren (vorher umgekehrt: Schlug das Löschen fehl, blieb ein
   Rezept mit totem Foto). Live per SQL als Besitzer geprüft (zurückgerollt): Die Dateien bleiben nach dem Löschen des
   Rezepts für ihn sichtbar und damit löschbar (Policies: eigener Ordner).
