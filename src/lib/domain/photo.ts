@@ -47,6 +47,15 @@ export function isOwnPhotoPath(path: string, userId: string, recipeId: string): 
   return p != null && !p.isThumb && p.ownerId === userId && p.recipeId === recipeId;
 }
 
+/**
+ * Dateien im Ordner eines Rezepts, die weg können: alles außer dem aktuellen Foto und seinem Vorschaubild
+ * (altes Foto nach dem Ersetzen, Reste abgebrochener Uploads). `names` sind die Dateinamen aus dem Ordner.
+ */
+export function staleFilesInFolder(folder: string, names: readonly string[], keepFullPath: string | null): string[] {
+  const keep = keepFullPath ? new Set([keepFullPath, thumbPathOf(keepFullPath)]) : new Set<string>();
+  return names.map((name) => `${folder}/${name}`).filter((path) => !keep.has(path));
+}
+
 /** Adresse, unter der die App das Foto ausliefert (Route /foto/…, prüft die Leserechte). */
 export function photoUrl(path: string, size: "gross" | "klein" = "gross"): string {
   return `/foto/${size === "klein" ? thumbPathOf(path) : path}`;

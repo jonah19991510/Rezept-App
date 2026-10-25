@@ -1307,6 +1307,22 @@ neue Spalte; App-Kopf im Editor am Handy ausblenden.
   Zutaten zwischen Gruppen) und per Tastatur, Fehler beim Speichern ohne Titel. **Nicht geprüft:** echtes Speichern,
   Zutatensuche und neue Zutat mit Login, Wischen am echten Handy.
 
+## Prüfung 25.10.2026: Rezeptfotos im Storage aufräumen
+
+**Befund:** Entfernen, Ersetzen und Rezept löschen haben die Dateien schon vorher serverseitig gelöscht. Live-Abgleich
+(nur lesend): 68 Dateien im Bucket = 34 Rezeptfotos mit Vorschaubild, keine verwaisten Dateien, keine fehlenden.
+
+**Absicherung** (committet, noch nicht gepusht), ohne Migration:
+- **Rezept löschen:** erst das Rezept, dann den Foto-Ordner leeren (vorher umgekehrt: Schlug das Löschen fehl, blieb ein
+  Rezept mit totem Foto). Live per SQL als Besitzer geprüft (zurückgerollt): Die Dateien bleiben nach dem Löschen des
+  Rezepts für ihn sichtbar und damit löschbar (Policies: eigener Ordner).
+- **Ersetzen:** löscht alles im Ordner `<owner>/<rezept>/` außer dem neuen Foto und seinem Vorschaubild, also auch Reste
+  abgebrochener Uploads (`staleFilesInFolder` in `domain/photo.ts`, Tests; `cleanRecipePhotoFolder`). **Entfernen**
+  leert den Ordner ebenso.
+- **Fehler** beim Löschen im Storage landen im Server-Log (`console.error`, Vercel → Logs) statt still ignoriert zu
+  werden; die Aktion selbst gilt weiter als erfolgreich.
+- 353 Tests, Typecheck, Lint grün. Nicht im Browser geprüft (Foto hochladen braucht Login).
+
 ## Offene Punkte
 
 - Vorrat: Zugeklappte Gruppen merkt sich die Seite nur bis zum Neuladen.

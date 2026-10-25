@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { parsePhotoPath, photoPaths, thumbPathOf } from "@/lib/domain/photo";
+import { parsePhotoPath, photoPaths, staleFilesInFolder, thumbPathOf } from "@/lib/domain/photo";
 import { RECIPE_PHOTO_BUCKET } from "@/lib/storage";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -17,16 +17,38 @@ export async function photoExists(supabase: Client, path: string): Promise<boole
   return !error && data.some((f) => f.name === path.slice(slash + 1));
 }
 
-/** Löscht Foto und Vorschaubild. Fehler werden ignoriert (übrig gebliebene Dateien räumt „Rezept löschen“ weg). */
-export async function removePhotoFiles(supabase: Client, fullPath: string): Promise<void> {
-  await supabase.storage.from(RECIPE_PHOTO_BUCKET).remove([fullPath, thumbPathOf(fullPath)]);
+/**
+ * Löscht Dateien im Storage. Ein Fehler bricht die Aktion nicht ab (das Rezept ist schon gespeichert), landet aber
+ * im Server-Log (Vercel → Logs); übrig gebliebene Dateien räumt das nächste Ersetzen oder Löschen mit weg.
+ */
+async function removeFiles(supabase: Client, paths: string[], context: string): Promise<void> {
+  if (paths.length === 0) return;
+  const { error } = await supabase.storage.from(RECIPE_PHOTO_BUCKET).remove(paths);
+  if (error) console.error(`Rezeptfoto: Löschen im Storage fehlgeschlagen (${context})`, { paths, message: error.message });
 }
 
-/** Löscht alle Dateien im Ordner <owner>/<rezept>/ (beim Löschen eines Rezepts). */
-export async function removeRecipePhotoFolder(supabase: Client, userId: string, recipeId: string): Promise<void> {
+/** Löscht Foto und Vorschaubild (z. B. ein gerade hochgeladenes Foto, das sich nicht eintragen ließ). */
+export async function removePhotoFiles(supabase: Client, fullPath: string): Promise<void> {
+  await removeFiles(supabase, [fullPath, thumbPathOf(fullPath)], "Foto");
+}
+
+/**
+ * Räumt den Ordner <owner>/<rezept>/ auf: löscht alles außer `keepFullPath` und dessen Vorschaubild, also auch alte
+ * Fotos und Reste abgebrochener Uploads. Ohne `keepFullPath` wird der Ordner geleert (Foto entfernen, Rezept löschen).
+ */
+export async function cleanRecipePhotoFolder(
+  supabase: Client,
+  userId: string,
+  recipeId: string,
+  keepFullPath: string | null,
+): Promise<void> {
   const folder = `${userId}/${recipeId}`;
-  const { data } = await supabase.storage.from(RECIPE_PHOTO_BUCKET).list(folder, { limit: 100 });
-  if (data?.length) await supabase.storage.from(RECIPE_PHOTO_BUCKET).remove(data.map((f) => `${folder}/${f.name}`));
+  const { data, error } = await supabase.storage.from(RECIPE_PHOTO_BUCKET).list(folder, { limit: 100 });
+  if (error) {
+    console.error("Rezeptfoto: Ordner im Storage nicht lesbar", { folder, message: error.message });
+    return;
+  }
+  await removeFiles(supabase, staleFilesInFolder(folder, data.map((f) => f.name), keepFullPath), `Ordner ${folder}`);
 }
 
 /**

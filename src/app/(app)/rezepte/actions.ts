@@ -7,7 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { toListSort } from "@/lib/domain/recipe-filter";
 import { resolveLineGrams, type Unit } from "@/lib/domain/units";
 import { Constants } from "@/lib/supabase/database.types";
-import { copyPhotoToRecipe, removeRecipePhotoFolder } from "@/lib/server/photos";
+import { cleanRecipePhotoFolder, copyPhotoToRecipe } from "@/lib/server/photos";
 import { createClient } from "@/lib/supabase/server";
 import { parseSnapshot } from "@/lib/domain/versions";
 import { forkRecipeSchema, setRecipePublicSchema, type SetRecipePublicInput } from "@/lib/validation/community";
@@ -189,8 +189,6 @@ export async function deleteRecipeAction(recipeId: string): Promise<{ ok: false;
   if (!idSchema.safeParse(recipeId).success) return { ok: false, message: "Ungültiges Rezept." };
 
   const supabase = await createClient();
-  // Fotos verschwinden nicht per Cascade: vorher den Ordner des Rezepts leeren
-  await removeRecipePhotoFolder(supabase, user.id, recipeId);
   const { data, error } = await supabase
     .from("recipes")
     .delete()
@@ -198,6 +196,9 @@ export async function deleteRecipeAction(recipeId: string): Promise<{ ok: false;
     .eq("owner_id", user.id)
     .select("id");
   if (error || !data?.length) return { ok: false, message: "Das Rezept konnte nicht gelöscht werden." };
+  // Fotos verschwinden nicht per Cascade. Erst nach dem Löschen den Ordner leeren (sonst bliebe bei einem Fehler ein
+  // Rezept mit totem Foto). Die Storage-Policies erlauben Lesen und Löschen im eigenen Ordner auch ohne Rezept.
+  await cleanRecipePhotoFolder(supabase, user.id, recipeId, null);
 
   revalidatePath("/rezepte");
   redirect("/rezepte");

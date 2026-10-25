@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { isOwnPhotoPath, photoPaths } from "@/lib/domain/photo";
-import { photoExists, removePhotoFiles } from "@/lib/server/photos";
+import { cleanRecipePhotoFolder, photoExists, removePhotoFiles } from "@/lib/server/photos";
 import { createClient } from "@/lib/supabase/server";
 import { preparePhotoSchema, removePhotoSchema, setPhotoSchema } from "@/lib/validation/photo";
 
@@ -39,7 +39,7 @@ export async function preparePhotoUploadAction(input: {
   return { ok: true, ...photoPaths(user.id, parsed.data.recipeId, crypto.randomUUID(), parsed.data.ext) };
 }
 
-/** Schritt 2: hochgeladenes Foto am Rezept eintragen, das alte Foto löschen. */
+/** Schritt 2: hochgeladenes Foto am Rezept eintragen; danach alles andere im Ordner löschen (altes Foto, Upload-Reste). */
 export async function setRecipePhotoAction(input: { recipeId: string; path: string }): Promise<{ ok: true } | Fail> {
   const user = await requireUser();
   const parsed = setPhotoSchema.safeParse(input);
@@ -51,12 +51,6 @@ export async function setRecipePhotoAction(input: { recipeId: string; path: stri
   const supabase = await createClient();
   if (!(await photoExists(supabase, path))) return { ok: false, message: "Das Foto ist nicht angekommen. Bitte noch einmal versuchen." };
 
-  const { data: before } = await supabase
-    .from("recipes")
-    .select("image_url")
-    .eq("id", recipeId)
-    .eq("owner_id", user.id)
-    .maybeSingle();
   const { data, error } = await supabase
     .from("recipes")
     .update({ image_url: path })
@@ -67,13 +61,13 @@ export async function setRecipePhotoAction(input: { recipeId: string; path: stri
     await removePhotoFiles(supabase, path);
     return { ok: false, message: "Das Foto konnte nicht gespeichert werden." };
   }
-  if (before?.image_url && before.image_url !== path) await removePhotoFiles(supabase, before.image_url);
+  await cleanRecipePhotoFolder(supabase, user.id, recipeId, path);
 
   revalidateRecipe(recipeId);
   return { ok: true };
 }
 
-/** Foto entfernen (Datei und Verweis). */
+/** Foto entfernen: Verweis leeren, dann den Ordner des Rezepts leeren (Foto, Vorschaubild, Upload-Reste). */
 export async function removeRecipePhotoAction(input: { recipeId: string }): Promise<{ ok: true } | Fail> {
   const user = await requireUser();
   const parsed = removePhotoSchema.safeParse(input);
@@ -94,7 +88,7 @@ export async function removeRecipePhotoAction(input: { recipeId: string }): Prom
     .eq("id", parsed.data.recipeId)
     .eq("owner_id", user.id);
   if (error) return { ok: false, message: "Das Foto konnte nicht entfernt werden." };
-  if (before.image_url) await removePhotoFiles(supabase, before.image_url);
+  await cleanRecipePhotoFolder(supabase, user.id, parsed.data.recipeId, null);
 
   revalidateRecipe(parsed.data.recipeId);
   return { ok: true };

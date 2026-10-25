@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkPhotoFile, fitWithin, isOwnPhotoPath, parsePhotoPath, photoPaths, photoUrl, thumbPathOf } from "./photo";
+import { checkPhotoFile, fitWithin, isOwnPhotoPath, parsePhotoPath, photoPaths, photoUrl, staleFilesInFolder, thumbPathOf } from "./photo";
 
 const U = "11111111-1111-4111-8111-111111111111";
 const R = "22222222-2222-4222-8222-222222222222";
@@ -48,6 +48,30 @@ describe("Pfade", () => {
     const { full } = photoPaths(U, R, P, "webp");
     expect(photoUrl(full)).toBe(`/foto/${full}`);
     expect(photoUrl(full, "klein")).toBe(`/foto/${U}/${R}/${P}-klein.webp`);
+  });
+});
+
+describe("staleFilesInFolder", () => {
+  const folder = `${U}/${R}`;
+  const neu = "33333333-3333-4333-8333-333333333333";
+  const alt = "44444444-4444-4444-8444-444444444444";
+  const abgebrochen = "55555555-5555-4555-8555-555555555555";
+
+  it("behält das aktuelle Foto samt Vorschaubild, alles andere kann weg", () => {
+    const names = [`${neu}.webp`, `${neu}-klein.webp`, `${alt}.jpg`, `${alt}-klein.jpg`, `${abgebrochen}.webp`];
+    expect(staleFilesInFolder(folder, names, `${folder}/${neu}.webp`)).toEqual([
+      `${folder}/${alt}.jpg`,
+      `${folder}/${alt}-klein.jpg`,
+      `${folder}/${abgebrochen}.webp`,
+    ]);
+  });
+
+  it("ohne aktuelles Foto alles, bei leerem Ordner nichts", () => {
+    expect(staleFilesInFolder(folder, [`${alt}.webp`, `${alt}-klein.webp`], null)).toEqual([
+      `${folder}/${alt}.webp`,
+      `${folder}/${alt}-klein.webp`,
+    ]);
+    expect(staleFilesInFolder(folder, [], `${folder}/${neu}.webp`)).toEqual([]);
   });
 });
 
