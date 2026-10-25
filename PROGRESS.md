@@ -1249,6 +1249,61 @@ Entscheidungen des Nutzers: jeder hat seine eigene Liste; beim Löschen wählt m
   375 px über temporäre Vorschauseiten (gelöscht). **Nicht geprüft:** die Migration selbst (Claude hat keinen
   Datenbankzugang) und alles mit echtem Login (Speichern, Umbenennen, Löschen mit Verschieben).
 
+## Wünsche vom 25.10.2026: Rezept-Editor im neuen Design
+
+**Stand:** fertig und committet, **noch nicht gepusht** (nicht live). Migration `…20261025100000_step_timer_from_text` am
+25.10.2026 von Claude über die Supabase-Verbindung eingespielt (mit Freigabe des Nutzers). Feinschliff, keine neue Phase.
+
+Entscheidungen des Nutzers: Drag & Drop mit **dnd-kit** (`@dnd-kit/core`, `/sortable`, `/utilities`, einzige neue
+Abhängigkeiten); Bottom-Sheet auf dem **Drawer von Base UI** (schon installiert, statt shadcn/vaul); Timer „Keiner“ als
+neue Spalte; App-Kopf im Editor am Handy ausblenden.
+
+- **Seitenrahmen** (`/rezepte/neu`, `/rezepte/[id]/bearbeiten`, erkannt per `isEditorPath`): ohne untere Navigation, am
+  Handy ohne App-Kopf (`AppHeader`). Eigener Kopf (`editor-header.tsx`, am Handy angeheftet): X „Abbrechen“ (bei
+  ungespeicherten Änderungen Dialog „Änderungen verwerfen?“), klein „Rezept bearbeiten“/„Neues Rezept“, darunter der
+  Titel (live). Speicherleiste unten fest (Safe Area), links „521 kcal · 27 g P / pro Portion“ (Bar: % vol · kcal),
+  rechts „Speichern“; am Desktop mitlaufend unten im Inhalt. In Link- und Markdown-Import bleibt alles wie bisher
+  (Leiste über der Navigation, „Überspringen“).
+- **Grunddaten** (`basics-section.tsx`): Karte Titel (groß, Fraunces, ohne Rahmen) / Beschreibung; „Eckdaten“ mit
+  Portionen-Stepper, Vorbereitung und Kochen als große Zahl („= 3 Std.“ ab 60 Min.), Gesamtzeit; „Einordnung“ mit
+  Kategorie als wischbare Chip-Leiste (Radiogruppe, Pfeiltasten; erneut tippen hebt auf), Meal-Prep, Tags (Auto-Tags
+  grün mit Funkeln, nicht entfernbar); „Quelle“ mit Link-Symbol. Cocktails: Drinks, Zubereitung, Glas und Methode als
+  Chip-Leisten, Eis, Garnitur.
+- **Zutaten** (`ingredients-section.tsx`): Kopf mit Anzahl und „Liste | Nach Schritt“, Nährwert-Karte (kcal pro
+  Portion, Balken der kcal-Anteile P/KH/F, Legende in g; Cocktails mit Alkoholgehalt). Kompakte Zeilen: Griff, Name,
+  Meta „S3 · Notiz · kcal“, Menge rechts. Optional gedimmt mit gestricheltem „optional“ und „nicht eingerechnet“.
+  „Nach Schritt“: eine Karte je Schritt (auch leere als Ablageziel) und „Ohne Schritt“; Ziehen in eine andere Gruppe
+  ändert die Zuordnung, Escape stellt den Stand wieder her.
+- **Zutat-Sheet** (`ingredient-sheet.tsx`): Name, Gruppe, kcal je 100 g, „Austauschen“; Menge mit −/+ (Schrittweite je
+  Einheit, `stepAmount`), Einheit als Segmente (g, ml, Stück, EL, TL, „Mehr“: cl, Prise, Dash, Barlöffel, „Ohne
+  Menge“), live kcal und P/KH/F; ggf. „Wie viel wiegt das zusammen?“; „Gebraucht in Schritt“ als wischbare Karten
+  (die gewählte beim Öffnen im Bild); Notiz; Optional; „Entfernen“ (mit Rückgängig) und „Fertig“. Neue Zutat: nach der
+  Suche öffnet sich direkt das Sheet.
+- **Zubereitung** (`steps-section.tsx`, `step-sheet.tsx`): Gesamtzeit-Chip, kompakte Schritte (bis 10 Zeilen) mit
+  Timer-Chip und Zutaten-Chip („Zwiebeln, Knoblauch +2“). Sheet: Anleitung, Timer „Aus dem Text | Eigener | Keiner“
+  (erkannte Zeiten bzw. Minutenfeld), „Zutaten in diesem Schritt“ (antippen ordnet zu bzw. löst; „S3“ an Zutaten anderer
+  Schritte), Entfernen (mit Rückgängig). Ein neuer Schritt, der leer bleibt, verschwindet beim Schließen.
+- **Drag & Drop** (`sortable.tsx`): nur am Griff (Scrollen bleibt frei), Tastatur (Leertaste, Pfeile, Escape), Ansagen
+  auf Deutsch. ↑/↓/Papierkorb-Leisten und die Timer-Felder je Schritt sind weg. Die Zuordnung Zutat → Schritt hängt am
+  Schlüssel des Schritts und wandert beim Verschieben mit; gelöschte Schritte → „Ohne Schritt“.
+- **Sheets** (`components/ui/drawer.tsx`, `EditorSheet`): Handy Drawer von unten (Wischen schließt), ab 768 px Dialog
+  (max. 640 px). Alle Änderungen wirken nur aufs Formular, gespeichert wird mit „Speichern“.
+- **Timer „Keiner“** – Migration (additiv, alte App speichert weiter): Spalte `recipe_steps.timer_from_text` (Standard
+  true); `save_recipe`, `recipe_snapshot` (Schlüssel nur bei false: Inhalts-Prüfsumme aller Rezepte vor/nach gleich),
+  `duplicate_recipe`, `fork_shared_recipe`. Kochmodus: Zeiten im Text sind nur antippbar, wenn „Aus dem Text“; bei
+  eigenem Timer nur dessen Knopf (vorher beides). Sicherung (nur bei false), Versionsvergleich, Validierung angepasst.
+  Geprüft per SQL als Rezept-Besitzer (zurückgerollt): unverändert speichern → keine neue Version; „Keiner“ → neue
+  Version, Flag gespeichert; Duplizieren übernimmt es. Security-Advisor: nichts Neues.
+- Behoben: Hydration-Abweichung bei den Editor-Schlüsseln (offener Punkt seit Phase 9): Schlüssel fortlaufend ab 1,
+  `DndContext` mit fester `id`.
+- Reine Logik in `domain/recipe-editor.ts` mit Tests (Chip-Text, Mitwandern beim Verschieben/Löschen, Gruppen, Ablegen
+  zwischen Gruppen, Mengen-Schritte, kcal-Anteile, Zeiten, Timer-Chips); `isEditorPath` getestet.
+- Geprüft: 351 Tests, Typecheck, Lint, Build grün. Über eine temporäre Vorschauseite mit einer Bolognese (danach
+  gelöscht) bei 375 px in Dark und Light und bei 1280 px: kein seitliches Scrollen, Sheets, Einheiten, Schrittkarten,
+  Timer „Keiner“, Zuordnen per Chip, Schritt löschen + Rückgängig (Zuordnungen wandern mit), Ziehen per Maus (Schritte,
+  Zutaten zwischen Gruppen) und per Tastatur, Fehler beim Speichern ohne Titel. **Nicht geprüft:** echtes Speichern,
+  Zutatensuche und neue Zutat mit Login, Wischen am echten Handy.
+
 ## Offene Punkte
 
 - Vorrat: Zugeklappte Gruppen merkt sich die Seite nur bis zum Neuladen.
@@ -1268,9 +1323,8 @@ Entscheidungen des Nutzers: jeder hat seine eigene Liste; beim Löschen wählt m
 - Die Konsole meldet in der Entwicklung „Encountered a script tag while rendering React component“ (kommt von
   next-themes, harmlos).
 - Datenexport enthält die Fotos nur als Liste. Ein ZIP mit allen Fotos wäre eine Ergänzung für später.
-- Editor: Die internen Schlüssel für Zutaten/Schritte kommen aus einem Zähler auf Modulebene; Server und Browser
-  zählen verschieden, daher meldet die Entwicklungskonsole eine Hydration-Abweichung bei `id="step-…"` (seit Phase 9,
-  harmlos, nur die `for`/`id`-Verknüpfung der „Gebraucht in“-Auswahl). Bei Gelegenheit auf `useId` umstellen.
+- Editor, Ansicht „Nach Schritt“: Beim Ziehen per Tastatur braucht der Wechsel in eine andere Gruppe manchmal einen
+  zweiten Pfeil-Druck. Alternative ohne Ziehen: Zutat antippen → „Gebraucht in Schritt“.
 - Bar: Die geteilte Karte nennt keine Basisspirituose (die Funktion liefert keine Zutatengruppen). Reicht so.
 - Service-Worker-Version (`VERSION` in `public/sw.js`) bei Änderungen am Caching hochzählen.
 - GitHub-Zweig `main` (nur die automatische README) kann jetzt gelöscht werden (Vercel nutzt `master`).
