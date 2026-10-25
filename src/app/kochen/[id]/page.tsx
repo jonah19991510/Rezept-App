@@ -47,7 +47,7 @@ export default async function CookPage({ params, searchParams }: PageProps<"/koc
         note: l.is_optional ? [l.note, "optional"].filter(Boolean).join(", ") : l.note,
         stepPosition: l.step_position,
       }))}
-      steps={steps.map((s) => ({ position: s.position, text: s.text, timerSeconds: s.timer_seconds }))}
+      steps={steps.map((s) => ({ position: s.position, text: s.text, timerSeconds: s.timer_seconds, timerFromText: s.timer_from_text }))}
       lastNote={lastNote?.note ? { text: lastNote.note, date: lastNote.date } : null}
       kind={recipe.recipe_type}
     />

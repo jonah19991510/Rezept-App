@@ -618,6 +618,7 @@ export type Database = {
           position: number
           recipe_id: string
           text: string
+          timer_from_text: boolean
           timer_seconds: number | null
         }
         Insert: {
@@ -625,6 +626,7 @@ export type Database = {
           position: number
           recipe_id: string
           text: string
+          timer_from_text?: boolean
           timer_seconds?: number | null
         }
         Update: {
@@ -632,6 +634,7 @@ export type Database = {
           position?: number
           recipe_id?: string
           text?: string
+          timer_from_text?: boolean
           timer_seconds?: number | null
         }
         Relationships: [

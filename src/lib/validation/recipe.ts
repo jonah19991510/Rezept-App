@@ -31,6 +31,8 @@ export const recipeIngredientInputSchema = z
 export const recipeStepInputSchema = z.object({
   text: z.string().trim().min(1, "Leere Schritte bitte löschen.").max(2000, "Höchstens 2000 Zeichen."),
   timer_seconds: z.number().int().positive().max(86400).nullable().default(null),
+  /** Zeitangaben im Text sind im Kochmodus Timer; false = Timer „Keiner“ */
+  timer_from_text: z.boolean().default(true),
 });
 
 /** Phase 15: Cocktail-Felder (nur bei recipe_type „cocktail“). */

@@ -23,7 +23,16 @@ const snapshotSchema = z.object({
       }),
     )
     .catch([]),
-  steps: z.array(z.object({ text: z.string(), timer_seconds: z.number().nullable().catch(null) })).catch([]),
+  steps: z
+    .array(
+      z.object({
+        text: z.string(),
+        timer_seconds: z.number().nullable().catch(null),
+        /** Nur gesetzt, wenn false (Timer „Keiner“, seit 25.10.2026) */
+        timer_from_text: z.boolean().optional().catch(undefined),
+      }),
+    )
+    .catch([]),
   /** Phase 15: Cocktail-Felder (Gerichte und ältere Versionen: null) */
   cocktail: z
     .object({
@@ -97,7 +106,11 @@ export function diffSteps(before: RecipeSnapshot["steps"], after: RecipeSnapshot
     const a = after[i]?.text;
     if (b == null) return { position: i + 1, kind: "added" as const, after: a };
     if (a == null) return { position: i + 1, kind: "removed" as const, before: b };
-    return { position: i + 1, kind: b === a && before[i].timer_seconds === after[i].timer_seconds ? ("same" as const) : ("changed" as const), before: b, after: a };
+    return { position: i + 1, kind:
+        b === a &&
+        before[i].timer_seconds === after[i].timer_seconds &&
+        (before[i].timer_from_text ?? true) === (after[i].timer_from_text ?? true)
+          ? ("same" as const) : ("changed" as const), before: b, after: a };
   });
 }
 

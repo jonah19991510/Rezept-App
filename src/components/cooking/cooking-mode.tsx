@@ -28,7 +28,13 @@ export type CookLine = {
   stepPosition: number | null;
 };
 
-export type CookStep = { position: number; text: string; timerSeconds: number | null };
+export type CookStep = {
+  position: number;
+  text: string;
+  timerSeconds: number | null;
+  /** false: Zeitangaben im Text sind keine Timer (Editor: Timer „Keiner“). Mit eigenem Timer gilt nur dieser. */
+  timerFromText?: boolean;
+};
 
 type Phase = "start" | "steps" | "done";
 
@@ -199,7 +205,7 @@ export function CookingMode({
             </div>
 
             <p className="text-2xl leading-relaxed font-medium md:text-4xl md:leading-snug" aria-live="polite">
-              {splitStepText(step.text).map((seg, i) =>
+              {(step.timerFromText !== false && !step.timerSeconds ? splitStepText(step.text) : [{ type: "text" as const, text: step.text }]).map((seg, i) =>
                 seg.type === "text" ? (
                   <span key={i}>{seg.text}</span>
                 ) : (

@@ -69,7 +69,16 @@ export const backupRecipeSchema = z.object({
       }),
     )
     .max(100),
-  steps: z.array(z.object({ text: z.string().trim().min(1).max(2000), timer_seconds: z.number().int().positive().max(86400).nullable() })).max(60),
+  steps: z
+    .array(
+      z.object({
+        text: z.string().trim().min(1).max(2000),
+        timer_seconds: z.number().int().positive().max(86400).nullable(),
+        /** seit 25.10.2026, nur wenn false („Keiner“) */
+        timer_from_text: z.boolean().optional(),
+      }),
+    )
+    .max(60),
 });
 
 export const backupFileSchema = z.object({
@@ -89,7 +98,7 @@ export type BackupFileInput = z.input<typeof backupFileSchema>;
 export type RecipeRowForBackup = Omit<BackupRecipe, "ingredients" | "steps" | "cocktail"> & {
   cocktail_details: BackupRecipe["cocktail"];
   recipe_ingredients: (Omit<BackupRecipe["ingredients"][number], "ingredient"> & { position: number; ingredient: BackupIngredient })[];
-  recipe_steps: { position: number; text: string; timer_seconds: number | null }[];
+  recipe_steps: { position: number; text: string; timer_seconds: number | null; timer_from_text?: boolean }[];
 };
 
 export function toBackupFile(rows: RecipeRowForBackup[], now: Date): BackupFile {
@@ -111,7 +120,9 @@ export function toBackupFile(rows: RecipeRowForBackup[], now: Date): BackupFile 
           step_position: l.step_position,
           is_optional: l.is_optional,
         })),
-      steps: [...recipe_steps].sort((a, b) => a.position - b.position).map(({ text, timer_seconds }) => ({ text, timer_seconds })),
+      steps: [...recipe_steps]
+        .sort((a, b) => a.position - b.position)
+        .map(({ text, timer_seconds, timer_from_text }) => ({ text, timer_seconds, ...(timer_from_text === false ? { timer_from_text } : {}) })),
     })),
   };
 }

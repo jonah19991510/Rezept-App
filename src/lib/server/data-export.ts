@@ -88,7 +88,7 @@ export async function buildRecipeBackup(userId: string): Promise<BackupFile> {
     .select(
       `recipe_type, title, description, servings, prep_minutes, cook_minutes, category:category_name, tags, is_meal_prep, source_url, side_dishes,
        recipe_ingredients!recipe_ingredients_recipe_id_fkey(position, amount, unit, grams, note, step_position, is_optional, ingredient:ingredients!recipe_ingredients_ingredient_id_fkey(${BACKUP_INGREDIENT_COLUMNS})),
-       recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds),
+       recipe_steps!recipe_steps_recipe_id_fkey(position, text, timer_seconds, timer_from_text),
        cocktail_details!cocktail_details_recipe_id_fkey(glass, method, ice, garnish)`,
     )
     .eq("owner_id", userId)
