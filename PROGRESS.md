@@ -1251,7 +1251,9 @@ Entscheidungen des Nutzers: jeder hat seine eigene Liste; beim Löschen wählt m
 
 ## Wünsche vom 25.10.2026: Rezept-Editor im neuen Design
 
-**Stand:** fertig und committet, **noch nicht gepusht** (nicht live). Migration `…20261025100000_step_timer_from_text` am
+**Live** seit 25.10.2026: vom Nutzer am Handy über den LAN-Server getestet; Push `4f775cc` (mit `9b5e23b`, `c91ae8c`,
+`ac8ef1c`, `81d346b`) → Deployment `dpl_2QPc4ZYuu8PqYQun3wNBfpHoWnpQ` (`production`, `fra1`, `source: git`, nach ca. 66 s
+„READY“, auf unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft). Migration `…20261025100000_step_timer_from_text` am
 25.10.2026 von Claude über die Supabase-Verbindung eingespielt (mit Freigabe des Nutzers). Feinschliff, keine neue Phase.
 
 Entscheidungen des Nutzers: Drag & Drop mit **dnd-kit** (`@dnd-kit/core`, `/sortable`, `/utilities`, einzige neue
