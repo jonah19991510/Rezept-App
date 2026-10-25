@@ -1267,7 +1267,8 @@ neue Spalte; App-Kopf im Editor am Handy ausblenden.
 - **Grunddaten** (`basics-section.tsx`): Karte Titel (groß, Fraunces, ohne Rahmen) / Beschreibung; „Eckdaten“ mit
   Portionen-Stepper, Vorbereitung und Kochen als große Zahl („= 3 Std.“ ab 60 Min.), Gesamtzeit; „Einordnung“ mit
   Kategorie als wischbare Chip-Leiste (Radiogruppe, Pfeiltasten; erneut tippen hebt auf), Meal-Prep, Tags (Auto-Tags
-  grün mit Funkeln, nicht entfernbar); „Quelle“ mit Link-Symbol. Cocktails: Drinks, Zubereitung, Glas und Methode als
+  grün mit Funkeln, nicht entfernbar). „Quelle“ (Link-Symbol) steht ganz unten im Editor, nach „Was hast du geändert?“
+  (Wunsch des Nutzers). Cocktails: Drinks, Zubereitung, Glas und Methode als
   Chip-Leisten, Eis, Garnitur.
 - **Zutaten** (`ingredients-section.tsx`): Kopf mit Anzahl und „Liste | Nach Schritt“, Nährwert-Karte (kcal pro
   Portion, Balken der kcal-Anteile P/KH/F, Legende in g; Cocktails mit Alkoholgehalt). Kompakte Zeilen: Griff, Name,

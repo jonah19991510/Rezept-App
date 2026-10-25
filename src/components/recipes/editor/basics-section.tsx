@@ -227,29 +227,33 @@ export function BasicsSection({
           </div>
         </div>
       </div>
+    </section>
+  );
+}
 
-      {/* Quelle */}
-      <div>
-        <FieldHeading>Quelle</FieldHeading>
-        <div className={cn(cardClass, "px-4 py-3")}>
-          <label htmlFor="source_url" className="text-sm font-medium text-muted-foreground">
-            Link zum Originalrezept <span className="font-normal">· optional</span>
-          </label>
-          <div className="relative mt-2">
-            <Link2 className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              id="source_url"
-              type="url"
-              inputMode="url"
-              placeholder="https://…"
-              value={basics.sourceUrl}
-              onChange={(e) => update({ sourceUrl: e.target.value })}
-              aria-invalid={Boolean(err("source_url")) || undefined}
-              className="h-12 pl-10"
-            />
-          </div>
-          {err("source_url") ? <p className="mt-1 text-sm text-destructive">{err("source_url")}</p> : null}
+/** Karte „Quelle“ (Link zum Originalrezept); steht ganz unten im Editor. */
+export function SourceSection({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
+  return (
+    <section aria-labelledby="sec-quelle">
+      <FieldHeading id="sec-quelle">Quelle</FieldHeading>
+      <div className={cn(cardClass, "px-4 py-3")}>
+        <label htmlFor="source_url" className="text-sm font-medium text-muted-foreground">
+          Link zum Originalrezept <span className="font-normal">· optional</span>
+        </label>
+        <div className="relative mt-2">
+          <Link2 className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <Input
+            id="source_url"
+            type="url"
+            inputMode="url"
+            placeholder="https://…"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            aria-invalid={Boolean(error) || undefined}
+            className="h-12 pl-10"
+          />
         </div>
+        {error ? <p className="mt-1 text-sm text-destructive">{error}</p> : null}
       </div>
     </section>
   );

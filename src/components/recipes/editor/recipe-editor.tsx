@@ -20,7 +20,7 @@ import { METHOD_LABELS, type AutoTag } from "@/lib/labels";
 import type { Enums } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
 import { recipeInputSchema, flattenIssues, type CocktailInput, type RecipeInput } from "@/lib/validation/recipe";
-import { BasicsSection, type Basics } from "./basics-section";
+import { BasicsSection, SourceSection, type Basics } from "./basics-section";
 import { EditorHeader } from "./editor-header";
 import type { Line, Step } from "./editor-model";
 import { IngredientPicker } from "./ingredient-picker";
@@ -506,6 +506,7 @@ export function RecipeEditor({
         </section>
       ) : null}
 
+      <SourceSection value={basics.sourceUrl} onChange={(sourceUrl) => updateBasics({ sourceUrl })} error={err("source_url")?.[0]} />
       {/*
         Speicherleiste. Eigene Seite: am Handy fest am unteren Rand (Navigation ist ausgeblendet), am Desktop
         mitlaufend unten im Inhalt. Import: wie bisher über der Navigation.
@@ -600,5 +601,6 @@ function firstErrorTarget(issues: Record<string, string[]>): string {
   if (keys.some((k) => ["servings", "prep_minutes", "cook_minutes"].includes(k))) return "sec-basis";
   if (keys.some((k) => k.startsWith("ingredients"))) return "sec-zutaten";
   if (keys.some((k) => k.startsWith("steps"))) return "sec-schritte";
-  return keys.includes("side_dishes") ? "sec-beilagen" : "sec-basis";
+  if (keys.includes("side_dishes")) return "sec-beilagen";
+  return keys.includes("source_url") ? "sec-quelle" : "sec-basis";
 }
