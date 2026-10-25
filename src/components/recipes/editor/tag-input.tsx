@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -15,6 +15,7 @@ export function TagInput({
   placeholder = "Tag eingeben und Enter drücken",
   maxLength = 30,
   itemLabel = "Tag",
+  leading,
 }: {
   id: string;
   value: string[];
@@ -24,6 +25,8 @@ export function TagInput({
   maxLength?: number;
   /** Für die Schaltflächen „<itemLabel> „…“ entfernen“ */
   itemLabel?: string;
+  /** Chips vor den eigenen Tags, z. B. die automatisch berechneten (nicht entfernbar) */
+  leading?: ReactNode;
 }) {
   const [draft, setDraft] = useState("");
 
@@ -45,15 +48,16 @@ export function TagInput({
 
   return (
     <div className="grid grid-cols-1 gap-2">
-      {value.length > 0 ? (
+      {value.length > 0 || leading ? (
         <ul className="flex flex-wrap gap-1.5">
+          {leading}
           {value.map((tag) => (
             <li key={tag} className="inline-flex max-w-full items-center gap-1 rounded-full border bg-card py-1 pr-1 pl-3 text-sm">
               <span className="min-w-0 truncate">{tag}</span>
               <button
                 type="button"
                 onClick={() => onChange(value.filter((t) => t !== tag))}
-                className="grid size-7 shrink-0 place-items-center rounded-full hover:bg-muted"
+                className="-my-2 grid size-11 shrink-0 place-items-center rounded-full hover:bg-muted"
                 aria-label={`${itemLabel} „${tag}“ entfernen`}
               >
                 <X className="size-3.5" aria-hidden />

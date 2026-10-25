@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/layout/page-header";
 import { RecipeEditor } from "@/components/recipes/editor/recipe-editor";
 import { requireUser } from "@/lib/auth";
 import { collectTags } from "@/lib/domain/recipe-filter";
@@ -22,8 +21,8 @@ export default async function NewRecipePage({ searchParams }: PageProps<"/rezept
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title={cocktail ? "Neuer Cocktail" : "Neues Rezept"} />
       <RecipeEditor
+        header={{ kicker: cocktail ? "Neuer Cocktail" : "Neues Rezept" }}
         thresholds={thresholds}
         dilution={dilution}
         tagSuggestions={collectTags(list)}

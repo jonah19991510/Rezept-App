@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/layout/page-header";
 import { RecipeEditor } from "@/components/recipes/editor/recipe-editor";
 import { requireUser } from "@/lib/auth";
 import { toIngredientOption } from "@/lib/domain/ingredient-option";
@@ -31,8 +30,8 @@ export default async function EditRecipePage({ params }: PageProps<"/rezepte/[id
   const list = await getOwnRecipeList(user.id, recipe.recipe_type);
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title={isCocktail ? "Cocktail bearbeiten" : "Rezept bearbeiten"} description={recipe.title} />
       <RecipeEditor
+        header={{ kicker: isCocktail ? "Cocktail bearbeiten" : "Rezept bearbeiten" }}
         thresholds={thresholds}
         dilution={dilution}
         tagSuggestions={collectTags(list)}
@@ -63,7 +62,7 @@ export default async function EditRecipePage({ params }: PageProps<"/rezepte/[id
             step_position: line.step_position,
             is_optional: line.is_optional,
           })),
-          steps: detail.steps.map((s) => ({ text: s.text, timer_seconds: s.timer_seconds })),
+          steps: detail.steps.map((s) => ({ text: s.text, timer_seconds: s.timer_seconds, timer_from_text: s.timer_from_text })),
         }}
       />
     </div>

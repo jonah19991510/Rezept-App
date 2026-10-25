@@ -1,3 +1,4 @@
+import { AppHeader } from "@/components/layout/app-header";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { Brand } from "@/components/layout/brand";
 import { LegalFooter } from "@/components/layout/legal-footer";
@@ -12,10 +13,10 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <div className="min-h-dvh md:flex">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-background/90 px-4 py-2 backdrop-blur md:justify-end md:px-8">
+        <AppHeader>
           <Brand className="md:hidden" />
           <UserMenu displayName={user.displayName} isAdmin={user.role === "admin"} />
-        </header>
+        </AppHeader>
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-2 pb-28 md:px-8 md:pb-10">{children}</main>
         <LegalFooter className="pb-24 md:pb-6" />
       </div>

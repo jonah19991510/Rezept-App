@@ -14,3 +14,8 @@ export const NAV_ITEMS: NavItem[] = [
 export function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
+
+/** Rezept-Editor (neu/bearbeiten): ohne untere Navigation, am Handy ohne App-Kopf (eigene Leiste unten). */
+export function isEditorPath(pathname: string) {
+  return /^\/rezepte\/(neu|[^/]+\/bearbeiten)\/?$/.test(pathname);
+}

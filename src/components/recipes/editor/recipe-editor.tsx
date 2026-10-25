@@ -1,32 +1,33 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState, useTransition } from "react";
-import { ArrowDown, ArrowUp, Martini, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Martini, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 import { saveRecipeAction } from "@/app/(app)/rezepte/actions";
-import { FormField } from "@/components/forms/form-field";
 import { FormMessage } from "@/components/forms/form-message";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { MacroSummary } from "@/components/recipes/macro-summary";
-import { RecipeTags } from "@/components/recipes/recipe-tags";
 import { computeAlcohol, DEFAULT_DILUTION, isBarGroup, type DilutionConfig } from "@/lib/domain/cocktail";
 import { formatDecimalInput, parseDecimal } from "@/lib/domain/decimal";
 import type { IngredientOption } from "@/lib/domain/ingredient-option";
 import { computeRecipeNutrition, type NutritionThresholds } from "@/lib/domain/nutrition";
-import { detectTimers } from "@/lib/domain/timers";
+import { formatMinutes, removeStep, stepNumberOf, timerModeOf } from "@/lib/domain/recipe-editor";
 import { needsManualGrams, resolveLineGrams, type Unit } from "@/lib/domain/units";
-import { formatGrams, formatNumber } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
 import { categoryOptions } from "@/lib/domain/categories";
-import { BAR_UNITS, GLASS_LABELS, KITCHEN_UNITS, METHOD_LABELS, UNIT_LABELS, type AutoTag } from "@/lib/labels";
+import { METHOD_LABELS, type AutoTag } from "@/lib/labels";
 import type { Enums } from "@/lib/supabase/database.types";
 import { cn } from "@/lib/utils";
 import { recipeInputSchema, flattenIssues, type CocktailInput, type RecipeInput } from "@/lib/validation/recipe";
+import { BasicsSection, type Basics } from "./basics-section";
+import { EditorHeader } from "./editor-header";
+import type { Line, Step } from "./editor-model";
 import { IngredientPicker } from "./ingredient-picker";
+import { IngredientSheet } from "./ingredient-sheet";
+import { IngredientsSection } from "./ingredients-section";
+import { StepSheet } from "./step-sheet";
+import { customTimerSeconds, StepsSection } from "./steps-section";
 import { TagInput } from "./tag-input";
 
 export type EditorInitial = {
@@ -55,26 +56,9 @@ export type EditorInitial = {
     /** Optionale Zutat: zählt nicht in Nährwerten, Kosten und Einkaufsliste */
     is_optional?: boolean;
   }[];
-  steps: { text: string; timer_seconds: number | null }[];
+  /** timer_from_text: false = Timer „Keiner“ (ohne Angabe: Zeiten im Text sind Timer) */
+  steps: { text: string; timer_seconds: number | null; timer_from_text?: boolean }[];
 };
-
-type Line = {
-  key: number;
-  ingredient: IngredientOption;
-  amount: string;
-  unit: Unit | "";
-  manualGrams: string;
-  note: string;
-  /** Schritt, in dem die Zutat gebraucht wird (über den stabilen Schlüssel, damit Umsortieren nichts verschiebt) */
-  stepKey: number | null;
-  optional: boolean;
-};
-
-type Step = { key: number; text: string; timerMinutes: string };
-
-// Stabile Schlüssel für Listeneinträge (nur für React, nicht gespeichert)
-let keySequence = 0;
-const nextKey = () => ++keySequence;
 
 const PIECE_GROUPS: Enums<"food_group">[] = ["egg", "fruit", "vegetables"];
 
@@ -89,14 +73,10 @@ function intOrNull(value: string): number | null {
   return n == null ? Number.NaN : n;
 }
 
-function move<T>(list: T[], index: number, delta: number): T[] {
-  const target = index + delta;
-  if (target < 0 || target >= list.length) return list;
-  const copy = [...list];
-  [copy[index], copy[target]] = [copy[target], copy[index]];
-  return copy;
-}
-
+/**
+ * Rezept anlegen/bearbeiten (Design vom 25.10.2026): Grunddaten, Zutaten und Schritte als kompakte Listen,
+ * Bearbeiten in Sheets. Alles wirkt nur aufs Formular und wird erst mit „Speichern“ gespeichert.
+ */
 export function RecipeEditor({
   initial,
   thresholds,
@@ -104,6 +84,7 @@ export function RecipeEditor({
   tagSuggestions,
   sideSuggestions = [],
   categories = [],
+  header,
   onSaved,
   cancel,
 }: {
@@ -116,54 +97,67 @@ export function RecipeEditor({
   sideSuggestions?: string[];
   /** eigene Kategorien (Einstellungen → Kategorien) */
   categories?: string[];
+  /**
+   * Eigene Seite (neu/bearbeiten): Kopf mit X und Titel, Speicherleiste fest unten (ohne Navigation).
+   * Ohne Angabe (Import) bleibt die Leiste über der Navigation und hat „Abbrechen“ bzw. `cancel`.
+   */
+  header?: { kicker: string };
   /** Markdown-Import: nach dem Speichern hier weitermachen statt zur Rezeptseite zu wechseln */
   onSaved?: (recipeId: string) => void;
-  /** Statt „Abbrechen“ (Link zur Übersicht) eine eigene Aktion, z. B. „Überspringen“ */
+  /** Statt „Abbrechen“ eine eigene Aktion, z. B. „Überspringen“ */
   cancel?: { label: string; onClick: () => void };
 }) {
-  const [title, setTitle] = useState(initial.title);
-  const [description, setDescription] = useState(initial.description);
-  const [servings, setServings] = useState(String(initial.servings));
-  const [prep, setPrep] = useState(initial.prep_minutes?.toString() ?? "");
-  const [cook, setCook] = useState(initial.cook_minutes?.toString() ?? "");
-  const [category, setCategory] = useState(initial.category ?? "");
+  const isCocktail = initial.recipe_type === "cocktail";
+  const [basics, setBasics] = useState<Basics>(() => ({
+    title: initial.title,
+    description: initial.description,
+    servings: Math.max(1, Math.round(initial.servings)),
+    prep: initial.prep_minutes?.toString() ?? "",
+    cook: initial.cook_minutes?.toString() ?? "",
+    category: initial.category ?? "",
+    tags: initial.tags,
+    isMealPrep: initial.is_meal_prep,
+    sourceUrl: initial.source_url,
+    sideDishes: initial.side_dishes ?? [],
+    glass: initial.cocktail?.glass ?? "",
+    method: initial.cocktail?.method ?? "",
+    ice: initial.cocktail?.ice ?? "",
+    garnish: initial.cocktail?.garnish ?? "",
+  }));
   // Eine Kategorie, die nicht (mehr) in der eigenen Liste steht (z. B. übernommenes Rezept), bleibt wählbar
   const categoryChoices = categoryOptions(categories, [initial.category]);
-  const [tags, setTags] = useState(initial.tags);
-  const [isMealPrep, setIsMealPrep] = useState(initial.is_meal_prep);
-  const [sourceUrl, setSourceUrl] = useState(initial.source_url);
-  const [sideDishes, setSideDishes] = useState(initial.side_dishes ?? []);
-  // Phase 15: Cocktail-Felder
-  const isCocktail = initial.recipe_type === "cocktail";
-  const [glass, setGlass] = useState<Enums<"glass"> | "">(initial.cocktail?.glass ?? "");
-  const [method, setMethod] = useState<Enums<"cocktail_method"> | "">(initial.cocktail?.method ?? "");
-  const [ice, setIce] = useState(initial.cocktail?.ice ?? "");
-  const [garnish, setGarnish] = useState(initial.cocktail?.garnish ?? "");
   // Phase 12: Notiz zur neuen Version (nur beim Bearbeiten)
   const [changeNote, setChangeNote] = useState("");
+
+  // Schlüssel fortlaufend ab 1 (Schritte, dann Zutaten): auf Server und im Browser gleich, keine Hydration-Abweichung
   const [initialState] = useState(() => {
-    const stepsWithKeys: Step[] = initial.steps.map((s) => ({
-      key: nextKey(),
+    const steps: Step[] = initial.steps.map((s, i) => ({
+      key: i + 1,
       text: s.text,
+      timerMode: timerModeOf(s),
       timerMinutes: s.timer_seconds ? formatDecimalInput(s.timer_seconds / 60) : "",
     }));
-    const linesWithKeys: Line[] = initial.ingredients.map((l) => ({
-      key: nextKey(),
+    const lines: Line[] = initial.ingredients.map((l, i) => ({
+      key: steps.length + i + 1,
       ingredient: l.ingredient,
       amount: formatDecimalInput(l.amount),
       unit: l.unit ?? "",
       manualGrams: needsManualGrams(l.amount, l.unit, l.ingredient) ? formatDecimalInput(l.grams) : "",
       note: l.note,
-      stepKey: l.step_position != null ? (stepsWithKeys[l.step_position - 1]?.key ?? null) : null,
+      stepKey: l.step_position != null ? (steps[l.step_position - 1]?.key ?? null) : null,
       optional: l.is_optional ?? false,
     }));
-    return { steps: stepsWithKeys, lines: linesWithKeys };
+    return { steps, lines };
   });
+  const keySequence = useRef(initialState.steps.length + initialState.lines.length);
+  const nextKey = () => ++keySequence.current;
   const [lines, setLines] = useState<Line[]>(initialState.lines);
   const [steps, setSteps] = useState<Step[]>(initialState.steps);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [replaceKey, setReplaceKey] = useState<number | null>(null);
+  const [lineSheet, setLineSheet] = useState<{ key: number; open: boolean } | null>(null);
+  const [stepSheet, setStepSheet] = useState<{ key: number; open: boolean } | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState<string>();
   const [pending, startTransition] = useTransition();
@@ -177,34 +171,86 @@ export function RecipeEditor({
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
 
-  function changed<T>(setter: (v: T) => void) {
-    return (v: T) => {
-      setDirty(true);
-      setter(v);
-    };
-  }
-
-  function updateLine(key: number, patch: Partial<Line>) {
+  function updateBasics(patch: Partial<Basics>) {
     setDirty(true);
-    setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+    setBasics((prev) => ({ ...prev, ...patch }));
+  }
+  function changeLines(update: (prev: Line[]) => Line[]) {
+    setDirty(true);
+    setLines(update);
+  }
+  function changeSteps(update: (prev: Step[]) => Step[]) {
+    setDirty(true);
+    setSteps(update);
+  }
+  function updateLine(key: number, patch: Partial<Line>) {
+    changeLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
+  }
+  function updateStep(key: number, patch: Partial<Step>) {
+    changeSteps((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch } : s)));
   }
 
   function onPick(ingredient: IngredientOption) {
-    setDirty(true);
     if (replaceKey != null) {
       updateLine(replaceKey, { ingredient });
       setReplaceKey(null);
+      setLineSheet({ key: replaceKey, open: true });
       return;
     }
     const unit = defaultUnit(ingredient, isCocktail);
-    setLines((prev) => [
+    const key = nextKey();
+    changeLines((prev) => [
       ...prev,
-      { key: nextKey(), ingredient, amount: unit === "piece" ? "1" : "", unit, manualGrams: "", note: "", stepKey: null, optional: false },
+      { key, ingredient, amount: unit === "piece" ? "1" : "", unit, manualGrams: "", note: "", stepKey: null, optional: false },
     ]);
+    // Danach direkt Menge & Co. festlegen
+    setLineSheet({ key, open: true });
+  }
+
+  function removeLine(key: number) {
+    const before = lines;
+    const name = lines.find((l) => l.key === key)?.ingredient.name ?? "Zutat";
+    setLineSheet((s) => (s ? { ...s, open: false } : s));
+    changeLines((prev) => prev.filter((l) => l.key !== key));
+    toast(`${name} entfernt`, { action: { label: "Rückgängig", onClick: () => setLines(before) } });
+  }
+
+  function addStep() {
+    const key = nextKey();
+    changeSteps((prev) => [...prev, { key, text: "", timerMode: "text", timerMinutes: "" }]);
+    setStepSheet({ key, open: true });
+  }
+
+  function deleteStep(key: number, undo: boolean) {
+    const before = { steps, lines };
+    const number = stepNumberOf(key, steps);
+    setDirty(true);
+    const next = removeStep(steps, lines, key);
+    setSteps(next.steps);
+    setLines(next.lines);
+    if (undo) {
+      toast(number ? `Schritt ${number} entfernt` : "Schritt entfernt", {
+        action: {
+          label: "Rückgängig",
+          onClick: () => {
+            setSteps(before.steps);
+            setLines(before.lines);
+          },
+        },
+      });
+    }
+  }
+
+  function closeStepSheet(open: boolean) {
+    if (open || !stepSheet) return;
+    setStepSheet({ ...stepSheet, open: false });
+    // Ein neuer Schritt, der leer bleibt, verschwindet wieder
+    const step = steps.find((s) => s.key === stepSheet.key);
+    if (step && !step.text.trim()) deleteStep(step.key, false);
   }
 
   // Live-Makros mit derselben Logik wie die Datenbank-View
-  const servingsNumber = parseDecimal(servings) ?? 1;
+  const servingsNumber = basics.servings > 0 ? basics.servings : 1;
   const resolved = useMemo(
     () =>
       lines.map((l) => {
@@ -224,6 +270,7 @@ export function RecipeEditor({
     () => computeRecipeNutrition(resolved.filter((r) => !r.optional), servingsNumber, thresholds),
     [resolved, servingsNumber, thresholds],
   );
+  const method = basics.method;
   const alcohol = useMemo(
     () =>
       isCocktail
@@ -248,53 +295,46 @@ export function RecipeEditor({
         ),
       ]
     : [];
-  const units = isCocktail ? BAR_UNITS : KITCHEN_UNITS;
-  const servingWord = (n: number) => (isCocktail ? (n === 1 ? "Drink" : "Drinks") : n === 1 ? "Portion" : "Portionen");
-  const autoTags: AutoTag[] = isCocktail ? [] : [
-    ...(nutrition.isHighProtein ? (["high_protein"] as const) : []),
-    ...(nutrition.isVegan ? (["vegan"] as const) : nutrition.isVegetarian ? (["vegetarian"] as const) : []),
-    ...(nutrition.isLowCarb ? (["low_carb"] as const) : []),
-    ...(isMealPrep ? (["meal_prep"] as const) : []),
-  ];
-
-  /** Nummer des Schritts (1, 2, …) zu einem Schlüssel; null, wenn keiner gewählt oder der Schritt gelöscht ist. */
-  function stepNumber(key: number | null): number | null {
-    if (key == null) return null;
-    const index = steps.findIndex((s) => s.key === key);
-    return index >= 0 ? index + 1 : null;
-  }
-
-  function timerSeconds(minutes: string): number | null {
-    if (!minutes.trim()) return null;
-    const value = parseDecimal(minutes);
-    return value == null ? Number.NaN : Math.round(value * 60);
-  }
+  const autoTags: AutoTag[] = isCocktail
+    ? []
+    : [
+        ...(nutrition.isHighProtein ? (["high_protein"] as const) : []),
+        ...(nutrition.isVegan ? (["vegan"] as const) : nutrition.isVegetarian ? (["vegetarian"] as const) : []),
+        ...(nutrition.isLowCarb ? (["low_carb"] as const) : []),
+      ];
+  const minutes = (v: string) => Math.max(0, parseDecimal(v) ?? 0);
+  const totalTime = formatMinutes(minutes(basics.prep) + (isCocktail ? 0 : minutes(basics.cook)));
 
   function buildInput(): RecipeInput {
     return {
       id: initial.id,
       recipe_type: initial.recipe_type,
-      cocktail: isCocktail ? { glass: glass || null, method: method || null, ice, garnish } : null,
-      title,
-      description,
-      servings: parseDecimal(servings) ?? Number.NaN,
-      prep_minutes: intOrNull(prep),
-      cook_minutes: isCocktail ? null : intOrNull(cook),
-      category: isCocktail ? null : category || null,
-      tags,
-      is_meal_prep: isCocktail ? false : isMealPrep,
-      source_url: sourceUrl.trim(),
-      side_dishes: isCocktail ? [] : sideDishes,
+      cocktail: isCocktail ? { glass: basics.glass || null, method: basics.method || null, ice: basics.ice, garnish: basics.garnish } : null,
+      title: basics.title,
+      description: basics.description,
+      servings: basics.servings,
+      prep_minutes: intOrNull(basics.prep),
+      cook_minutes: isCocktail ? null : intOrNull(basics.cook),
+      category: isCocktail ? null : basics.category || null,
+      tags: basics.tags,
+      is_meal_prep: isCocktail ? false : basics.isMealPrep,
+      source_url: basics.sourceUrl.trim(),
+      side_dishes: isCocktail ? [] : basics.sideDishes,
       ingredients: lines.map((l) => ({
         ingredient_id: l.ingredient.id,
         amount: l.amount.trim() ? (parseDecimal(l.amount) ?? Number.NaN) : null,
         unit: l.unit || null,
         manual_grams: parseDecimal(l.manualGrams),
         note: l.note,
-        step_position: stepNumber(l.stepKey),
+        step_position: stepNumberOf(l.stepKey, steps),
         is_optional: l.optional,
       })),
-      steps: steps.map((s) => ({ text: s.text, timer_seconds: timerSeconds(s.timerMinutes) })),
+      steps: steps.map((s) => ({
+        text: s.text,
+        timer_seconds:
+          s.timerMode === "custom" ? (s.timerMinutes.trim() ? (customTimerSeconds(s) ?? Number.NaN) : null) : null,
+        timer_from_text: s.timerMode !== "none",
+      })),
       change_note: changeNote,
     };
   }
@@ -303,8 +343,11 @@ export function RecipeEditor({
     const input = buildInput();
     const parsed = recipeInputSchema.safeParse(input);
     if (!parsed.success) {
-      setErrors(flattenIssues(parsed.error));
+      const issues = flattenIssues(parsed.error);
+      setErrors(issues);
       setMessage("Bitte prüfe die markierten Felder.");
+      toast.error("Bitte prüfe die markierten Felder.");
+      document.getElementById(firstErrorTarget(issues))?.scrollIntoView({ block: "center" });
       return;
     }
     setErrors({});
@@ -321,248 +364,58 @@ export function RecipeEditor({
         setDirty(true);
         setErrors(result.fieldErrors ?? {});
         setMessage(result.message);
+        toast.error(result.message ?? "Speichern fehlgeschlagen.");
       }
     });
   }
 
   const err = (key: string) => errors[key];
   const cancelHref = initial.id ? `/rezepte/${initial.id}` : isCocktail ? "/rezepte/bar" : "/rezepte";
+  const openLine = lineSheet ? lines.find((l) => l.key === lineSheet.key) : undefined;
+  const openLineIndex = lineSheet ? lines.findIndex((l) => l.key === lineSheet.key) : -1;
+  const openStep = stepSheet ? steps.find((s) => s.key === stepSheet.key) : undefined;
+  const pageMode = Boolean(header);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {header ? (
+        <EditorHeader
+          kicker={header.kicker}
+          title={basics.title.trim() || "Ohne Titel"}
+          cancelHref={cancelHref}
+          dirty={dirty}
+          onDiscard={() => setDirty(false)}
+        />
+      ) : null}
       <FormMessage message={message} />
 
-      {/* Grunddaten */}
-      <section className="grid grid-cols-1 gap-4 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="sec-basis">
-        <h2 id="sec-basis" className="text-xl font-semibold">
-          Grunddaten
-        </h2>
-        <FormField label="Titel" name="title" value={title} onChange={(e) => changed(setTitle)(e.target.value)} errors={err("title")} maxLength={200} />
-        <div className="grid gap-1.5">
-          <Label htmlFor="description">Beschreibung (optional)</Label>
-          <Textarea
-            id="description"
-            value={description}
-            onChange={(e) => changed(setDescription)(e.target.value)}
-            rows={2}
-            maxLength={2000}
-            className="rounded-xl bg-card"
-          />
-        </div>
-        {isCocktail ? (
-          <CocktailFields
-            servings={servings}
-            prep={prep}
-            glass={glass}
-            method={method}
-            ice={ice}
-            garnish={garnish}
-            errors={errors}
-            onServings={changed(setServings)}
-            onPrep={changed(setPrep)}
-            onGlass={changed(setGlass)}
-            onMethod={changed(setMethod)}
-            onIce={changed(setIce)}
-            onGarnish={changed(setGarnish)}
-          />
-        ) : (
-          <div className="grid grid-cols-3 gap-3">
-            <FormField label="Portionen" name="servings" inputMode="numeric" value={servings} onChange={(e) => changed(setServings)(e.target.value)} errors={err("servings")} />
-            <FormField label="Vorbereitung (Min.)" name="prep" inputMode="numeric" value={prep} onChange={(e) => changed(setPrep)(e.target.value)} errors={err("prep_minutes")} />
-            <FormField label="Kochen (Min.)" name="cook" inputMode="numeric" value={cook} onChange={(e) => changed(setCook)(e.target.value)} errors={err("cook_minutes")} />
-          </div>
-        )}
-        <div className={cn("grid gap-4 sm:grid-cols-2", isCocktail && "hidden")}>
-          <div className="grid gap-1.5">
-            <Label htmlFor="category">Kategorie</Label>
-            <NativeSelect id="category" value={category} onChange={(e) => changed(setCategory)(e.target.value)}>
-              <option value="">Keine</option>
-              {categoryChoices.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </NativeSelect>
-            <p className="text-xs text-muted-foreground">
-              Eigene Kategorien legst du in den{" "}
-              <a href="/einstellungen#kategorien" className="text-primary underline-offset-4 hover:underline">
-                Einstellungen
-              </a>{" "}
-              an.
-            </p>
-          </div>
-          <label htmlFor="meal-prep" className="flex min-h-11 items-center justify-between gap-3 rounded-xl border px-3 sm:mt-6">
-            <span className="text-sm">
-              <span className="font-medium">Meal-Prep-geeignet</span>
-              <span className="block text-xs text-muted-foreground">Lässt sich gut vorkochen</span>
-            </span>
-            <Switch id="meal-prep" checked={isMealPrep} onCheckedChange={(v) => changed(setIsMealPrep)(v)} />
-          </label>
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="tags">Eigene Tags</Label>
-          <TagInput id="tags" value={tags} onChange={changed(setTags)} suggestions={tagSuggestions} />
-          {err("tags") ? <p className="text-sm text-destructive">{err("tags")?.[0]}</p> : null}
-        </div>
-        <FormField
-          label="Quelle (optional)"
-          name="source_url"
-          type="url"
-          inputMode="url"
-          placeholder="https://…"
-          value={sourceUrl}
-          onChange={(e) => changed(setSourceUrl)(e.target.value)}
-          errors={err("source_url")}
-        />
-      </section>
+      <BasicsSection
+        basics={basics}
+        update={updateBasics}
+        isCocktail={isCocktail}
+        categoryChoices={categoryChoices}
+        autoTags={autoTags}
+        tagSuggestions={tagSuggestions}
+        errors={errors}
+      />
 
-      {/* Zutaten */}
-      <section className="grid grid-cols-1 gap-4 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="sec-zutaten">
-        <h2 id="sec-zutaten" className="text-xl font-semibold">
-          Zutaten
-        </h2>
-        {lines.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Noch keine Zutaten. Füg die erste hinzu, die Makros rechnen sich dann mit.</p>
-        ) : (
-          <ol className="grid grid-cols-1 gap-3">
-            {lines.map((line, index) => {
-              const r = resolved[index];
-              const prefix = `ingredients.${index}`;
-              return (
-                <li key={line.key} className={cn("grid grid-cols-1 gap-2 rounded-2xl border p-3", line.optional && "border-dashed")}>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setReplaceKey(line.key);
-                        setPickerOpen(true);
-                      }}
-                      className="min-h-11 min-w-0 flex-1 truncate rounded-lg px-1 text-left font-medium hover:text-primary"
-                      aria-label={`${line.ingredient.name} austauschen`}
-                    >
-                      {line.ingredient.name}
-                      {line.optional ? <span className="ml-1.5 text-xs font-normal text-muted-foreground">optional</span> : null}
-                    </button>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => { setDirty(true); setLines((p) => move(p, index, -1)); }} disabled={index === 0} aria-label="Nach oben">
-                      <ArrowUp aria-hidden />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => { setDirty(true); setLines((p) => move(p, index, 1)); }} disabled={index === lines.length - 1} aria-label="Nach unten">
-                      <ArrowDown aria-hidden />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => { setDirty(true); setLines((p) => p.filter((l) => l.key !== line.key)); }} aria-label={`${line.ingredient.name} entfernen`}>
-                      <Trash2 aria-hidden />
-                    </Button>
-                  </div>
-                  {/* Handy: Menge und Einheit nebeneinander, Notiz darunter; ab sm alles in einer Zeile */}
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-[6rem_7.5rem_minmax(0,1fr)]">
-                    <Input
-                      aria-label="Menge"
-                      inputMode="decimal"
-                      placeholder="Menge"
-                      value={line.amount}
-                      onChange={(e) => updateLine(line.key, { amount: e.target.value })}
-                      aria-invalid={Boolean(err(`${prefix}.amount`)) || undefined}
-                    />
-                    <NativeSelect
-                      aria-label="Einheit"
-                      value={line.unit}
-                      onChange={(e) => updateLine(line.key, { unit: e.target.value as Unit | "" })}
-                      aria-invalid={Boolean(err(`${prefix}.unit`)) || undefined}
-                    >
-                      <option value="">–</option>
-                      {units.map((u) => (
-                        <option key={u} value={u}>
-                          {UNIT_LABELS[u]}
-                        </option>
-                      ))}
-                    </NativeSelect>
-                    <Input
-                      aria-label="Notiz"
-                      className="col-span-2 sm:col-span-1"
-                      placeholder="Notiz, z. B. gewürfelt"
-                      value={line.note}
-                      maxLength={200}
-                      onChange={(e) => updateLine(line.key, { note: e.target.value })}
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
-                  {steps.length > 0 ? (
-                    <div className="flex min-w-0 flex-1 basis-56 items-center gap-2">
-                      <Label htmlFor={`step-${line.key}`} className="shrink-0 text-muted-foreground">
-                        Gebraucht in
-                      </Label>
-                      <NativeSelect
-                        id={`step-${line.key}`}
-                        className="min-w-0 flex-1 sm:max-w-64"
-                        value={stepNumber(line.stepKey)?.toString() ?? ""}
-                        onChange={(e) =>
-                          updateLine(line.key, { stepKey: e.target.value ? (steps[Number(e.target.value) - 1]?.key ?? null) : null })
-                        }
-                      >
-                        <option value="">keinem Schritt</option>
-                        {steps.map((s, i) => (
-                          <option key={s.key} value={i + 1}>
-                            Schritt {i + 1}
-                          </option>
-                        ))}
-                      </NativeSelect>
-                    </div>
-                  ) : null}
-                    <label htmlFor={`optional-${line.key}`} className="flex min-h-11 items-center gap-2 text-muted-foreground">
-                      Optional
-                      <Switch
-                        id={`optional-${line.key}`}
-                        checked={line.optional}
-                        onCheckedChange={(v) => updateLine(line.key, { optional: v })}
-                      />
-                    </label>
-                  </div>
-                  {r.needsManual ? (
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <Label htmlFor={`manual-${line.key}`} className="text-muted-foreground">
-                        Wie viel wiegt das zusammen? ≈
-                      </Label>
-                      <Input
-                        id={`manual-${line.key}`}
-                        inputMode="decimal"
-                        className="w-24"
-                        value={line.manualGrams}
-                        onChange={(e) => updateLine(line.key, { manualGrams: e.target.value })}
-                      />
-                      <span>g</span>
-                    </div>
-                  ) : null}
-                  <p className={cn("text-xs", err(`${prefix}.amount`) || err(`${prefix}.unit`) ? "text-destructive" : "text-muted-foreground")}>
-                    {err(`${prefix}.amount`)?.[0] ??
-                      err(`${prefix}.unit`)?.[0] ??
-                      (line.optional
-                        ? `optional, zählt nicht in Nährwerten, Kosten und Einkaufsliste${r.grams != null ? ` (≈ ${formatGrams(r.grams, 0)})` : ""}`
-                        : r.grams != null
-                        ? `≈ ${formatGrams(r.grams, 0)} · ${formatNumber(Math.round((r.grams * line.ingredient.kcal) / 100), 0)} kcal`
-                        : line.amount.trim()
-                          ? "Gewicht unbekannt, zählt nicht in den Nährwerten"
-                          : "ohne Menge (z. B. nach Geschmack)")}
-                  </p>
-                </li>
-              );
-            })}
-          </ol>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            setReplaceKey(null);
-            setPickerOpen(true);
-          }}
-        >
-          <Plus aria-hidden />
-          Zutat hinzufügen
-        </Button>
-
-        <div className="rounded-2xl bg-muted/40 p-3">
-          {alcohol ? (
-            <div className="mb-3 space-y-1" aria-live="polite">
+      <IngredientsSection
+        lines={lines}
+        steps={steps}
+        resolved={resolved}
+        perServing={nutrition.perServing}
+        servings={servingsNumber}
+        isCocktail={isCocktail}
+        errors={errors}
+        onOpen={(key) => setLineSheet({ key, open: true })}
+        onAdd={() => {
+          setReplaceKey(null);
+          setPickerOpen(true);
+        }}
+        onLinesChange={changeLines}
+        summaryExtra={
+          alcohol ? (
+            <div className="mb-3 space-y-0.5 border-b pb-3">
               <p className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span className="flex items-center gap-1.5 text-lg font-semibold tabular-nums">
                   <Martini className="size-4 text-primary" aria-hidden />
@@ -577,109 +430,38 @@ export function RecipeEditor({
                   ? `${METHOD_LABELS[method]}: +${formatNumber(alcohol.dilution * 100, 0)} % Schmelzwasser eingerechnet`
                   : "ohne Methode ohne Schmelzwasser gerechnet"}
               </p>
+            </div>
+          ) : null
+        }
+        notices={
+          missingAbv.length > 0 || nutrition.linesWithoutGrams > 0 ? (
+            <div className="-mt-2 space-y-1 px-1">
               {missingAbv.length > 0 ? (
                 <p className="flex gap-1.5 text-xs text-muted-foreground">
                   <TriangleAlert className="size-3.5 shrink-0 text-primary" aria-hidden />
                   Für {missingAbv.join(", ")} fehlt der Alkoholgehalt, zählt als alkoholfrei.
                 </p>
               ) : null}
+              {nutrition.linesWithoutGrams > 0 ? (
+                <p className="flex gap-1.5 text-xs text-muted-foreground">
+                  <TriangleAlert className="size-3.5 shrink-0 text-primary" aria-hidden />
+                  {nutrition.linesWithoutGrams} {nutrition.linesWithoutGrams === 1 ? "Zutat zählt" : "Zutaten zählen"} ohne Gewicht nicht mit.
+                </p>
+              ) : null}
             </div>
-          ) : null}
-          <MacroSummary
-            values={nutrition.perServing}
-            total={nutrition.total}
-            caption={`pro ${isCocktail ? "Drink" : "Portion"} (${formatNumber(servingsNumber > 0 ? servingsNumber : 1, 0)} ${servingWord(servingsNumber)})`}
-          />
-          {nutrition.linesWithoutGrams > 0 ? (
-            <p className="mt-2 flex gap-1.5 text-xs text-muted-foreground">
-              <TriangleAlert className="size-3.5 shrink-0 text-primary" aria-hidden />
-              {nutrition.linesWithoutGrams} {nutrition.linesWithoutGrams === 1 ? "Zutat zählt" : "Zutaten zählen"} ohne Gewicht nicht mit.
-            </p>
-          ) : null}
-          <RecipeTags autoTags={autoTags} className="mt-3" />
-        </div>
-      </section>
+          ) : null
+        }
+      />
 
-      {/* Zubereitung */}
-      <section className="grid grid-cols-1 gap-4 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="sec-schritte">
-        <h2 id="sec-schritte" className="text-xl font-semibold">
-          Zubereitung
-        </h2>
-        {steps.length > 0 ? (
-          <ol className="grid grid-cols-1 gap-3">
-            {steps.map((step, index) => (
-              <li key={step.key} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-2">
-                <span className="mt-2 grid size-8 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-                  {index + 1}
-                </span>
-                <div className="grid min-w-0 grid-cols-1 gap-1">
-                  <Textarea
-                    aria-label={`Schritt ${index + 1}`}
-                    value={step.text}
-                    rows={3}
-                    maxLength={2000}
-                    className="rounded-xl bg-card"
-                    aria-invalid={Boolean(err(`steps.${index}.text`)) || undefined}
-                    onChange={(e) => {
-                      setDirty(true);
-                      setSteps((prev) => prev.map((s) => (s.key === step.key ? { ...s, text: e.target.value } : s)));
-                    }}
-                  />
-                  {err(`steps.${index}.text`) ? <p className="text-xs text-destructive">{err(`steps.${index}.text`)?.[0]}</p> : null}
-                  <div className="flex flex-wrap items-center justify-between gap-1">
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <Label htmlFor={`timer-${step.key}`} className="text-muted-foreground">
-                        Timer
-                      </Label>
-                      <Input
-                        id={`timer-${step.key}`}
-                        inputMode="decimal"
-                        className="h-9 w-20"
-                        placeholder="–"
-                        value={step.timerMinutes}
-                        aria-invalid={Boolean(err(`steps.${index}.timer_seconds`)) || undefined}
-                        onChange={(e) => {
-                          setDirty(true);
-                          setSteps((prev) => prev.map((s) => (s.key === step.key ? { ...s, timerMinutes: e.target.value } : s)));
-                        }}
-                      />
-                      <span className="text-muted-foreground">Min.</span>
-                      <StepTimerHint text={step.text} />
-                    </div>
-                    <div className="flex gap-1">
-                    <Button type="button" variant="ghost" size="icon" onClick={() => { setDirty(true); setSteps((p) => move(p, index, -1)); }} disabled={index === 0} aria-label="Schritt nach oben">
-                      <ArrowUp aria-hidden />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => { setDirty(true); setSteps((p) => move(p, index, 1)); }} disabled={index === steps.length - 1} aria-label="Schritt nach unten">
-                      <ArrowDown aria-hidden />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => { setDirty(true); setSteps((p) => p.filter((s) => s.key !== step.key)); }} aria-label={`Schritt ${index + 1} löschen`}>
-                      <Trash2 aria-hidden />
-                    </Button>
-                    </div>
-                  </div>
-                  {err(`steps.${index}.timer_seconds`) ? (
-                    <p className="text-xs text-destructive">Bitte den Timer in Minuten angeben (z. B. 10 oder 1,5), höchstens 24 Stunden.</p>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="text-sm text-muted-foreground">Noch keine Schritte.</p>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            setDirty(true);
-            setSteps((prev) => [...prev, { key: nextKey(), text: "", timerMinutes: "" }]);
-          }}
-        >
-          <Plus aria-hidden />
-          Schritt hinzufügen
-        </Button>
-      </section>
+      <StepsSection
+        steps={steps}
+        lines={lines}
+        totalTime={totalTime}
+        errors={errors}
+        onOpen={(key) => setStepSheet({ key, open: true })}
+        onAdd={addStep}
+        onStepsChange={changeSteps}
+      />
 
       {/* Beilagen: Vorschläge, gehören nicht zum Rezept (keine Nährwerte, kein Einkauf) */}
       {isCocktail ? null : (
@@ -695,9 +477,9 @@ export function RecipeEditor({
           </div>
           <TagInput
             id="side-dishes"
-            value={sideDishes}
-            onChange={changed(setSideDishes)}
-            suggestions={sideSuggestions.filter((t) => t.toLocaleLowerCase("de") !== title.trim().toLocaleLowerCase("de"))}
+            value={basics.sideDishes}
+            onChange={(sideDishes) => updateBasics({ sideDishes })}
+            suggestions={sideSuggestions.filter((t) => t.toLocaleLowerCase("de") !== basics.title.trim().toLocaleLowerCase("de"))}
             placeholder="Beilage eingeben und Enter drücken"
             maxLength={100}
             itemLabel="Beilage"
@@ -724,35 +506,37 @@ export function RecipeEditor({
         </section>
       ) : null}
 
-      {/* Speicherleiste: bleibt sichtbar, auf dem Handy über der Navigation */}
-      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-between gap-2 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur md:bottom-4">
-        <p className="min-w-0 text-sm tabular-nums">
+      {/*
+        Speicherleiste. Eigene Seite: am Handy fest am unteren Rand (Navigation ist ausgeblendet), am Desktop
+        mitlaufend unten im Inhalt. Import: wie bisher über der Navigation.
+      */}
+      <div
+        className={cn(
+          "z-40 flex items-center justify-between gap-3 bg-background/95 backdrop-blur",
+          pageMode
+            ? "fixed inset-x-0 bottom-0 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:sticky md:bottom-4 md:rounded-2xl md:border md:p-3 md:shadow-lg"
+            : "sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] rounded-2xl border p-3 shadow-lg md:bottom-4",
+        )}
+      >
+        <p className="min-w-0 tabular-nums">
           {alcohol ? (
-            <>
-              <span className="font-semibold">{formatNumber(alcohol.abvPercent, 1)} % vol</span>
-              <span className="text-muted-foreground"> · </span>
-              <span className="font-medium">{formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal</span>
-            </>
+            <span className="font-semibold whitespace-nowrap">
+              {formatNumber(alcohol.abvPercent, 1)} % vol · {formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal
+            </span>
           ) : (
-            <>
-              <span className="font-semibold whitespace-nowrap">{formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal</span>
-              <span className="text-muted-foreground"> · </span>
-              <span className="font-medium whitespace-nowrap">{formatNumber(nutrition.perServing.protein, 0)} g P</span>
-            </>
+            <span className="font-semibold whitespace-nowrap">
+              {formatNumber(Math.round(nutrition.perServing.kcal), 0)} kcal · {formatNumber(nutrition.perServing.protein, 0)} g P
+            </span>
           )}
           <span className="block text-xs text-muted-foreground">pro {isCocktail ? "Drink" : "Portion"}</span>
         </p>
         <div className="flex shrink-0 gap-1 sm:gap-2">
           {cancel ? (
-            <Button type="button" variant="ghost" onClick={cancel.onClick} disabled={pending}>
+            <Button type="button" variant="ghost" className="h-12" onClick={cancel.onClick} disabled={pending}>
               {cancel.label}
             </Button>
-          ) : (
-            <Link href={cancelHref} className={buttonVariants({ variant: "ghost" })}>
-              Abbrechen
-            </Link>
-          )}
-          <Button type="button" onClick={save} disabled={pending}>
+          ) : null}
+          <Button type="button" onClick={save} disabled={pending} className="h-12 rounded-full px-7 text-base">
             {pending ? "Wird gespeichert …" : "Speichern"}
           </Button>
         </div>
@@ -766,68 +550,55 @@ export function RecipeEditor({
         }}
         onSelect={onPick}
       />
+
+      <IngredientSheet
+        open={Boolean(lineSheet?.open && openLine)}
+        onOpenChange={(open) => setLineSheet((s) => (s ? { ...s, open } : s))}
+        line={openLine}
+        index={openLineIndex}
+        steps={steps}
+        isCocktail={isCocktail}
+        errors={errors}
+        onChange={(patch) => lineSheet && updateLine(lineSheet.key, patch)}
+        onRemove={() => lineSheet && removeLine(lineSheet.key)}
+        onReplace={() => {
+          if (!lineSheet) return;
+          setReplaceKey(lineSheet.key);
+          setLineSheet({ ...lineSheet, open: false });
+          setPickerOpen(true);
+        }}
+      />
+
+      <StepSheet
+        open={Boolean(stepSheet?.open && openStep)}
+        onOpenChange={closeStepSheet}
+        step={openStep}
+        steps={steps}
+        lines={lines}
+        errors={errors}
+        onChange={(patch) => stepSheet && updateStep(stepSheet.key, patch)}
+        onToggleLine={(lineKey) =>
+          stepSheet &&
+          changeLines((prev) =>
+            prev.map((l) => (l.key === lineKey ? { ...l, stepKey: l.stepKey === stepSheet.key ? null : stepSheet.key } : l)),
+          )
+        }
+        onRemove={() => {
+          if (!stepSheet) return;
+          setStepSheet({ ...stepSheet, open: false });
+          deleteStep(stepSheet.key, true);
+        }}
+      />
     </div>
   );
 }
 
-/** Phase 15: Drinks, Zeit, Glas, Methode, Eis und Garnitur statt Portionen/Kochzeit/Kategorie. */
-function CocktailFields(props: {
-  servings: string;
-  prep: string;
-  glass: Enums<"glass"> | "";
-  method: Enums<"cocktail_method"> | "";
-  ice: string;
-  garnish: string;
-  errors: Record<string, string[]>;
-  onServings: (v: string) => void;
-  onPrep: (v: string) => void;
-  onGlass: (v: Enums<"glass"> | "") => void;
-  onMethod: (v: Enums<"cocktail_method"> | "") => void;
-  onIce: (v: string) => void;
-  onGarnish: (v: string) => void;
-}) {
-  const { errors } = props;
-  return (
-    <>
-      <div className="grid grid-cols-2 gap-3">
-        <FormField label="Drinks" name="servings" inputMode="numeric" value={props.servings} onChange={(e) => props.onServings(e.target.value)} errors={errors.servings} />
-        <FormField label="Zubereitung (Min.)" name="prep" inputMode="numeric" value={props.prep} onChange={(e) => props.onPrep(e.target.value)} errors={errors.prep_minutes} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="grid gap-1.5">
-          <Label htmlFor="glass">Glas</Label>
-          <NativeSelect id="glass" value={props.glass} onChange={(e) => props.onGlass(e.target.value as Enums<"glass"> | "")}>
-            <option value="">Keine Angabe</option>
-            {Object.entries(GLASS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="method">Methode</Label>
-          <NativeSelect id="method" value={props.method} onChange={(e) => props.onMethod(e.target.value as Enums<"cocktail_method"> | "")}>
-            <option value="">Keine Angabe</option>
-            {Object.entries(METHOD_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <FormField label="Eis (optional)" name="ice" placeholder="z. B. Würfel, crushed, ohne" value={props.ice} maxLength={100} onChange={(e) => props.onIce(e.target.value)} errors={errors["cocktail.ice"]} />
-        <FormField label="Garnitur (optional)" name="garnish" placeholder="z. B. Limettenrad" value={props.garnish} maxLength={200} onChange={(e) => props.onGarnish(e.target.value)} errors={errors["cocktail.garnish"]} />
-      </div>
-    </>
-  );
-}
-
-/** Zeigt, welche Zeitangaben der Kochmodus im Schritttext automatisch als Timer anbietet. */
-function StepTimerHint({ text }: { text: string }) {
-  const found = detectTimers(text);
-  if (found.length === 0) return null;
-  return <span className="text-xs text-muted-foreground">erkannt: {found.map((t) => t.label).join(", ")}</span>;
+/** Erstes Feld mit Fehler, zu dem gescrollt wird (Zutaten/Schritte: der Abschnitt). */
+function firstErrorTarget(issues: Record<string, string[]>): string {
+  const keys = Object.keys(issues);
+  if (keys.some((k) => k === "title")) return "title";
+  if (keys.some((k) => ["servings", "prep_minutes", "cook_minutes"].includes(k))) return "sec-basis";
+  if (keys.some((k) => k.startsWith("ingredients"))) return "sec-zutaten";
+  if (keys.some((k) => k.startsWith("steps"))) return "sec-schritte";
+  return keys.includes("side_dishes") ? "sec-beilagen" : "sec-basis";
 }
