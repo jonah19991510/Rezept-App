@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
-import { AREA_PARAM, areaForPath } from "@/components/layout/nav-items";
+import { AreaTile } from "@/components/layout/area-tile";
+import { AREA_PARAM, AREAS, areaForPath } from "@/components/layout/nav-items";
 import { requireUser } from "@/lib/auth";
 import { getCategoryCounts, getCategoryRows } from "@/lib/server/categories";
 import { getLongNotCookedWeeks } from "@/lib/server/kitchen-log";
@@ -16,27 +17,70 @@ export const metadata: Metadata = { title: "Einstellungen" };
 
 /**
  * Einstellungen: Profil, Passwort und Account gelten für alles; dazwischen die Einstellungen des Bereichs, aus dem man
- * kommt (`?bereich=sport` für Sport & Gesundheit, sonst Essen & Trinken).
+ * kommt (`?bereich=sport` Sport & Gesundheit, `?bereich=start` von der Startseite: beide Bereiche zusammen, sonst
+ * Essen & Trinken).
  */
 export default async function SettingsPage({ searchParams }: PageProps<"/einstellungen">) {
   const user = await requireUser();
   const param = (await searchParams)[AREA_PARAM];
   const area = areaForPath("/einstellungen", typeof param === "string" ? param : null);
-  if (area === "sport") return <SportSettings user={user} />;
 
-  const [goals, trainingWeekdays, longWeeks, categories, categoryCounts] = await Promise.all([
-    getAllGoals(user.id),
-    getTrainingWeekdays(user.id),
-    getLongNotCookedWeeks(user.id),
-    getCategoryRows(user.id),
-    getCategoryCounts(user.id),
-  ]);
-
+  if (area === "sport") {
+    return (
+      <>
+        <PageHeader title="Einstellungen" description="Sport & Gesundheit" />
+        <AccountSections user={user} />
+        <SportSettings showAllData />
+        <DeleteSection user={user} />
+      </>
+    );
+  }
+  if (area === "start") {
+    return (
+      <>
+        <PageHeader title="Einstellungen" description="Alle Bereiche" />
+        <AccountSections user={user} />
+        <AreaHeading area="food" />
+        <FoodSettings userId={user.id} />
+        <AreaHeading area="sport" />
+        <SportSettings showAllData={false} />
+        <DeleteSection user={user} />
+      </>
+    );
+  }
   return (
     <>
       <PageHeader title="Einstellungen" description="Essen & Trinken" />
       <AccountSections user={user} />
+      <FoodSettings userId={user.id} />
+      <DeleteSection user={user} />
+    </>
+  );
+}
 
+/** Zwischenüberschrift mit Bereichs-Kachel (Einstellungen von der Startseite). */
+function AreaHeading({ area }: { area: "food" | "sport" }) {
+  const a = AREAS.find((x) => x.key === area)!;
+  return (
+    <h2 className="mt-10 mb-4 flex items-center gap-3 text-2xl font-semibold">
+      <AreaTile area={a} size="sm" />
+      {a.label}
+    </h2>
+  );
+}
+
+/** Einstellungen von Essen & Trinken. */
+async function FoodSettings({ userId }: { userId: string }) {
+  const [goals, trainingWeekdays, longWeeks, categories, categoryCounts] = await Promise.all([
+    getAllGoals(userId),
+    getTrainingWeekdays(userId),
+    getLongNotCookedWeeks(userId),
+    getCategoryRows(userId),
+    getCategoryCounts(userId),
+  ]);
+
+  return (
+    <>
       <section id="ziele" className="mb-6 scroll-mt-20 rounded-3xl border bg-card p-5" aria-labelledby="sec-ziele">
         <h2 id="sec-ziele" className="mb-1 text-lg font-semibold">
           Tagesziele
@@ -97,8 +141,6 @@ export default async function SettingsPage({ searchParams }: PageProps<"/einstel
         </p>
         <DataSection />
       </section>
-
-      <DeleteSection user={user} />
     </>
   );
 }
@@ -146,24 +188,17 @@ function DeleteSection({ user }: { user: User }) {
   );
 }
 
-/** Einstellungen im Bereich Sport & Gesundheit. */
-function SportSettings({ user }: { user: User }) {
+/** Einstellungen von Sport & Gesundheit. showAllData: „Meine Daten herunterladen“ (fehlt, wenn Essen & Trinken ihn zeigt). */
+function SportSettings({ showAllData }: { showAllData: boolean }) {
   return (
-    <>
-      <PageHeader title="Einstellungen" description="Sport & Gesundheit" />
-      <AccountSections user={user} />
-
-      <section id="daten" className="mb-6 scroll-mt-20 rounded-3xl border bg-card p-5" aria-labelledby="sec-sport-daten">
-        <h2 id="sec-sport-daten" className="mb-1 text-lg font-semibold">
-          Trainingsdaten
-        </h2>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Deine Trainingspläne und eigenen Übungen als Datei sichern oder eine Sicherung einspielen.
-        </p>
-        <SportDataSection />
-      </section>
-
-      <DeleteSection user={user} />
-    </>
+    <section id="trainingsdaten" className="mb-6 scroll-mt-20 rounded-3xl border bg-card p-5" aria-labelledby="sec-sport-daten">
+      <h2 id="sec-sport-daten" className="mb-1 text-lg font-semibold">
+        Trainingsdaten
+      </h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Deine Trainingspläne und eigenen Übungen als Datei sichern oder eine Sicherung einspielen.
+      </p>
+      <SportDataSection showAllData={showAllData} />
+    </section>
   );
 }

@@ -42,11 +42,14 @@ describe("gemeinsame Seiten", () => {
     expect(areaForPath("/einstellungen")).toBe("food");
     expect(areaForPath("/admin", "sport")).toBe("sport");
     expect(areaForPath("/rezepte", "sport")).toBe("food");
+    expect(areaForPath("/einstellungen", "start")).toBe("start");
+    expect(areaForPath("/einstellungen", "irgendwas")).toBe("food");
   });
 
   it("bekommen den Bereich im Link mit", () => {
     expect(sharedHref("/einstellungen", "sport")).toBe("/einstellungen?bereich=sport");
     expect(sharedHref("/einstellungen#daten", "sport")).toBe("/einstellungen?bereich=sport#daten");
     expect(sharedHref("/einstellungen", "food")).toBe("/einstellungen");
+    expect(sharedHref("/einstellungen", "start")).toBe("/einstellungen?bereich=start");
   });
 });

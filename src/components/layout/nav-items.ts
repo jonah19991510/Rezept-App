@@ -68,26 +68,29 @@ export const AREAS: Area[] = [
   { key: "sport", label: "Sport & Gesundheit", href: "/sport/plaene", icon: HeartPulse, tile: { background: "var(--sport)", color: "var(--sport-foreground)" } },
 ];
 
-/** Seiten für beide Bereiche (Einstellungen, Nutzerverwaltung): Sie bleiben im Bereich, aus dem man kommt. */
+/**
+ * Seiten für alle Bereiche (Einstellungen, Nutzerverwaltung): Sie bleiben im Bereich, aus dem man kommt; von der
+ * Startseite aus gehören sie zu „Start“ (Einstellungen beider Bereiche zusammen).
+ */
 const SHARED_PATHS = ["/einstellungen", "/admin"];
 
-/** Parameter, mit dem gemeinsame Seiten ihren Bereich mitbekommen (`?bereich=sport`). */
+/** Parameter, mit dem gemeinsame Seiten ihren Bereich mitbekommen (`?bereich=sport` bzw. `?bereich=start`). */
 export const AREA_PARAM = "bereich";
 
 /**
  * Zu welchem Bereich eine Seite gehört. Alles außer Start und Sport ist Essen & Trinken; gemeinsame Seiten
- * gehören zum Bereich aus `?bereich=` (sonst Essen & Trinken).
+ * gehören zum Bereich aus `?bereich=` (Sport oder Start, sonst Essen & Trinken).
  */
 export function areaForPath(pathname: string, areaParam?: string | null): AreaKey {
   if (pathname === "/") return "start";
   if (isActivePath(pathname, "/sport")) return "sport";
-  if (SHARED_PATHS.some((p) => isActivePath(pathname, p)) && areaParam === "sport") return "sport";
+  if (SHARED_PATHS.some((p) => isActivePath(pathname, p)) && (areaParam === "sport" || areaParam === "start")) return areaParam;
   return "food";
 }
 
 /** Link auf eine gemeinsame Seite, die im aktuellen Bereich bleiben soll, z. B. „/einstellungen?bereich=sport“. */
 export function sharedHref(path: string, area: AreaKey): string {
-  if (area !== "sport") return path;
+  if (area === "food") return path;
   const [base, hash] = path.split("#");
-  return `${base}?${AREA_PARAM}=sport${hash ? `#${hash}` : ""}`;
+  return `${base}?${AREA_PARAM}=${area}${hash ? `#${hash}` : ""}`;
 }

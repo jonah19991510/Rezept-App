@@ -9,8 +9,11 @@ import { importSportBackupAction } from "./sport-backup-actions";
 
 const MAX_BACKUP_BYTES = 10 * 1024 * 1024;
 
-/** Einstellungen im Sport-Bereich: Trainingsdaten sichern, Sicherung einspielen, alle Daten herunterladen. */
-export function SportDataSection() {
+/**
+ * Einstellungen im Sport-Bereich: Trainingsdaten sichern, Sicherung einspielen und (showAllData) alle Daten
+ * herunterladen; auf den Einstellungen für alle Bereiche steht dieser Knopf schon bei Essen & Trinken.
+ */
+export function SportDataSection({ showAllData }: { showAllData: boolean }) {
   const input = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ text: string; ok: boolean }>();
   const [pending, startTransition] = useTransition();
@@ -58,10 +61,12 @@ export function SportDataSection() {
           {pending ? <Loader2 className="animate-spin" aria-hidden /> : <FileUp aria-hidden />}
           {pending ? "Wird importiert …" : "Trainingsdaten importieren"}
         </Button>
-        <a href="/einstellungen/meine-daten" download className={buttonVariants({ variant: "outline" })}>
-          <Download aria-hidden />
-          Meine Daten herunterladen
-        </a>
+        {showAllData ? (
+          <a href="/einstellungen/meine-daten" download className={buttonVariants({ variant: "outline" })}>
+            <Download aria-hidden />
+            Meine Daten herunterladen
+          </a>
+        ) : null}
         <input
           ref={input}
           type="file"
@@ -87,10 +92,12 @@ export function SportDataSection() {
           <strong className="font-medium text-foreground">Importieren</strong> legt die Pläne zusätzlich an; Pläne, deren
           Namen es bei dir schon gibt, werden übersprungen. Fehlende Übungen werden als eigene Übungen angelegt.
         </li>
-        <li>
-          <strong className="font-medium text-foreground">Meine Daten</strong>: alles, was die App über dich speichert,
-          aus beiden Bereichen.
-        </li>
+        {showAllData ? (
+          <li>
+            <strong className="font-medium text-foreground">Meine Daten</strong>: alles, was die App über dich speichert,
+            aus beiden Bereichen.
+          </li>
+        ) : null}
       </ul>
     </div>
   );

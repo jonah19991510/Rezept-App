@@ -1363,6 +1363,11 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
   speichern; Pläne mit schon vorhandenem Namen werden übersprungen. Logik in `domain/sport-backup.ts` (Tests).
   Trainings kommen mit S2 als Version 2 dazu.
 - 386 Tests, Typecheck, Lint, Build grün. **Nicht im Browser geprüft** (Einstellungen brauchen Login).
+- **Einstellungen von der Startseite** (Wunsch des Nutzers, nachdem Sport funktionierte): Das Profilmenü verlinkt dort
+  auf `/einstellungen?bereich=start`; die Seite gehört dann zu „Start“ (Umschalter zeigt Start, keine Seiten- oder
+  untere Leiste) und führt beide Bereiche zusammen: Profil, Passwort, Zwischenüberschrift „Essen & Trinken“ mit allen
+  Küchen-Einstellungen, „Sport & Gesundheit“ mit Trainingsdaten (ohne den doppelten Knopf „Meine Daten“), Account
+  löschen. Nicht im Browser geprüft (Login).
 
 - **Migration** `…20261026120000_sport_plans` (additiv): Enums `muscle_group`, `exercise_equipment`,
   `exercise_tracking`; Tabellen `exercises` (Grundbestand 120 Übungen auf Deutsch, eigene mit `created_by`, alle
