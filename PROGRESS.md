@@ -1350,6 +1350,11 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Phase S3: Statistik
 
+**Live** seit 26.10.2026: Push `cee4396` (GitHub lehnte zweimal mit „Internal Server Error“ ab, der dritte Versuch ging)
+→ Deployment `dpl_6kWUWK9mTGV7iDSCBCWCfF9bahhk` (`production`, „READY“; per Vercel-Connector geprüft).
+**Nächster Schritt:** Phase S4 (Entdecken: Pläne veröffentlichen, fremde Pläne starten oder übernehmen) nach OK des
+Nutzers. Export/Import der Trainingsdaten ist schon fertig (vorgezogen).
+
 Keine Migration (alles aus `workouts`, `workout_exercises`, `workout_sets`).
 
 - **Seite** `/sport/statistik` (vorher „Kommt bald“): Zeitraum als Chips (4 Wochen, 3 Monate, 1 Jahr, Alles; Start
