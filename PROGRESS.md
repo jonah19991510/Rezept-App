@@ -1390,6 +1390,12 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
   hell/dunkel: Aufwärmsätze (60 kg → 20×10, 30×8, 42,5×5, 50×3), Abhaken übernimmt die hellen Werte, Pausentimer,
   Neuladen stellt den Stand vom Handy wieder her, Beenden-Dialog. **Nicht geprüft:** echtes Speichern mit Login,
   Offline im fertigen Build, Ton/Vibration am Handy.
+- **Migration eingespielt** am 26.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in
+  Supabase unter `sport_workouts`). RLS auf allen drei Tabellen, keine Rechte für `anon`, Security-Advisor ohne neue
+  Hinweise. Per SQL als Admin geprüft (zurückgerollt): Training anlegen (Version 1), älterer Stand (Version 0) wird
+  ignoriert, zweites laufendes Training wird abgelehnt (23505), Abschluss mit Version 3 speichert beide Sätze,
+  `last_exercise_sets` liefert den erledigten Arbeitssatz (62,5 kg × 8, Aufwärmsatz nicht); ein anderes Konto sieht das
+  Training nicht und kann es nicht überschreiben. Danach 0 Trainings in der Datenbank.
 
 ### Phase S1: Gerüst, Übungsdatenbank, Trainingspläne
 
