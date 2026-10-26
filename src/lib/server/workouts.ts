@@ -1,6 +1,8 @@
 import "server-only";
 import type { ExerciseOption } from "@/lib/domain/exercises";
+import { todayInBerlin } from "@/lib/domain/week";
 import { setInputs, type LastSet, type Session } from "@/lib/domain/workout";
+import type { StatsWorkout } from "@/lib/domain/workout-stats";
 import { createClient } from "@/lib/supabase/server";
 
 // Sport & Gesundheit, Phase S2: Trainings lesen.
@@ -146,4 +148,37 @@ export async function getWorkoutHistory(userId: string, options: { from?: string
     }
     return { id: w.id, title: w.title, startedAt: w.started_at, endedAt: w.ended_at, exercises, sets, volumeKg };
   });
+}
+
+/** Alle beendeten Trainings mit erledigten Sätzen für die Statistik (Tag in deutscher Zeit). */
+export async function getWorkoutStatsData(userId: string): Promise<StatsWorkout[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("workouts")
+    .select(
+      "id, title, started_at, ended_at, workout_exercises!workout_exercises_workout_id_fkey(position, exercises!workout_exercises_exercise_id_fkey(id, name, muscle_group, secondary_muscles, tracking), workout_sets!workout_sets_workout_exercise_id_fkey(position, kind, done, weight_kg, reps, seconds, distance_m))",
+    )
+    .eq("user_id", userId)
+    .not("ended_at", "is", null)
+    .order("started_at");
+  if (error) throw new Error(`Trainings konnten nicht geladen werden (${error.code})`);
+  return data.map((w) => ({
+    id: w.id,
+    title: w.title,
+    date: todayInBerlin(new Date(w.started_at)),
+    durationSeconds: Math.max(0, Math.round((new Date(w.ended_at!).getTime() - new Date(w.started_at).getTime()) / 1000)),
+    exercises: [...w.workout_exercises]
+      .sort((a, b) => a.position - b.position)
+      .map((e) => ({
+        exerciseId: e.exercises.id,
+        name: e.exercises.name,
+        muscleGroup: e.exercises.muscle_group,
+        secondaryMuscles: e.exercises.secondary_muscles,
+        tracking: e.exercises.tracking,
+        sets: [...e.workout_sets]
+          .filter((s) => s.done)
+          .sort((a, b) => a.position - b.position)
+          .map((s) => ({ kind: s.kind, weightKg: s.weight_kg, reps: s.reps, seconds: s.seconds, distanceM: s.distance_m })),
+      })),
+  }));
 }

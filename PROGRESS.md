@@ -1348,6 +1348,27 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Phase S3: Statistik
+
+Keine Migration (alles aus `workouts`, `workout_exercises`, `workout_sets`).
+
+- **Seite** `/sport/statistik` (vorher „Kommt bald“): Zeitraum als Chips (4 Wochen, 3 Monate, 1 Jahr, Alles; Start
+  3 Monate), alles im Browser gerechnet aus den beendeten Trainings (`getWorkoutStatsData`).
+- **Kennzahlen:** Trainings (und pro Woche), Ø Dauer (und gesamt), Volumen (kg bzw. t, Arbeitssätze), Serie (Wochen am
+  Stück mit Training, die laufende Woche darf noch leer sein).
+- **Diagramme** (Recharts, Farben aus der geprüften Diagramm-Palette, je Diagramm Tooltip und Tabellenansicht):
+  Trainings pro Woche, Volumen pro Woche, Dauer pro Woche; **Übung im Verlauf** (Auswahl nach Häufigkeit): geschätztes
+  1RM (Epley, nur bis 12 Wdh.) und schwerster Satz als zwei Linien in kg mit Legende, bei Zeit/Strecke/Körpergewicht
+  eine Linie (längster Satz, Strecke, meiste Wdh.); Tipp auf einen Punkt öffnet das Training; Bestwerte-Kacheln
+  (schwerster Satz mit Wdh., 1RM, bestes Volumen, meiste Wdh.). **Sätze pro Muskelgruppe** pro Woche (Nebenmuskeln
+  halb) als Balken mit Band 10–20. **Trainingstage** der letzten 12 Wochen als Kalender. **Neue Bestwerte** (Steigerung
+  gegenüber allen früheren Trainings, das erste zählt nicht) mit Link zum Training. Hinweis, dass Körpergewicht,
+  Körpermaße und Getränke später dazukommen.
+- Logik in `domain/workout-stats.ts` (Tests).
+- Geprüft: 412 Tests, Typecheck, Lint, Build grün. Über eine temporäre Vorschauseite mit 12 Wochen Beispieldaten (danach
+  gelöscht) bei 375 px: kein seitliches Scrollen, Tooltips, Kennzahlen ohne Umbruch. **Nicht geprüft:** mit echten
+  Daten und Login.
+
 ### Phase S2: Training im Gym
 
 **Live** seit 26.10.2026: Push `b8a4bc9` (mit `2ad403b`) → Deployment `dpl_CPtPEeRbAhhrzPxe4aLioMk78pyr` (`production`,
