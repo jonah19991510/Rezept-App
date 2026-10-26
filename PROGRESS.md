@@ -1350,6 +1350,9 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Nachtrag 26.10.2026: Übungsdatenbank im Profilmenü
 
+**Live** seit 26.10.2026: Push `c1e2a08` (mit `e5dc1f2`) → Deployment `dpl_3DnQxuZLfz8Zv69cxv6kz4UhwfvA` („READY“; per
+Vercel-Connector geprüft, keine Fehler im Log).
+
 Wunsch des Nutzers: alle Übungen sehen, bearbeiten/umbenennen, neue anlegen. Entscheidung des Nutzers: eigene Übungen
 und als **Admin auch den Grundbestand** (gilt für alle).
 
