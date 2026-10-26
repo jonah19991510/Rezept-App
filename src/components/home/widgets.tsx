@@ -22,7 +22,9 @@ import { expiryLabel } from "@/lib/domain/pantry";
 import { SLOT_LABELS } from "@/lib/domain/plan";
 import { hasAnyGoal } from "@/lib/domain/training";
 import { formatNumber } from "@/lib/format";
-import type { ExpiringItem, LongAgoRecipe, TodayPlan } from "@/lib/server/home";
+import { addDays, mondayOf, weekdayShort } from "@/lib/domain/week";
+import { workoutDuration } from "@/lib/domain/workout";
+import type { ExpiringItem, LongAgoRecipe, SportSummary, TodayPlan } from "@/lib/server/home";
 import { cn } from "@/lib/utils";
 
 // Widgets der Startseite (Server-Komponenten). Anordnen und Ausblenden übernimmt HomeWidgets.
@@ -178,15 +180,24 @@ export function FoodAreaWidget({ plan, hour, shoppingCount }: { plan: TodayPlan 
   );
 }
 
-/** Sport & Gesundheit: zuletzt geänderter aktiver Plan, Abkürzungen zu Plänen, Körper, Energie und Lexikon. */
-export function SportAreaWidget({ plan }: { plan: { title: string; days: number } | null }) {
+const clock = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+
+/** Sport & Gesundheit: laufendes Training bzw. nächster Tag, Abkürzungen zu Plänen, Körper, Energie und Lexikon. */
+export function SportAreaWidget({ sport }: { sport: SportSummary }) {
+  const subtitle = sport.active
+    ? `Training läuft seit ${clock.format(new Date(sport.active.startedAt))} Uhr`
+    : sport.next
+      ? `Als Nächstes: ${sport.next.dayName}${sport.next.focus ? ` · ${sport.next.focus}` : ""}`
+      : sport.hasPlan
+        ? "Dein Plan hat noch keine Tage"
+        : "Leg deinen ersten Trainingsplan an";
   return (
     <AreaCard
       areaKey="sport"
-      subtitle={plan ? `${plan.title} · ${plan.days === 1 ? "1 Tag" : `${plan.days} Tage`}` : "Leg deinen ersten Trainingsplan an"}
+      subtitle={subtitle}
       tileClass="bg-sport-soft text-sport"
       tiles={[
-        { href: "/sport/plaene", label: "Training", icon: Dumbbell },
+        { href: sport.active ? `/training/${sport.active.id}` : "/sport/plaene", label: "Training", icon: Dumbbell },
         { href: "/sport/koerper", label: "Körper", icon: Ruler },
         { href: "/sport/energie", label: "Energie", icon: Flame },
         { href: "/sport/lexikon", label: "Lexikon", icon: BookOpenText },
@@ -329,6 +340,56 @@ export function LongNotCookedWidget({ items, weeks }: { items: LongAgoRecipe[]; 
             </li>
           ))}
         </ul>
+      )}
+    </section>
+  );
+}
+
+/** Training diese Woche: Anzahl und Dauer, Mo–So als Punkte, letztes Training. */
+export function TrainingWidget({ sport, today }: { sport: SportSummary; today: string }) {
+  const monday = mondayOf(today);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const trained = new Set(sport.week.map((w) => w.date));
+  const seconds = sport.week.reduce(
+    (sum, w) => sum + (w.endedAt ? Math.round((new Date(w.endedAt).getTime() - new Date(w.startedAt).getTime()) / 1000) : 0),
+    0,
+  );
+  return (
+    <section className={CARD}>
+      <WidgetTitle icon={Dumbbell} title="Training diese Woche" aside={<AsideLink href="/sport/verlauf">Verlauf</AsideLink>} />
+      <p className="flex items-baseline gap-2">
+        <span className="font-heading text-4xl font-semibold tabular-nums">{sport.week.length}</span>
+        <span className="text-muted-foreground">
+          {sport.week.length === 1 ? "Training" : "Trainings"}
+          {seconds > 0 ? ` · ${workoutDuration(seconds)}` : ""}
+        </span>
+      </p>
+      <ol className="mt-3 grid grid-cols-7 gap-1.5" aria-label="Trainingstage dieser Woche">
+        {days.map((d) => (
+          <li key={d} className="flex flex-col items-center gap-1">
+            <span
+              className={cn(
+                "grid size-8 place-items-center rounded-full text-xs font-medium",
+                trained.has(d) ? "bg-sport text-sport-foreground" : "bg-muted text-muted-foreground",
+                d === today && !trained.has(d) && "ring-2 ring-sport/50",
+              )}
+            >
+              {weekdayShort(d).slice(0, 2)}
+            </span>
+            <span className="sr-only">{trained.has(d) ? "trainiert" : "nicht trainiert"}</span>
+          </li>
+        ))}
+      </ol>
+      {sport.last ? (
+        <Link href={`/sport/verlauf/${sport.last.id}`} className="mt-3 flex min-h-11 items-center justify-between gap-3 rounded-2xl bg-muted px-3 py-2 transition hover:bg-accent">
+          <span className="min-w-0">
+            <span className="block text-xs text-muted-foreground">Zuletzt · {weekdayShort(sport.last.date)}, {sport.last.date.slice(8, 10)}.{sport.last.date.slice(5, 7)}.</span>
+            <span className="block truncate font-medium">{sport.last.title}</span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        </Link>
+      ) : (
+        <p className="mt-3 text-sm text-muted-foreground">Noch kein Training. Starte eins über deine Pläne.</p>
       )}
     </section>
   );

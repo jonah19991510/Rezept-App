@@ -44,8 +44,10 @@ export function SportDataSection({ showAllData }: { showAllData: boolean }) {
       }
       const parts = [`${result.imported} ${result.imported === 1 ? "Plan" : "Pläne"} importiert`];
       if (result.skipped) parts.push(`${result.skipped} übersprungen (Name gibt es schon)`);
+      if (result.importedWorkouts) parts.push(`${result.importedWorkouts} ${result.importedWorkouts === 1 ? "Training" : "Trainings"} importiert`);
+      if (result.skippedWorkouts) parts.push(`${result.skippedWorkouts} Trainings übersprungen (gab es schon)`);
       if (result.createdExercises) parts.push(`${result.createdExercises} fehlende Übungen als eigene angelegt`);
-      setMessage({ text: `${parts.join(", ")}.`, ok: result.imported > 0 || result.skipped > 0 });
+      setMessage({ text: `${parts.join(", ")}.`, ok: true });
     });
   }
 
@@ -84,13 +86,14 @@ export function SportDataSection({ showAllData }: { showAllData: boolean }) {
       <FormMessage message={message?.text} ok={message?.ok} />
       <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
         <li>
-          <strong className="font-medium text-foreground">Exportieren</strong>: deine Trainingspläne (auch ausgeblendete)
-          und deine eigenen Übungen als Datei, die du hier wieder importieren kannst. Trainings kommen dazu, sobald es sie
-          gibt.
+          <strong className="font-medium text-foreground">Exportieren</strong>: deine Trainingspläne (auch ausgeblendete),
+          deine beendeten Trainings mit allen Sätzen und deine eigenen Übungen als Datei, die du hier wieder importieren
+          kannst.
         </li>
         <li>
-          <strong className="font-medium text-foreground">Importieren</strong> legt die Pläne zusätzlich an; Pläne, deren
-          Namen es bei dir schon gibt, werden übersprungen. Fehlende Übungen werden als eigene Übungen angelegt.
+          <strong className="font-medium text-foreground">Importieren</strong> legt Pläne und Trainings zusätzlich an; Pläne
+          mit vorhandenem Namen und Trainings mit derselben Startzeit werden übersprungen. Fehlende Übungen werden als eigene
+          Übungen angelegt.
         </li>
         {showAllData ? (
           <li>

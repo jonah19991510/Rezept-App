@@ -12,6 +12,7 @@ export const HOME_WIDGETS = [
   { id: "ready", label: "Was kann ich kochen?", description: "Rezepte und Cocktails aus dem Vorrat", visible: true },
   { id: "expiring", label: "Läuft bald ab", description: "Vorrat mit Ablaufdatum", visible: false },
   { id: "longNotCooked", label: "Lange nicht gekocht", description: "Gut bewertete Rezepte von früher", visible: false },
+  { id: "training", label: "Training diese Woche", description: "Trainings, Dauer und letztes Training", visible: true },
 ] as const;
 
 export type HomeWidgetId = (typeof HOME_WIDGETS)[number]["id"];

@@ -4,11 +4,15 @@ import { ChevronDown, ClipboardList } from "lucide-react";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { NewRecipeFab } from "@/components/recipes/new-recipe-fab";
+import { ActiveWorkoutBanner } from "@/components/sport/active-workout-banner";
 import { PlanMenu } from "@/components/sport/plan-menu";
+import { SportTabs } from "@/components/sport/sport-tabs";
+import { StartTraining } from "@/components/sport/start-training";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { planSummary } from "@/lib/domain/training-plan";
 import { getTrainingPlans, type PlanListItem } from "@/lib/server/sport";
+import { getActiveWorkout } from "@/lib/server/workouts";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Trainingspläne" };
@@ -46,14 +50,16 @@ function PlanCard({ plan }: { plan: PlanListItem }) {
 
 export default async function PlansPage() {
   const user = await requireUser();
-  const plans = await getTrainingPlans(user.id);
-  const active = plans.filter((p) => !p.isArchived);
+  const [plans, active] = await Promise.all([getTrainingPlans(user.id), getActiveWorkout(user.id)]);
+  const current = plans.filter((p) => !p.isArchived);
   const archived = plans.filter((p) => p.isArchived);
 
   return (
     // Unten Platz lassen, damit der schwebende Knopf die letzte Karte nicht verdeckt
     <div className="pb-16 md:pb-20">
-      <PageHeader title="Trainingspläne" description={plans.length > 0 ? `${active.length} aktiv` : undefined} />
+      <PageHeader title="Training" />
+      <SportTabs active="plaene" />
+      {active ? <ActiveWorkoutBanner workout={active} /> : null}
 
       {plans.length === 0 ? (
         <EmptyState
@@ -70,9 +76,9 @@ export default async function PlansPage() {
         </EmptyState>
       ) : (
         <div className="space-y-6">
-          {active.length > 0 ? (
+          {current.length > 0 ? (
             <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {active.map((p) => (
+              {current.map((p) => (
                 <PlanCard key={p.id} plan={p} />
               ))}
             </ul>
@@ -80,6 +86,12 @@ export default async function PlansPage() {
             <p className="rounded-3xl border border-dashed p-6 text-center text-muted-foreground">
               Alle Pläne sind ausgeblendet. Unten kannst du einen wieder einblenden.
             </p>
+          )}
+
+          {active ? null : (
+            <div className="flex justify-center">
+              <StartTraining label="Freies Training ohne Plan" variant="outline" />
+            </div>
           )}
 
           {archived.length > 0 ? (

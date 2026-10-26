@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { clearAllLocalWorkouts } from "@/components/sport/workout/use-workout-session";
 import { initials } from "@/lib/initials";
 import { sharedHref } from "./nav-items";
 import { useArea } from "./use-area";
@@ -107,7 +108,13 @@ export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmi
         <DropdownMenuItem
           className={ITEM}
           disabled={pending}
-          onClick={() => startTransition(() => logoutAction())}
+          onClick={() =>
+            startTransition(() => {
+              // Auf geteilten Geräten keine Trainingsdaten liegen lassen
+              clearAllLocalWorkouts();
+              return logoutAction();
+            })
+          }
         >
           <LogOut aria-hidden />
           Abmelden

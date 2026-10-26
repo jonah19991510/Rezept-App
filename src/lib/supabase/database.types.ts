@@ -17,6 +17,171 @@ export type Database = {
   }
   public: {
     Tables: {
+      workout_exercises: {
+        Row: {
+          exercise_id: string
+          id: string
+          note: string | null
+          position: number
+          reps_max: number | null
+          reps_min: number | null
+          rest_seconds: number | null
+          target_seconds: number | null
+          warmup: boolean
+          workout_id: string
+        }
+        Insert: {
+          exercise_id: string
+          id: string
+          note?: string | null
+          position: number
+          reps_max?: number | null
+          reps_min?: number | null
+          rest_seconds?: number | null
+          target_seconds?: number | null
+          warmup?: boolean
+          workout_id: string
+        }
+        Update: {
+          exercise_id?: string
+          id?: string
+          note?: string | null
+          position?: number
+          reps_max?: number | null
+          reps_min?: number | null
+          rest_seconds?: number | null
+          target_seconds?: number | null
+          warmup?: boolean
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_exercises_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workout_sets: {
+        Row: {
+          distance_m: number | null
+          done: boolean
+          done_at: string | null
+          id: string
+          kind: Database["public"]["Enums"]["workout_set_kind"]
+          position: number
+          reps: number | null
+          seconds: number | null
+          weight_kg: number | null
+          workout_exercise_id: string
+        }
+        Insert: {
+          distance_m?: number | null
+          done?: boolean
+          done_at?: string | null
+          id: string
+          kind?: Database["public"]["Enums"]["workout_set_kind"]
+          position: number
+          reps?: number | null
+          seconds?: number | null
+          weight_kg?: number | null
+          workout_exercise_id: string
+        }
+        Update: {
+          distance_m?: number | null
+          done?: boolean
+          done_at?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["workout_set_kind"]
+          position?: number
+          reps?: number | null
+          seconds?: number | null
+          weight_kg?: number | null
+          workout_exercise_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_sets_workout_exercise_id_fkey"
+            columns: ["workout_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "workout_exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workouts: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          note: string | null
+          plan_day_id: string | null
+          plan_id: string | null
+          started_at: string
+          title: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          note?: string | null
+          plan_day_id?: string | null
+          plan_id?: string | null
+          started_at: string
+          title: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          note?: string | null
+          plan_day_id?: string | null
+          plan_id?: string | null
+          started_at?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workouts_plan_day_id_fkey"
+            columns: ["plan_day_id"]
+            isOneToOne: false
+            referencedRelation: "training_plan_days"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workouts_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workouts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
           created_at: string
@@ -1214,6 +1379,22 @@ export type Database = {
       }
     }
     Functions: {
+      last_exercise_sets: {
+        Args: { p_exclude?: string; p_exercise_ids: string[] }
+        Returns: {
+          distance_m: number
+          exercise_id: string
+          reps: number
+          seconds: number
+          set_index: number
+          started_at: string
+          weight_kg: number
+        }[]
+      }
+      sync_workout: {
+        Args: { p_workout: Json }
+        Returns: number
+      }
       copy_training_plan: {
         Args: { p_plan_id: string; p_title?: string }
         Returns: string
@@ -1363,6 +1544,7 @@ export type Database = {
         | "dash"
         | "barspoon"
       user_role: "user" | "admin"
+      workout_set_kind: "warmup" | "normal"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1571,6 +1753,7 @@ export const Constants = {
         "barspoon",
       ],
       user_role: ["user", "admin"],
+      workout_set_kind: ["warmup", "normal"],
     },
   },
 } as const

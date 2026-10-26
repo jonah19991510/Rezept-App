@@ -17,7 +17,7 @@ export type CookTimer = {
 let nextId = 1;
 
 /** Kurzer Gong mit der Web-Audio-API (keine Audiodatei, funktioniert offline). */
-function beep(ctx: AudioContext) {
+export function beep(ctx: AudioContext) {
   const now = ctx.currentTime;
   for (let i = 0; i < 3; i++) {
     const osc = ctx.createOscillator();

@@ -36,7 +36,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
   const id = user.id;
   const [
     profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
-    trainingPlans, ownExercises,
+    trainingPlans, ownExercises, workouts,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, created_at").eq("id", id).maybeSingle(),
     supabase
@@ -67,6 +67,13 @@ export async function buildPersonalDataExport(user: CurrentUser) {
       .eq("owner_id", id)
       .order("created_at"),
     supabase.from("exercises").select("*").eq("created_by", id).order("created_at"),
+    supabase
+      .from("workouts")
+      .select(
+        "*, workout_exercises!workout_exercises_workout_id_fkey(*, exercises!workout_exercises_exercise_id_fkey(name), workout_sets!workout_sets_workout_exercise_id_fkey(*))",
+      )
+      .eq("user_id", id)
+      .order("started_at"),
   ]);
 
   return {
@@ -90,6 +97,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     kategorien: must(categories, "Kategorien"),
     trainingsplaene: must(trainingPlans, "Trainingspläne"),
     eigene_uebungen: must(ownExercises, "Übungen"),
+    trainings: must(workouts, "Trainings"),
   };
 }
 
@@ -190,7 +198,7 @@ export async function getOwnRecipesForMarkdown(userId: string): Promise<Markdown
 /** Sport-Sicherung: eigene Trainingspläne (mit Tagen und Übungen) und eigene Übungen, wieder importierbar. */
 export async function buildSportBackup(userId: string): Promise<SportBackupFile> {
   const supabase = await createClient();
-  const [plans, exercises] = await Promise.all([
+  const [plans, exercises, workouts] = await Promise.all([
     supabase
       .from("training_plans")
       .select(
@@ -199,6 +207,13 @@ export async function buildSportBackup(userId: string): Promise<SportBackupFile>
       .eq("owner_id", userId)
       .order("created_at"),
     supabase.from("exercises").select("name, muscle_group, secondary_muscles, equipment, tracking").eq("created_by", userId).order("name"),
+    supabase
+      .from("workouts")
+      .select(
+        "title, started_at, ended_at, note, training_plans!workouts_plan_id_fkey(title), training_plan_days!workouts_plan_day_id_fkey(name), workout_exercises!workout_exercises_workout_id_fkey(position, note, exercises!workout_exercises_exercise_id_fkey(name, muscle_group, secondary_muscles, equipment, tracking), workout_sets!workout_sets_workout_exercise_id_fkey(position, kind, done, weight_kg, reps, seconds, distance_m))",
+      )
+      .eq("user_id", userId)
+      .order("started_at"),
   ]);
-  return toSportBackupFile(must(plans, "Trainingspläne"), must(exercises, "Übungen"), new Date());
+  return toSportBackupFile(must(plans, "Trainingspläne"), must(exercises, "Übungen"), must(workouts, "Trainings"), new Date());
 }

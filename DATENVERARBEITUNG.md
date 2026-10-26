@@ -53,6 +53,8 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `favorites` | Lieblingsrezepte | 2 | nur Nutzer selbst |
 | `ingredients` (Spalte `created_by`) | selbst angelegte Zutaten | 2 | Zutaten sind global für alle lesbar; `created_by` wird beim Löschen auf leer gesetzt |
 | `training_plans` (+ `training_plan_days`, `training_plan_exercises`) | Trainingspläne mit Tagen und Übungen (Sätze, Wiederholungen, Pause, Notiz), „ausgeblendet“; `forked_from_id` für spätere Übernahmen | S1 (26.10.2026) | nur Owner; öffentlich erst mit Phase S4 (Schalter, alle Eingeloggten mit Anzeigename) |
+| `workouts` (+ `workout_exercises`, `workout_sets`) | Trainings: Start/Ende, Plan und Tag, Übungen, Sätze (Gewicht, Wiederholungen, Zeit, Strecke), Notizen | S2 (26.10.2026) | nur Nutzer selbst |
+| Browser (`localStorage`, Schlüssel `training:<id>`) und Cache Storage des Service Workers (`rezeptbuch-training`, Seite `/training/<id>`) | laufendes Training, damit es ohne Netz weitergeht | S2 (26.10.2026) | nur das Gerät; gelöscht beim Beenden, Verwerfen und Abmelden |
 | `exercises` (Spalte `created_by`) | selbst angelegte Übungen (Name, Muskelgruppe, Gerät) | S1 (26.10.2026) | Übungen sind wie Zutaten für alle lesbar; ändern nur, wer sie angelegt hat; `created_by` wird beim Löschen auf leer gesetzt |
 | Storage-Bucket `recipe-photos/<user-id>/<rezept-id>/…` (privat) | Rezeptfotos (groß + Vorschaubild), vor dem Upload im Browser verkleinert und neu kodiert, dadurch **ohne EXIF/GPS** | 7 | wie das Rezept (Owner; bei öffentlichen Rezepten alle Eingeloggten), ausgeliefert nur über die App-Route `/foto/…` |
 
@@ -127,6 +129,11 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **26.10.2026, Sport & Gesundheit Phase S2:** Neue Tabellen `workouts`, `workout_exercises`, `workout_sets` (RLS nur
+  der Nutzer, Cascade am Profil), im Datenexport als `trainings` und in der Sport-Sicherung (Version 2). Während eines
+  Trainings liegt sein Stand zusätzlich im Browser (`localStorage`) und die Trainingsseite im Cache des Service Workers
+  (Ausnahme von „keine Seiten im Cache“), damit es ohne Netz weitergeht; beides wird beim Beenden, Verwerfen und
+  Abmelden gelöscht. Trainingsdaten lassen Rückschlüsse auf Sport und Gesundheit zu. Keine neuen Dienstleister.
 - **26.10.2026, Sport & Gesundheit Phase S1:** Neue Tabellen `exercises` (Grundbestand ohne Personenbezug, eigene
   Übungen mit `created_by`), `training_plans`, `training_plan_days`, `training_plan_exercises` (RLS: nur Owner bzw.
   öffentliche Pläne lesbar, Kindtabellen über Security-Definer-Prüfungen; Cascade am Profil). Im Datenexport als

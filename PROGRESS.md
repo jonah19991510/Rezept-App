@@ -1348,6 +1348,49 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Phase S2: Training im Gym
+
+- **Migration** `…20261026150000_sport_workouts` (additiv): Typ `workout_set_kind` (warmup/normal); Tabellen `workouts`
+  (Plan/Tag `on delete set null`, Titel, Start, Ende = null solange es läuft, Notiz, `version` = Stand-Zähler des Handys;
+  höchstens ein laufendes Training je Nutzer per Teil-Index), `workout_exercises` (Vorgaben aus dem Plan, Übung
+  `restrict`), `workout_sets` (Art, kg, Wdh., Sekunden, Meter, erledigt). IDs erzeugt das Handy. RLS: nur der Nutzer
+  (`private.owns_workout`). `sync_workout(jsonb)` speichert das ganze Training atomar und ignoriert ältere Stände;
+  `last_exercise_sets` liefert je Übung die erledigten Arbeitssätze des letzten beendeten Trainings.
+- **Training starten** (Planseite, Dialog mit den Tagen, vorausgewählt der nächste nach dem zuletzt trainierten;
+  „Freies Training ohne Plan“ auf der Pläne-Seite). Läuft schon eins: Fortsetzen oder Verwerfen und neu starten.
+- **Training im Gym** (`/training/[id]`, Vollbild ohne Navigation wie der Kochmodus, Bildschirm bleibt an):
+  Dauer oben, je Übung Sätze mit „Zuletzt“ und den Werten vom letzten Mal hell in den Feldern (Abhaken übernimmt
+  sie; ab dem Satz, den es letztes Mal nicht gab, gilt der letzte bekannte), Felder je Erfassung (kg/Wdh., +kg/Wdh.,
+  Zeit, km/Zeit; Zeiten als 45 oder 1:30), Abhaken (grün), Satz +/−, Aufwärmsätze berechnen (leere Stange × 10,
+  50/70/85 % × 8/5/3, auf 2,5 kg bzw. Gerätschritt gerundet; Knopf direkt unter Übungen mit „Aufwärmsätze“ im Plan, sonst
+  im Menü), Pausentimer nach jedem Arbeitssatz (−15/+15, Überspringen, Ton und Vibration), Übungen tauschen,
+  hinzufügen (mit Werten vom letzten Mal, wenn Netz da ist), entfernen (mit Rückgängig), per Drag & Drop verschieben,
+  Notiz je Übung und zum Training, Training verwerfen.
+- **Ohne Netz:** Jede Änderung landet sofort im `localStorage` (`training:<id>`) und wird entprellt hochgeladen
+  (`syncWorkoutAction`, ganzes Training mit Versionszähler); ohne Netz neuer Versuch beim Ereignis „online“ bzw. alle
+  15 s. Anzeige oben: Wolke = gespeichert, „offline gesichert“. Beim Laden gilt der neuere Stand (Handy oder Server).
+  Der Service Worker (Version v2) speichert die Seite `/training/<id>` beim Laden, damit Neuladen im Funkloch geht;
+  Beenden/Verwerfen/Abmelden löschen sie und den lokalen Stand. Abgelaufene Anmeldung leitet beim Hochladen nicht zum
+  Login um (der Stand bleibt auf dem Handy). **Offline nur im fertigen Build prüfbar** (Service Worker läuft nicht beim
+  Entwickeln); das Speichern im `localStorage` und Neuladen ist im Entwicklungsserver geprüft.
+- **Beenden:** Zusammenfassung (Dauer, Sätze, Volumen); nicht erledigte Sätze und Übungen ohne erledigten Satz fallen
+  weg, leere erledigte Sätze bekommen die Werte vom letzten Mal. Danach Verlaufsseite mit „Training gespeichert“ und,
+  wenn Übungen, Reihenfolge oder Satzzahl vom Plan-Tag abweichen, **„Änderungen in den Plan übernehmen?“**
+  (Vorgaben wie Wdh./Pause/Notiz bleiben). Ohne Netz: Hinweis „auf dem Handy gesichert“, Hochladen sobald möglich.
+- **Verlauf** (`/sport/verlauf`, Tabs „Pläne | Verlauf“, nach Monat): Trainings mit Dauer, Sätzen, Volumen; Detail mit
+  allen Sätzen, Fortsetzen (wenn es läuft), Löschen. Banner „Training läuft“ auf Pläne, Verlauf und Planseite.
+- **Startseite:** Sport-Karte „Als Nächstes: Tag B · Rücken“ bzw. „Training läuft seit …“; neues Widget **„Training
+  diese Woche“** (Anzahl, Dauer, Mo–So, zuletzt). Für bestehende Anordnungen wird es hinten angehängt.
+- **Sicherung Version 2** (Trainingsdaten exportieren/importieren): auch beendete Trainings (Plan/Tag über Namen,
+  nur erledigte Sätze); Import überspringt Trainings mit gleicher Startzeit. Version 1 geht weiter. Datenexport:
+  `trainings`.
+- Reine Logik in `domain/workout.ts` (Aufwärmsätze, Anzeige/Eingabe, Abschluss, Zusammenfassung, Rotation,
+  Training → Plan) mit Tests; `domain/sport-backup.ts` erweitert.
+- Geprüft: 402 Tests, Typecheck, Lint, Build grün. Live-Ansicht über eine temporäre Vorschauseite (gelöscht) bei 375 px
+  hell/dunkel: Aufwärmsätze (60 kg → 20×10, 30×8, 42,5×5, 50×3), Abhaken übernimmt die hellen Werte, Pausentimer,
+  Neuladen stellt den Stand vom Handy wieder her, Beenden-Dialog. **Nicht geprüft:** echtes Speichern mit Login,
+  Offline im fertigen Build, Ton/Vibration am Handy.
+
 ### Phase S1: Gerüst, Übungsdatenbank, Trainingspläne
 
 **Live** seit 26.10.2026: vom Nutzer am LAN-Server getestet (Pläne, Einstellungen je Bereich, Trainingsdaten);

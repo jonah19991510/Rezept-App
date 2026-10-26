@@ -4,13 +4,16 @@ import { normalizeHomeLayout, type HomeWidget } from "@/lib/domain/home";
 import { expiryStatus } from "@/lib/domain/pantry";
 import { entryMacros, sumMacros, type DayMacros, type Goals } from "@/lib/domain/plan";
 import { goalsForDay, isTrainingDay } from "@/lib/domain/training";
-import { mondayOf } from "@/lib/domain/week";
+import { mondayOf, todayInBerlin } from "@/lib/domain/week";
+import { nextPlanDay } from "@/lib/domain/workout";
 import { createClient } from "@/lib/supabase/server";
 import { getCookLogs, getLongNotCookedWeeks } from "./kitchen-log";
 import { getPantry } from "./pantry";
 import { getAllGoals, getTrainingDays, getWeekEntries, type PlanEntry } from "./plan";
 import { getOwnRecipeTitles } from "./recipes";
 import { getShoppingList } from "./shopping";
+import { getTrainingPlans } from "./sport";
+import { getActiveWorkout, getLastPlanDayId, getWorkoutHistory, type ActiveWorkout, type WorkoutListItem } from "./workouts";
 
 // Daten für die Widgets der Startseite. Die Seite lädt nur, was sichtbare Widgets brauchen.
 
@@ -74,4 +77,34 @@ export async function getLongNotCookedRecipes(userId: string, today: string, lim
     .slice(0, limit)
     .map((l) => ({ id: l.recipeId, title: byId.get(l.recipeId)!, weeksAgo: l.weeksAgo, avgRating: l.avgRating }));
   return { items, weeks };
+}
+
+export type SportSummary = {
+  active: ActiveWorkout | null;
+  /** nächster Tag des zuletzt geänderten aktiven Plans */
+  next: { planTitle: string; dayName: string; focus: string | null } | null;
+  hasPlan: boolean;
+  /** beendete Trainings dieser Woche (Montag bis heute, deutsche Zeit) mit ihrem Tag */
+  week: (WorkoutListItem & { date: string })[];
+  last: (WorkoutListItem & { date: string }) | null;
+};
+
+/** Sport auf der Startseite: laufendes Training, als Nächstes, diese Woche. Fehler (z. B. Tabellen fehlen) = leer. */
+export async function getSportSummary(userId: string, today: string): Promise<SportSummary> {
+  const [plans, active, history] = await Promise.all([
+    getTrainingPlans(userId).catch(() => []),
+    getActiveWorkout(userId).catch(() => null),
+    getWorkoutHistory(userId, { limit: 30 }).catch(() => []),
+  ]);
+  const plan = plans.find((p) => !p.isArchived);
+  const day = plan ? nextPlanDay(plan.days, await getLastPlanDayId(userId, plan.id).catch(() => null)) : null;
+  const finished = history.filter((w) => w.endedAt).map((w) => ({ ...w, date: todayInBerlin(new Date(w.startedAt)) }));
+  const monday = mondayOf(today);
+  return {
+    active,
+    next: plan && day ? { planTitle: plan.title, dayName: day.name, focus: day.focus } : null,
+    hasPlan: Boolean(plan),
+    week: finished.filter((w) => w.date >= monday && w.date <= today),
+    last: finished[0] ?? null,
+  };
 }

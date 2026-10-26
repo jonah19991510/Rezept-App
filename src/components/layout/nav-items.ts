@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type NavItem = { href: string; label: string; icon: LucideIcon };
+export type NavItem = { href: string; label: string; icon: LucideIcon; /** weitere Seiten, bei denen der Punkt aktiv ist */ also?: string[] };
 
 /** Hauptnavigation Essen & Trinken: höchstens fünf Punkte (SPEC „Navigation“). */
 export const NAV_ITEMS: NavItem[] = [
@@ -27,7 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
 
 /** Hauptnavigation Sport & Gesundheit (Getränke und Lexikon kommen später, bis dahin Platzhalterseiten). */
 export const SPORT_NAV_ITEMS: NavItem[] = [
-  { href: "/sport/plaene", label: "Pläne", icon: ClipboardList },
+  { href: "/sport/plaene", label: "Pläne", icon: ClipboardList, also: ["/sport/verlauf"] },
   { href: "/sport/getraenke", label: "Getränke", icon: GlassWater },
   { href: "/sport/statistik", label: "Statistik", icon: ChartLine },
   { href: "/sport/lexikon", label: "Lexikon", icon: BookOpenText },
@@ -37,6 +37,11 @@ export const SPORT_NAV_ITEMS: NavItem[] = [
 /** Navigation eines Bereichs. */
 export function navItemsFor(area: AreaKey): NavItem[] {
   return area === "sport" ? SPORT_NAV_ITEMS : NAV_ITEMS;
+}
+
+/** Ist der Navigationspunkt auf dieser Seite aktiv? */
+export function isActiveItem(pathname: string, item: NavItem) {
+  return [item.href, ...(item.also ?? [])].some((href) => isActivePath(pathname, href));
 }
 
 export function isActivePath(pathname: string, href: string) {

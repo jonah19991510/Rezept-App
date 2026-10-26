@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Flame, Pencil, Play } from "lucide-react";
+import { ChevronLeft, Flame, Pencil } from "lucide-react";
 import { PlanMenu } from "@/components/sport/plan-menu";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { ActiveWorkoutBanner } from "@/components/sport/active-workout-banner";
+import { StartTraining } from "@/components/sport/start-training";
+import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { EQUIPMENT_LABELS, MUSCLE_LABELS } from "@/lib/domain/exercises";
 import { planSummary, restLabel, targetLabel, totalSets } from "@/lib/domain/training-plan";
 import { getTrainingPlan } from "@/lib/server/sport";
+import { getActiveWorkout, getLastPlanDayId } from "@/lib/server/workouts";
+import { nextPlanDay } from "@/lib/domain/workout";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata({ params }: PageProps<"/sport/plaene/[id]">): Promise<Metadata> {
@@ -23,6 +27,8 @@ export default async function PlanPage({ params }: PageProps<"/sport/plaene/[id]
   const plan = await getTrainingPlan(id, user.id);
   // Fremde öffentliche Pläne kommen mit „Entdecken“ (Phase S4)
   if (!plan || !plan.isOwn) notFound();
+  const [lastDayId, active] = await Promise.all([getLastPlanDayId(user.id, plan.id), getActiveWorkout(user.id)]);
+  const nextDay = nextPlanDay(plan.days, lastDayId);
 
   return (
     <article className="space-y-6">
@@ -44,17 +50,24 @@ export default async function PlanPage({ params }: PageProps<"/sport/plaene/[id]
         {plan.description ? <p className="mt-3 whitespace-pre-line">{plan.description}</p> : null}
       </div>
 
+      {active ? <ActiveWorkoutBanner workout={active} /> : null}
+
       <div className="flex flex-wrap items-center gap-2">
-        {/* Training im Gym kommt mit Phase S2 */}
-        <Button disabled className="h-12 rounded-full px-6 text-base">
-          <Play aria-hidden />
-          Training starten
-        </Button>
+        <StartTraining
+          planId={plan.id}
+          days={plan.days.map((d) => ({ id: d.id, name: d.name, focus: d.focus, exerciseCount: d.exercises.length }))}
+          nextDayId={nextDay?.id ?? null}
+        />
         <Link href={`/sport/plaene/${plan.id}/bearbeiten`} className={cn(buttonVariants({ variant: "outline" }), "h-12 rounded-full px-5")}>
           <Pencil aria-hidden />
           Bearbeiten
         </Link>
-        <p className="basis-full text-sm text-muted-foreground">„Training starten“ kommt im nächsten Schritt.</p>
+        {nextDay ? (
+          <p className="basis-full text-sm text-muted-foreground">
+            Als Nächstes: {nextDay.name}
+            {nextDay.focus ? ` · ${nextDay.focus}` : ""}
+          </p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

@@ -10,13 +10,13 @@ import {
   ShoppingWidget,
   SportAreaWidget,
   TodayWidget,
+  TrainingWidget,
 } from "@/components/home/widgets";
 import { requireUser } from "@/lib/auth";
 import { berlinHour, greeting, type HomeWidgetId } from "@/lib/domain/home";
 import { dayMonth, todayInBerlin, weekdayLong } from "@/lib/domain/week";
-import { getExpiringPantry, getHomeLayout, getLongNotCookedRecipes, getOpenShopping, getTodayPlan } from "@/lib/server/home";
+import { getExpiringPantry, getHomeLayout, getLongNotCookedRecipes, getOpenShopping, getSportSummary, getTodayPlan } from "@/lib/server/home";
 import { countReadyRecipes } from "@/lib/server/pantry";
-import { getTrainingPlans } from "@/lib/server/sport";
 
 export const metadata: Metadata = { title: "Start" };
 
@@ -30,23 +30,22 @@ export default async function HomePage() {
   const needs = (...ids: HomeWidgetId[]) => ids.some((id) => visible.has(id));
 
   // Nur laden, was sichtbare Widgets brauchen
-  const [plan, shopping, dishes, cocktails, expiring, longAgo, trainingPlans] = await Promise.all([
+  const [plan, shopping, dishes, cocktails, expiring, longAgo, sport] = await Promise.all([
     needs("today", "food", "meals") ? getTodayPlan(user.id, today) : null,
     needs("food", "shopping") ? getOpenShopping(user.id) : null,
     needs("ready") ? countReadyRecipes(user.id, "dish") : null,
     needs("ready") ? countReadyRecipes(user.id, "cocktail") : null,
     needs("expiring") ? getExpiringPantry(user.id, today) : null,
     needs("longNotCooked") ? getLongNotCookedRecipes(user.id, today) : null,
-    // Ein Fehler hier (z. B. Sport-Tabellen fehlen) soll nicht die ganze Startseite kosten
-    needs("sport") ? getTrainingPlans(user.id).catch(() => []) : null,
+    // Fehler hier (z. B. Sport-Tabellen fehlen) kosten nicht die ganze Startseite
+    needs("sport", "training") ? getSportSummary(user.id, today) : null,
   ]);
-  // Sport-Karte: zuletzt geänderter aktiver Plan (die Liste kommt neueste zuerst)
-  const currentPlan = trainingPlans?.find((p) => !p.isArchived);
 
   const widgets: Partial<Record<HomeWidgetId, ReactNode>> = {
     today: plan ? <TodayWidget plan={plan} /> : null,
     food: visible.has("food") ? <FoodAreaWidget plan={plan} hour={hour} shoppingCount={shopping?.count ?? null} /> : null,
-    sport: trainingPlans ? <SportAreaWidget plan={currentPlan ? { title: currentPlan.title, days: currentPlan.days.length } : null} /> : null,
+    sport: sport && visible.has("sport") ? <SportAreaWidget sport={sport} /> : null,
+    training: sport && visible.has("training") ? <TrainingWidget sport={sport} today={today} /> : null,
     meals: plan ? <MealsWidget plan={plan} /> : null,
     shopping: shopping ? <ShoppingWidget shopping={shopping} /> : null,
     ready: dishes != null && cocktails != null ? <ReadyWidget dishes={dishes} cocktails={cocktails} /> : null,
