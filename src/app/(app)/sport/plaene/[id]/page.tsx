@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Flame, Pencil } from "lucide-react";
+import { ChevronLeft, Flame, Pencil, PartyPopper } from "lucide-react";
 import { PlanMenu } from "@/components/sport/plan-menu";
+import { ForkPlanButton, PlanPublishToggle } from "@/components/sport/plan-publish";
 import { ActiveWorkoutBanner } from "@/components/sport/active-workout-banner";
 import { StartTraining } from "@/components/sport/start-training";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { EQUIPMENT_LABELS, MUSCLE_LABELS } from "@/lib/domain/exercises";
 import { planSummary, restLabel, targetLabel, totalSets } from "@/lib/domain/training-plan";
-import { getTrainingPlan } from "@/lib/server/sport";
+import { getOwnCopyOf, getTrainingPlan } from "@/lib/server/sport";
 import { getActiveWorkout, getLastPlanDayId } from "@/lib/server/workouts";
 import { nextPlanDay } from "@/lib/domain/workout";
 import { cn } from "@/lib/utils";
@@ -20,32 +21,49 @@ export async function generateMetadata({ params }: PageProps<"/sport/plaene/[id]
   return { title: plan?.title ?? "Trainingsplan" };
 }
 
-export default async function PlanPage({ params }: PageProps<"/sport/plaene/[id]">) {
+/**
+ * Planseite: eigene Pläne mit Bearbeiten, Menü und Sichtbarkeit; fremde öffentliche Pläne (aus Entdecken) mit Autor,
+ * „Training starten“ und „In meine Pläne übernehmen“.
+ */
+export default async function PlanPage({ params, searchParams }: PageProps<"/sport/plaene/[id]">) {
   const user = await requireUser();
-  const { id } = await params;
+  const [{ id }, query] = await Promise.all([params, searchParams]);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const plan = await getTrainingPlan(id, user.id);
-  // Fremde öffentliche Pläne kommen mit „Entdecken“ (Phase S4)
-  if (!plan || !plan.isOwn) notFound();
-  const [lastDayId, active] = await Promise.all([getLastPlanDayId(user.id, plan.id), getActiveWorkout(user.id)]);
+  if (!plan) notFound();
+  const [lastDayId, active, ownCopy] = await Promise.all([
+    getLastPlanDayId(user.id, plan.id),
+    getActiveWorkout(user.id),
+    plan.isOwn ? null : getOwnCopyOf(user.id, plan.id),
+  ]);
   const nextDay = nextPlanDay(plan.days, lastDayId);
+  const justForked = plan.isOwn && query.uebernommen === "1";
 
   return (
     <article className="space-y-6">
       <div>
-        <Link href="/sport/plaene" className="-ml-2 inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          href={plan.isOwn ? "/sport/plaene" : "/sport/entdecken"}
+          className="-ml-2 inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ChevronLeft className="size-4" aria-hidden />
-          Pläne
+          {plan.isOwn ? "Pläne" : "Entdecken"}
         </Link>
+        {justForked ? (
+          <p className="mb-1 flex items-center gap-2 font-medium text-sport">
+            <PartyPopper className="size-5" aria-hidden />
+            Übernommen. Der Plan gehört jetzt dir und lässt sich bearbeiten.
+          </p>
+        ) : null}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <h1 className="text-3xl font-semibold wrap-anywhere md:text-4xl">{plan.title}</h1>
             <p className="text-muted-foreground">
               {planSummary(plan.days)}
-              {plan.isArchived ? " · ausgeblendet" : ""}
+              {plan.isOwn ? (plan.isArchived ? " · ausgeblendet" : "") : ` · von ${plan.authorName}`}
             </p>
           </div>
-          <PlanMenu planId={plan.id} title={plan.title} archived={plan.isArchived} />
+          {plan.isOwn ? <PlanMenu planId={plan.id} title={plan.title} archived={plan.isArchived} /> : null}
         </div>
         {plan.description ? <p className="mt-3 whitespace-pre-line">{plan.description}</p> : null}
       </div>
@@ -58,10 +76,18 @@ export default async function PlanPage({ params }: PageProps<"/sport/plaene/[id]
           days={plan.days.map((d) => ({ id: d.id, name: d.name, focus: d.focus, exerciseCount: d.exercises.length }))}
           nextDayId={nextDay?.id ?? null}
         />
-        <Link href={`/sport/plaene/${plan.id}/bearbeiten`} className={cn(buttonVariants({ variant: "outline" }), "h-12 rounded-full px-5")}>
-          <Pencil aria-hidden />
-          Bearbeiten
-        </Link>
+        {plan.isOwn ? (
+          <Link href={`/sport/plaene/${plan.id}/bearbeiten`} className={cn(buttonVariants({ variant: "outline" }), "h-12 rounded-full px-5")}>
+            <Pencil aria-hidden />
+            Bearbeiten
+          </Link>
+        ) : ownCopy ? (
+          <Link href={`/sport/plaene/${ownCopy}`} className={cn(buttonVariants({ variant: "outline" }), "h-12 rounded-full px-5")}>
+            Zu deiner Kopie
+          </Link>
+        ) : (
+          <ForkPlanButton planId={plan.id} />
+        )}
         {nextDay ? (
           <p className="basis-full text-sm text-muted-foreground">
             Als Nächstes: {nextDay.name}
@@ -69,6 +95,8 @@ export default async function PlanPage({ params }: PageProps<"/sport/plaene/[id]
           </p>
         ) : null}
       </div>
+
+      {plan.isOwn ? <PlanPublishToggle planId={plan.id} isPublic={plan.isPublic} /> : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {plan.days.map((day) => (

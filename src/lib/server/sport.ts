@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
-import type { ExerciseOption } from "@/lib/domain/exercises";
+import { authorName } from "@/lib/domain/community";
+import type { ExerciseOption, MuscleGroup } from "@/lib/domain/exercises";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -83,6 +84,8 @@ export type PlanDetail = {
   isArchived: boolean;
   isPublic: boolean;
   isOwn: boolean;
+  /** Anzeigename des Besitzers (nie die E-Mail) */
+  authorName: string;
   days: { id: string; name: string; focus: string | null; exercises: PlanDetailExercise[] }[];
 };
 
@@ -92,7 +95,7 @@ export const getTrainingPlan = cache(async (planId: string, userId: string): Pro
   const { data, error } = await supabase
     .from("training_plans")
     .select(
-      `id, title, description, is_archived, is_public, owner_id, training_plan_days!training_plan_days_plan_id_fkey(id, name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(id, position, sets, reps_min, reps_max, target_seconds, rest_seconds, warmup, note, exercises!training_plan_exercises_exercise_id_fkey(${EXERCISE_COLUMNS})))`,
+      `id, title, description, is_archived, is_public, owner_id, profiles!training_plans_owner_id_fkey(display_name), training_plan_days!training_plan_days_plan_id_fkey(id, name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(id, position, sets, reps_min, reps_max, target_seconds, rest_seconds, warmup, note, exercises!training_plan_exercises_exercise_id_fkey(${EXERCISE_COLUMNS})))`,
     )
     .eq("id", planId)
     .maybeSingle();
@@ -105,6 +108,7 @@ export const getTrainingPlan = cache(async (planId: string, userId: string): Pro
     isArchived: data.is_archived,
     isPublic: data.is_public,
     isOwn: data.owner_id === userId,
+    authorName: authorName(data.profiles?.display_name),
     days: [...data.training_plan_days]
       .sort((a, b) => a.position - b.position)
       .map((d) => ({
@@ -127,3 +131,67 @@ export const getTrainingPlan = cache(async (planId: string, userId: string): Pro
       })),
   };
 });
+
+export type PublicPlanItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  authorName: string;
+  isOwn: boolean;
+  /** Hat der Nutzer schon eine eigene Kopie? */
+  copied: boolean;
+  updatedAt: string;
+  days: { name: string; focus: string | null; exerciseCount: number }[];
+  /** Arbeitssätze je Muskelgruppe über alle Tage (für Filter und Schwerpunkt) */
+  muscleSets: Partial<Record<MuscleGroup, number>>;
+};
+
+/** Öffentliche Pläne aus der Runde (auch eigene, als „von dir“), zuletzt geänderte zuerst. */
+export async function getPublicTrainingPlans(userId: string): Promise<PublicPlanItem[]> {
+  const supabase = await createClient();
+  const [plans, forks] = await Promise.all([
+    supabase
+      .from("training_plans")
+      .select(
+        "id, title, description, owner_id, updated_at, profiles!training_plans_owner_id_fkey(display_name), training_plan_days!training_plan_days_plan_id_fkey(name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(sets, exercises!training_plan_exercises_exercise_id_fkey(muscle_group)))",
+      )
+      .eq("is_public", true)
+      .order("updated_at", { ascending: false }),
+    supabase.from("training_plans").select("forked_from_id").eq("owner_id", userId).not("forked_from_id", "is", null),
+  ]);
+  if (plans.error) throw new Error(`Öffentliche Pläne konnten nicht geladen werden (${plans.error.code})`);
+  const copied = new Set((forks.data ?? []).map((f) => f.forked_from_id));
+  return plans.data.map((p) => {
+    const muscleSets: Partial<Record<MuscleGroup, number>> = {};
+    for (const d of p.training_plan_days) {
+      for (const e of d.training_plan_exercises) muscleSets[e.exercises.muscle_group] = (muscleSets[e.exercises.muscle_group] ?? 0) + e.sets;
+    }
+    return {
+      id: p.id,
+      title: p.title,
+      description: p.description,
+      authorName: authorName(p.profiles?.display_name),
+      isOwn: p.owner_id === userId,
+      copied: copied.has(p.id),
+      updatedAt: p.updated_at,
+      days: [...p.training_plan_days]
+        .sort((a, b) => a.position - b.position)
+        .map((d) => ({ name: d.name, focus: d.focus, exerciseCount: d.training_plan_exercises.length })),
+      muscleSets,
+    };
+  });
+}
+
+/** Eigene Kopie eines (fremden) Plans, falls vorhanden. */
+export async function getOwnCopyOf(userId: string, planId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("training_plans")
+    .select("id")
+    .eq("owner_id", userId)
+    .eq("forked_from_id", planId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.id ?? null;
+}

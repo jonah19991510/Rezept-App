@@ -114,3 +114,36 @@ export async function createExerciseAction(input: ExerciseInput): Promise<Create
     },
   };
 }
+
+/** Plan veröffentlichen bzw. wieder privat machen (nur der Besitzer). */
+export async function setPlanPublicAction(planId: string, isPublic: boolean): Promise<{ ok: boolean; message?: string }> {
+  const user = await requireUser();
+  if (!idSchema.safeParse(planId).success || typeof isPublic !== "boolean") return { ok: false, message: "Ungültiger Plan." };
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("training_plans")
+    .update({ is_public: isPublic })
+    .eq("id", planId)
+    .eq("owner_id", user.id)
+    .select("id");
+  if (error || !data?.length) return { ok: false, message: "Die Sichtbarkeit konnte nicht geändert werden." };
+  revalidatePlans(planId);
+  revalidatePath("/sport/entdecken");
+  return { ok: true };
+}
+
+/** Öffentlichen Plan in die eigenen Pläne übernehmen (eigene, bearbeitbare Kopie mit Verweis auf das Original). */
+export async function forkPlanAction(planId: string): Promise<{ ok: false; message: string }> {
+  await requireUser();
+  if (!idSchema.safeParse(planId).success) return { ok: false, message: "Ungültiger Plan." };
+  const supabase = await createClient();
+  // copy_training_plan sieht per RLS nur eigene und öffentliche Pläne und setzt bei fremden forked_from_id
+  const { data: newId, error } = await supabase.rpc("copy_training_plan", { p_plan_id: planId });
+  if (error || !newId) {
+    if (error?.code === "P0002") return { ok: false, message: "Der Plan ist nicht mehr öffentlich." };
+    return { ok: false, message: "Der Plan konnte nicht übernommen werden." };
+  }
+  revalidatePlans();
+  revalidatePath("/sport/entdecken");
+  redirect(`/sport/plaene/${newId}?uebernommen=1`);
+}

@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { durationLabel, nextDayName, planSummary, repsRange, restLabel, suggestedFocus, targetLabel } from "./training-plan";
+import {
+  durationLabel,
+  filterPublicPlans,
+  nextDayName,
+  planMainMuscles,
+  planSummary,
+  repsRange,
+  restLabel,
+  suggestedFocus,
+  targetLabel,
+} from "./training-plan";
 
 describe("repsRange", () => {
   it("zeigt Bereiche, feste Werte und offene Grenzen", () => {
@@ -63,5 +73,23 @@ describe("planSummary", () => {
   it("zählt Tage und Übungen", () => {
     expect(planSummary([{ exercises: [1, 2] }, { exercises: [3] }])).toBe("2 Tage · 3 Übungen");
     expect(planSummary([{ exercises: [1] }])).toBe("1 Tag · 1 Übung");
+  });
+});
+
+describe("Entdecken", () => {
+  const plans = [
+    { title: "Push / Pull / Beine", description: "Klassiker", authorName: "Mia", days: [{ name: "Push", focus: "Brust" }, { name: "Pull", focus: null }, { name: "Beine", focus: null }], muscleSets: { chest: 9, back: 9, quads: 6 } },
+    { title: "Ganzkörper", description: null, authorName: "Jonah", days: [{ name: "Tag A", focus: null }, { name: "Tag B", focus: null }], muscleSets: { full_body: 6, core: 3 } },
+  ];
+
+  it("filtert nach Text, Tagen und Muskelgruppe", () => {
+    expect(filterPublicPlans(plans, { query: "jonah", days: null, muscle: null }).map((p) => p.title)).toEqual(["Ganzkörper"]);
+    expect(filterPublicPlans(plans, { query: "", days: "3", muscle: null }).map((p) => p.title)).toEqual(["Push / Pull / Beine"]);
+    expect(filterPublicPlans(plans, { query: "", days: "1-2", muscle: "chest" })).toEqual([]);
+    expect(filterPublicPlans(plans, { query: "brust", days: null, muscle: "back" })).toHaveLength(1);
+  });
+
+  it("nennt die Schwerpunkte nach Sätzen", () => {
+    expect(planMainMuscles({ chest: 9, back: 12, quads: 6, core: 0 }, 2)).toEqual(["back", "chest"]);
   });
 });

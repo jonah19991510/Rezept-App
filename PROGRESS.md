@@ -1348,6 +1348,28 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Phase S4: Entdecken und Daten
+
+Keine Migration (Spalten `is_public`, `forked_from_id` und `copy_training_plan` gibt es seit S1).
+
+- **Veröffentlichen:** Umschalter „Privat | Öffentlich“ auf der eigenen Planseite (wie bei Rezepten, wirkt sofort,
+  `setPlanPublicAction`); in der Pläne-Liste Hinweis „Öffentlich“.
+- **Entdecken** (`/sport/entdecken`, vorher „Kommt bald“): öffentliche Pläne aus der Runde (eigene als „von dir“),
+  Suche (Titel, Beschreibung, Autor, Tage; Umlaute egal), Chips 1–2 / 3 / 4+ Tage und Muskelgruppe (nur vorkommende),
+  Karten mit Autor (Anzeigename, nie E-Mail), Tagen, Schwerpunkten (Muskelgruppen mit den meisten Sätzen), „Übernommen“.
+- **Fremder Plan** (gleiche Planseite `/sport/plaene/[id]`, zurück nach Entdecken): mit Autor, ohne Bearbeiten/Menü;
+  **„Training starten“** direkt (Training verweist auf den fremden Plan, „In den Plan übernehmen“ gibt es nur bei
+  eigenen) und **„In meine Pläne übernehmen“** (`copy_training_plan`, Kopie mit `forked_from_id`, danach Planseite der
+  Kopie mit Hinweis); gibt es schon eine Kopie: „Zu deiner Kopie“.
+- **Daten:** Export/Import der Trainingsdaten war schon vorgezogen (Sicherung Version 2). Prüfung per SQL: Löschregeln
+  aller Sport-Tabellen (Pläne und Trainings `CASCADE` am Profil; eigene Übungen `SET NULL` wie Zutaten; Verweise
+  fremder Trainings/Kopien auf gelöschte Pläne `SET NULL`), Datenexport enthält `trainingsplaene`, `eigene_uebungen`,
+  `trainings`. Per SQL als Admin und als fremdes Konto (zurückgerollt): privater Plan für andere unsichtbar,
+  öffentlicher lesbar (mit Tagen und Übungen), nicht änderbar; Kopie des eigenen Plans ohne `forked_from_id`.
+  Übernehmen durch ein zweites echtes Konto nicht geprüft (es gibt nur ein Profil).
+- Logik (`filterPublicPlans`, `planMainMuscles`) mit Tests. 414 Tests, Typecheck, Lint, Build grün. Entdecken über eine
+  temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Filter, kein seitliches Scrollen). **Nicht geprüft:** mit Login.
+
 ### Phase S3: Statistik
 
 **Live** seit 26.10.2026: Push `cee4396` (GitHub lehnte zweimal mit „Internal Server Error“ ab, der dritte Versuch ging)

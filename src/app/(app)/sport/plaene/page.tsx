@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronDown, ClipboardList } from "lucide-react";
+import { ChevronDown, ClipboardList, Globe } from "lucide-react";
 import { EmptyState } from "@/components/layout/empty-state";
+import { TagLabel } from "@/components/layout/list-blocks";
 import { PageHeader } from "@/components/layout/page-header";
 import { NewRecipeFab } from "@/components/recipes/new-recipe-fab";
 import { ActiveWorkoutBanner } from "@/components/sport/active-workout-banner";
@@ -28,7 +29,12 @@ function PlanCard({ plan }: { plan: PlanListItem }) {
               {plan.title}
             </Link>
           </h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">{planSummary(plan.days.map((d) => ({ exercises: Array(d.exerciseCount) })))}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            {planSummary(plan.days.map((d) => ({ exercises: Array(d.exerciseCount) })))}
+            {plan.isPublic ? (
+              <TagLabel icon={Globe}>Öffentlich</TagLabel>
+            ) : null}
+          </p>
         </div>
         <div className="relative z-10">
           <PlanMenu planId={plan.id} title={plan.title} archived={plan.isArchived} />

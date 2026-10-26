@@ -129,6 +129,11 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **26.10.2026, Sport & Gesundheit Phase S4:** Trainingspläne lassen sich veröffentlichen (`training_plans.is_public`,
+  Schalter auf der Planseite). Öffentliche Pläne sehen alle eingeloggten Mitglieder unter „Entdecken“ mit dem
+  Anzeigenamen des Besitzers (nie die E-Mail); Trainings, Sätze und Statistik bleiben privat. Andere können einen
+  öffentlichen Plan trainieren (ihr Training verweist auf ihn) oder als eigene Kopie übernehmen (`forked_from_id`);
+  Kopien bleiben bestehen, wenn das Original privat oder gelöscht wird. Keine neuen Tabellen, keine neuen Dienstleister.
 - **26.10.2026, Sport & Gesundheit Phase S2:** Neue Tabellen `workouts`, `workout_exercises`, `workout_sets` (RLS nur
   der Nutzer, Cascade am Profil), im Datenexport als `trainings` und in der Sport-Sicherung (Version 2). Während eines
   Trainings liegt sein Stand zusätzlich im Browser (`localStorage`) und die Trainingsseite im Cache des Service Workers
