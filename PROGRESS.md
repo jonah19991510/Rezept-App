@@ -1350,6 +1350,13 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Phase S4: Entdecken und Daten
 
+**Bugfix 26.10.2026 (nach dem Push von S4):** Die Pläne-Seite (Einstieg in Sport & Gesundheit) zeigte live „Da ist etwas
+schiefgelaufen“. Laut Vercel-Log: „Functions cannot be passed directly to Client Components“ – der neue Hinweis
+„Öffentlich“ übergab das Symbol `Globe` als Prop `icon` an `TagLabel` (Client-Komponente) aus einer Server-Seite. Build
+und Typecheck erkennen das nicht, erst der Aufruf. Jetzt steht das Symbol als Kind im `TagLabel`. Alle anderen
+`icon={…}`-Übergaben aus Server-Seiten gehen an Server-Bausteine (`EmptyState`, `ComingSoon`, Widgets) und sind erlaubt.
+Regel für später: In Server-Komponenten keine Komponenten (z. B. Lucide-Symbole) als Props an `"use client"`-Bausteine.
+
 **Live** seit 26.10.2026: Push `014933b` → Deployment `dpl_ES56E2vh9mYSz6br2DtVr5j16AfQ` (`production`, „READY“; per
 Vercel-Connector geprüft). Damit ist der Sport-Plan S1–S4 umgesetzt. **Offen für später** (eigene Phasen nach Wunsch des
 Nutzers): Getränketracker, Lexikon (inkl. eigene Übungen bearbeiten), Körpermaße, Energiebedarfsrechner; Idee:

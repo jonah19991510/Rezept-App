@@ -32,7 +32,11 @@ function PlanCard({ plan }: { plan: PlanListItem }) {
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             {planSummary(plan.days.map((d) => ({ exercises: Array(d.exerciseCount) })))}
             {plan.isPublic ? (
-              <TagLabel icon={Globe}>Öffentlich</TagLabel>
+              // Symbol als Kind statt als icon-Prop: Komponenten-Funktionen lassen sich nicht an Client-Komponenten übergeben
+              <TagLabel>
+                <Globe className="size-3" aria-hidden />
+                Öffentlich
+              </TagLabel>
             ) : null}
           </p>
         </div>
