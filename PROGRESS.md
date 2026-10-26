@@ -1330,7 +1330,7 @@ unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft).
 
 ## Wünsche vom 26.10.2026: Startseite mit Bereichen und Widgets
 
-**Live** seit 26.10.2026: vom Nutzer am LAN-Server getestet (Speichern der Anordnung ging erst nach der Migration);
+**Live** seit 26.10.2026: vom Nutzer am LAN-Server getestet (Speichern schlug vor der Migration fehl; danach nicht ausdrücklich bestätigt);
 Push `bd0d8b5` (mit `4b2bf48`, `2fb4568`) → Deployment `dpl_HPxvjaLevydvpWv6wmvUxsGZ3YaS` (`production`, `fra1`,
 `source: git`, nach ca. 54 s „READY“, auf unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft).
 
