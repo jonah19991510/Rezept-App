@@ -1348,6 +1348,23 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Nachtrag 26.10.2026: Trainings nachtragen und bearbeiten
+
+**Noch nicht live** (Commit lokal, Push nach OK des Nutzers). Keine Migration nötig.
+
+Wunsch: „nachträglich manuell Trainingseinheiten eintragen“. Umsetzung:
+- Verlauf → „Nachtragen“ (`log-past-workout.tsx`): Datum (nicht in der Zukunft), Beginn, Minuten (Vorschlag: vor einer
+  Stunde, 60 Min.) und optional Plan + Tag (ausgeblendete Pläne hinten). `createPastWorkoutAction` legt ein beendetes
+  Training an (mit den Übungen des Tages, sonst leer) und öffnet die Bearbeiten-Ansicht.
+- Bearbeiten-Ansicht = Trainingsansicht mit `mode="edit"` (`/training/<id>?bearbeiten=1`): Datum/Beginn/Minuten statt
+  laufender Uhr, kein Pausentimer, kein Bildschirm-an, „Speichern“ statt „Beenden“, „Training löschen“. Beim Speichern
+  zählen alle Sätze mit Werten (auch ohne Haken); ein Haken bei leerem Satz übernimmt die hellen Werte vom letzten Mal;
+  Übungen ohne Satz fallen weg (`finalizeEditedSession`). Zeiten in deutscher Zeit, sommerzeitsicher (`berlinToIso`).
+- Trainingsseite im Verlauf: „Bearbeiten“ bei beendeten Trainings (ändert auch ältere/importierte Trainings).
+- Geprüft: 425 Tests, Typecheck, Lint, Build grün; im Browser (Vorschau ohne Login, Handybreite) Dialog mit Plan/Tag,
+  Bearbeiten-Ansicht, Zeit-/Dauer-Änderung (07:15 Uhr → 05:15 UTC, 90 Min.) und Speichern. **Nicht geprüft:** mit Login
+  gegen die echte Datenbank (Anlegen, Hochladen, Weiterleitung zur Trainingsseite).
+
 ### Nachtrag 26.10.2026: Import aus der früheren Gym-App
 
 **Live** seit 26.10.2026: Push `2780a09` → Deployment `dpl_EhFndyufqyDyecot1VYPFrkq1cET` („READY“; per Vercel-Connector

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, PartyPopper } from "lucide-react";
+import { ChevronLeft, PartyPopper, Pencil } from "lucide-react";
 import { ApplyToPlan, DeleteWorkout } from "@/components/sport/workout-actions";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
@@ -80,7 +80,12 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
         </p>
       </div>
 
-      {session.endedAt ? null : (
+      {session.endedAt ? (
+        <Link href={`/training/${session.id}?bearbeiten=1`} className={cn(buttonVariants({ variant: "outline" }), "h-11 rounded-full px-5")}>
+          <Pencil aria-hidden />
+          Bearbeiten
+        </Link>
+      ) : (
         <Link href={`/training/${session.id}`} className={cn(buttonVariants(), "h-12 rounded-full px-6 text-base")}>
           Training fortsetzen
         </Link>

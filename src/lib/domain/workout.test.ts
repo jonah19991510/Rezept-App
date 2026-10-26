@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ExerciseOption } from "./exercises";
 import {
+  berlinParts,
+  berlinToIso,
   differsFromPlan,
+  finalizeEditedSession,
   emptySet,
   finalizeSession,
   formatSet,
@@ -170,5 +173,38 @@ describe("workoutDuration", () => {
     expect(workoutDuration(23 * 60 + 38)).toBe("24 Min.");
     expect(workoutDuration(65 * 60)).toBe("1 Std. 5 Min.");
     expect(workoutDuration(120 * 60)).toBe("2 Std.");
+  });
+});
+
+describe("Nachtragen", () => {
+  it("rechnet deutsche Zeit in UTC um (Winter- und Sommerzeit)", () => {
+    expect(berlinToIso("2026-10-26", "18:30")).toBe("2026-10-26T17:30:00.000Z");
+    expect(berlinToIso("2026-07-01", "08:00")).toBe("2026-07-01T06:00:00.000Z");
+    expect(berlinToIso("2026-13-01", "08:00")).toBeNull();
+    expect(berlinParts("2026-07-01T06:00:00.000Z")).toEqual({ date: "2026-07-01", time: "08:00" });
+  });
+
+  it("zählt eingetragene Sätze auch ohne Haken und lässt leere weg", () => {
+    const edited: Session = {
+      ...session,
+      endedAt: "2026-10-26T11:00:00.000Z",
+      exercises: [
+        {
+          ...session.exercises[0],
+          sets: [
+            { ...emptySet("normal", "a"), weight: "60", reps: "8" },
+            { ...emptySet("normal", "b"), done: true, doneAt: null },
+            { ...emptySet("normal", "c") },
+          ],
+        },
+        { ...session.exercises[1], sets: [emptySet("normal", "d")] },
+      ],
+    };
+    const result = finalizeEditedSession(edited, { bench: [{ weightKg: 55, reps: 10, seconds: null, distanceM: null }] });
+    expect(result.exercises).toHaveLength(1);
+    expect(result.exercises[0].sets.map((s) => [s.id, s.weight, s.reps, s.done, s.doneAt])).toEqual([
+      ["a", "60", "8", true, "2026-10-26T11:00:00.000Z"],
+      ["b", "55", "10", true, "2026-10-26T11:00:00.000Z"],
+    ]);
   });
 });

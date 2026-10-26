@@ -40,7 +40,10 @@ import { EQUIPMENT_LABELS, isTimed, MUSCLE_LABELS, type ExerciseOption } from "@
 import { repsRange, restLabel } from "@/lib/domain/training-plan";
 import { formatCountdown } from "@/lib/domain/timers";
 import {
+  berlinParts,
+  berlinToIso,
   emptySet,
+  finalizeEditedSession,
   finalizeSession,
   formatSet,
   mmss,
@@ -94,16 +97,21 @@ function withExercise(session: Session, id: string, change: (e: SessionExercise)
  * Training im Gym (Vollbild ohne Navigation): Dauer oben, je Übung die Sätze mit den Werten vom letzten Mal (hell,
  * Abhaken übernimmt sie), Aufwärmsätze auf Knopfdruck, Pausentimer, Übungen tauschen/hinzufügen/verschieben.
  * Alles wird zuerst auf dem Handy gesichert und hochgeladen, sobald Netz da ist.
+ * mode „edit“: beendetes oder nachgetragenes Training bearbeiten – Datum, Uhrzeit und Dauer statt laufender Uhr, ohne
+ * Pausentimer; „Speichern“ übernimmt alle Sätze mit Werten (auch ohne Haken).
  */
 export function WorkoutView({
   initial,
   exercises: initialExercises,
   last: initialLast,
+  mode = "live",
 }: {
   initial: Session;
   exercises: ExerciseOption[];
   last: Record<string, LastSet[]>;
+  mode?: "live" | "edit";
 }) {
+  const edit = mode === "edit";
   const router = useRouter();
   const { session, update, state, synced } = useWorkoutSession(initial);
   const [last, setLast] = useState(initialLast);
@@ -112,19 +120,23 @@ export function WorkoutView({
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [openNotes, setOpenNotes] = useState<Set<string>>(() => new Set());
+  // Beendet bzw. gespeichert: sobald hochgeladen, weiter zur Trainingsseite
+  const [finished, setFinished] = useState(false);
   const now = useNow();
   const [discarding, startDiscard] = useTransition();
   const rest = useRestTimer();
   const sensors = useEditorSensors();
-  useWakeLock(session.endedAt == null);
+  // Live: ein beendeter Stand (z. B. offline beendet, dann neu geladen) gilt als fertig
+  const done = finished || (!edit && session.endedAt != null);
+  useWakeLock(!edit && !done);
 
-  // Abgeschlossen und hochgeladen: lokale Kopie weg, weiter zur Zusammenfassung
+  // Abgeschlossen und hochgeladen: lokale Kopie weg, weiter zur Trainingsseite
   useEffect(() => {
-    if (session.endedAt && synced) {
+    if (done && synced) {
       clearLocalWorkout(session.id);
-      router.replace(`/sport/verlauf/${session.id}?fertig=1`);
+      router.replace(`/sport/verlauf/${session.id}${edit ? "" : "?fertig=1"}`);
     }
-  }, [session.endedAt, session.id, synced, router]);
+  }, [done, edit, session.id, synced, router]);
 
   const summary = useMemo(() => summarizeSession(session, new Date(now ?? new Date(session.startedAt).getTime())), [session, now]);
 
@@ -154,7 +166,7 @@ export function WorkoutView({
       return;
     }
     updateSet(e.id, set.id, { ...setInputs(values), done: true, doneAt: new Date().toISOString() });
-    if (set.kind === "normal" && e.restSeconds) rest.start(e.restSeconds, e.exercise.name);
+    if (!edit && set.kind === "normal" && e.restSeconds) rest.start(e.restSeconds, e.exercise.name);
   }
 
   function addSet(e: SessionExercise) {
@@ -254,6 +266,27 @@ export function WorkoutView({
     setConfirmFinish(false);
     rest.stop();
     update((s) => finalizeSession(s, new Date().toISOString(), last));
+    setFinished(true);
+  }
+
+  /** Bearbeiten: Sätze mit Werten übernehmen und speichern (ohne Satz bleibt nichts zu speichern). */
+  function saveEdit() {
+    const result = finalizeEditedSession(session, last);
+    if (result.exercises.length === 0) {
+      toast("Trag zuerst bei mindestens einem Satz Werte ein.");
+      return;
+    }
+    update(() => result);
+    setFinished(true);
+  }
+
+  /** Datum, Beginn oder Dauer eines bearbeiteten Trainings ändern (Ende = Beginn + Dauer). */
+  function setTiming(change: { date?: string; time?: string; minutes?: number }) {
+    const current = berlinParts(session.startedAt);
+    const minutes = change.minutes ?? Math.max(1, Math.round((new Date(session.endedAt ?? session.startedAt).getTime() - new Date(session.startedAt).getTime()) / 60000));
+    const start = berlinToIso(change.date ?? current.date, change.time ?? current.time);
+    if (!start || !(minutes >= 1 && minutes <= 600)) return;
+    update((s) => ({ ...s, startedAt: start, endedAt: new Date(new Date(start).getTime() + minutes * 60_000).toISOString() }));
   }
 
   function discard() {
@@ -262,7 +295,7 @@ export function WorkoutView({
         const result = await deleteWorkoutAction(session.id);
         if (!result.ok) throw new Error();
         clearLocalWorkout(session.id);
-        router.replace("/sport/plaene");
+        router.replace(edit ? "/sport/verlauf" : "/sport/plaene");
       } catch {
         toast.error("Verwerfen geht nur mit Netz. Versuch es gleich noch einmal.");
       }
@@ -273,12 +306,12 @@ export function WorkoutView({
   const exerciseName = (id: string | number) => session.exercises.find((e) => e.id === id)?.exercise.name ?? "Übung";
 
   // Abgeschlossen, aber noch nicht hochgeladen (kein Netz)
-  if (session.endedAt) {
+  if (done) {
     return (
       <main className="grid min-h-dvh place-items-center bg-background p-6 text-center">
         <div className="max-w-sm space-y-3">
           {state === "offline" ? <CloudOff className="mx-auto size-10 text-muted-foreground" aria-hidden /> : <Loader2 className="mx-auto size-10 animate-spin text-muted-foreground" aria-hidden />}
-          <h1 className="text-2xl font-semibold">Training beendet</h1>
+          <h1 className="text-2xl font-semibold">{edit ? "Training gespeichert" : "Training beendet"}</h1>
           <p className="text-muted-foreground">
             {state === "offline"
               ? "Es ist auf dem Handy gesichert und wird hochgeladen, sobald du wieder Netz hast. Du kannst die Seite offen lassen."
@@ -294,8 +327,8 @@ export function WorkoutView({
       <header className="sticky top-0 z-30 border-b bg-background/95 px-2 pt-[max(0.375rem,env(safe-area-inset-top))] pb-1.5 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center gap-1">
           <Link
-            href="/sport/plaene"
-            aria-label="Zu den Plänen (Training läuft weiter)"
+            href={edit ? `/sport/verlauf/${session.id}` : "/sport/plaene"}
+            aria-label={edit ? "Zurück zum Training (Änderungen sind gesichert)" : "Zu den Plänen (Training läuft weiter)"}
             className="grid size-11 shrink-0 place-items-center rounded-full transition hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
           >
             <ChevronLeft className="size-5" aria-hidden />
@@ -303,19 +336,30 @@ export function WorkoutView({
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm text-muted-foreground">{session.title}</p>
             <p className="flex items-center gap-2">
-              <span className="font-heading text-2xl leading-tight font-semibold tabular-nums" aria-label="Trainingsdauer">
-                {elapsed == null ? "–:–" : formatCountdown(elapsed)}
-              </span>
+              {edit ? (
+                <span className="font-heading text-2xl leading-tight font-semibold">Bearbeiten</span>
+              ) : (
+                <span className="font-heading text-2xl leading-tight font-semibold tabular-nums" aria-label="Trainingsdauer">
+                  {elapsed == null ? "–:–" : formatCountdown(elapsed)}
+                </span>
+              )}
               <SyncBadge state={state} />
             </p>
           </div>
-          <Button type="button" onClick={() => setConfirmFinish(true)} className="h-11 shrink-0 rounded-full px-5">
-            Beenden
+          <Button type="button" onClick={edit ? saveEdit : () => setConfirmFinish(true)} className="h-11 shrink-0 rounded-full px-5">
+            {edit ? "Speichern" : "Beenden"}
           </Button>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl space-y-4 px-3 pt-4 md:px-4">
+        {edit ? <TimingCard session={session} onChange={setTiming} /> : null}
+        {edit ? (
+          <p className="px-1 text-sm text-muted-foreground">
+            Trag die Werte ein; beim Speichern zählen alle Sätze mit Werten, auch ohne Haken. Ein Haken bei leerem Satz übernimmt
+            die hellen Werte vom letzten Mal.
+          </p>
+        ) : null}
         {session.exercises.length === 0 ? (
           <p className="rounded-3xl border border-dashed p-6 text-center text-muted-foreground">
             Noch keine Übungen. Füg unten die erste hinzu.
@@ -375,7 +419,7 @@ export function WorkoutView({
 
         <Button type="button" variant="ghost" className="w-full text-destructive" onClick={() => setConfirmDiscard(true)}>
           <Trash2 aria-hidden />
-          Training verwerfen
+          {edit ? "Training löschen" : "Training verwerfen"}
         </Button>
       </main>
 
@@ -427,7 +471,7 @@ export function WorkoutView({
       <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Training verwerfen?</DialogTitle>
+            <DialogTitle>{edit ? "Training löschen?" : "Training verwerfen?"}</DialogTitle>
             <DialogDescription>Alle Sätze dieses Trainings werden gelöscht. Das lässt sich nicht rückgängig machen.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -435,11 +479,43 @@ export function WorkoutView({
               Behalten
             </Button>
             <Button type="button" variant="destructive" onClick={discard} disabled={discarding}>
-              Verwerfen
+              {edit ? "Löschen" : "Verwerfen"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/** Bearbeiten: Datum, Beginn und Dauer des Trainings (deutsche Zeit). */
+function TimingCard({ session, onChange }: { session: Session; onChange: (change: { date?: string; time?: string; minutes?: number }) => void }) {
+  const { date, time } = berlinParts(session.startedAt);
+  const minutes = Math.max(1, Math.round((new Date(session.endedAt ?? session.startedAt).getTime() - new Date(session.startedAt).getTime()) / 60000));
+  const field = "h-11 w-full min-w-0 rounded-xl border border-input bg-background px-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+  return (
+    <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)] gap-2 rounded-3xl border bg-card p-3">
+      <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+        Datum
+        <input type="date" value={date} max={berlinParts(new Date().toISOString()).date} onChange={(e) => e.target.value && onChange({ date: e.target.value })} className={field} />
+      </label>
+      <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+        Beginn
+        <input type="time" value={time} onChange={(e) => e.target.value && onChange({ time: e.target.value })} className={field} />
+      </label>
+      <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+        Minuten
+        <input
+          inputMode="numeric"
+          defaultValue={minutes}
+          onBlur={(e) => {
+            const v = Number.parseInt(e.target.value, 10);
+            if (v >= 1 && v <= 600) onChange({ minutes: v });
+            else e.target.value = String(minutes);
+          }}
+          className={cn(field, "text-center tabular-nums")}
+        />
+      </label>
     </div>
   );
 }

@@ -333,3 +333,60 @@ export function differsFromPlan(plan: PlanDayExercise[], next: PlanDayExercise[]
   if (plan.length !== next.length) return true;
   return plan.some((p, i) => p.exerciseId !== next[i].exerciseId || p.sets !== next[i].sets);
 }
+
+// ---------------------------------------------------------------------------
+// Nachtragen und Bearbeiten beendeter Trainings
+// ---------------------------------------------------------------------------
+
+const BERLIN = "Europe/Berlin";
+
+/** Datum und Uhrzeit in deutscher Zeit („2026-10-26“, „18:30“) eines Zeitpunkts. */
+export function berlinParts(iso: string): { date: string; time: string } {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", { timeZone: BERLIN, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(new Date(iso))
+      .map((p) => [p.type, p.value]),
+  );
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+}
+
+/** Datum und Uhrzeit in deutscher Zeit → Zeitpunkt (ISO, UTC); Sommer- und Winterzeit richtig. Ungültig: null. */
+export function berlinToIso(date: string, time: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return null;
+  const guess = new Date(`${date}T${time}:00Z`);
+  if (Number.isNaN(guess.getTime())) return null;
+  // Abstand zwischen UTC und deutscher Zeit zu diesem Zeitpunkt (zweimal, falls die Umstellung dazwischen liegt)
+  let result = guess.getTime();
+  for (let i = 0; i < 2; i++) {
+    const shown = berlinParts(new Date(result).toISOString());
+    const shownMs = new Date(`${shown.date}T${shown.time}:00Z`).getTime();
+    result -= shownMs - guess.getTime();
+  }
+  return new Date(result).toISOString();
+}
+
+/**
+ * Nachgetragenes oder bearbeitetes Training speichern: Sätze zählen, wenn sie abgehakt sind oder Werte eingetragen
+ * haben (beim Nachtragen muss man nicht jeden Satz abhaken); leere Felder abgehakter Sätze bekommen die Werte vom
+ * letzten Mal. Übungen ohne Satz fallen weg.
+ */
+export function finalizeEditedSession(session: Session, last: Record<string, LastSet[]>): Session {
+  const entered = (s: SessionSet) => [s.weight, s.reps, s.seconds, s.distance].some((v) => v.trim() !== "");
+  return {
+    ...session,
+    exercises: session.exercises
+      .map((e) => {
+        let normalIndex = 0;
+        const sets = e.sets.flatMap((s) => {
+          const lastSet = s.kind === "normal" ? (last[e.exercise.id]?.[normalIndex] ?? last[e.exercise.id]?.at(-1) ?? null) : null;
+          if (s.kind === "normal") normalIndex++;
+          if (!s.done && !entered(s)) return [];
+          const values = resolveSet(s, s.done ? lastSet : null);
+          if (!setHasValues(values, e.exercise.tracking)) return [];
+          return [{ ...s, ...setInputs(values), done: true, doneAt: s.doneAt ?? session.endedAt }];
+        });
+        return { ...e, sets };
+      })
+      .filter((e) => e.sets.length > 0),
+  };
+}

@@ -3,7 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentUser, requireUser } from "@/lib/auth";
-import { differsFromPlan, emptySet, nextPlanDay, planDayFromWorkout, toSyncPayload, uuid, type LastSet, type Session } from "@/lib/domain/workout";
+import {
+  berlinToIso,
+  differsFromPlan,
+  emptySet,
+  nextPlanDay,
+  planDayFromWorkout,
+  toSyncPayload,
+  uuid,
+  type LastSet,
+  type Session,
+} from "@/lib/domain/workout";
 import { getTrainingPlan } from "@/lib/server/sport";
 import { getActiveWorkout, getLastPlanDayId, getLastSets, getWorkoutSession } from "@/lib/server/workouts";
 import { createClient } from "@/lib/supabase/server";
@@ -20,20 +30,8 @@ function revalidateSport(workoutId?: string) {
   revalidatePath("/");
 }
 
-export type StartWorkoutResult = { ok: true; id: string } | { ok: false; message: string; activeId?: string };
-
-/**
- * Training starten: mit Plan (Tag nach Wahl, sonst der nächste in der Reihe) oder frei ohne Übungen. Läuft schon eins,
- * kommt dessen ID zurück (Fortsetzen oder Verwerfen entscheidet der Nutzer).
- */
-export async function startWorkoutAction(input: { planId: string | null; dayId: string | null }): Promise<StartWorkoutResult> {
-  const user = await requireUser();
-  if ((input.planId && !idSchema.safeParse(input.planId).success) || (input.dayId && !idSchema.safeParse(input.dayId).success)) {
-    return { ok: false, message: "Ungültiger Plan." };
-  }
-  const active = await getActiveWorkout(user.id);
-  if (active) return { ok: false, message: "Es läuft schon ein Training.", activeId: active.id };
-
+/** Neues Training mit den Übungen eines Plan-Tages (ohne Tag: der nächste der Reihe) oder frei ohne Übungen. */
+async function buildSession(userId: string, planId: string | null, dayId: string | null): Promise<{ ok: true; session: Session } | { ok: false; message: string }> {
   const session: Session = {
     id: uuid(),
     planId: null,
@@ -46,12 +44,12 @@ export async function startWorkoutAction(input: { planId: string | null; dayId: 
     exercises: [],
   };
 
-  if (input.planId) {
-    const plan = await getTrainingPlan(input.planId, user.id);
+  if (planId) {
+    const plan = await getTrainingPlan(planId, userId);
     if (!plan) return { ok: false, message: "Den Plan gibt es nicht mehr." };
-    const day = input.dayId
-      ? plan.days.find((d) => d.id === input.dayId)
-      : nextPlanDay(plan.days, await getLastPlanDayId(user.id, plan.id));
+    const day = dayId
+      ? plan.days.find((d) => d.id === dayId)
+      : nextPlanDay(plan.days, await getLastPlanDayId(userId, plan.id));
     if (!day) return { ok: false, message: "Den Trainingstag gibt es nicht mehr." };
     session.planId = plan.id;
     session.planDayId = day.id;
@@ -68,6 +66,27 @@ export async function startWorkoutAction(input: { planId: string | null; dayId: 
       sets: Array.from({ length: e.sets }, () => emptySet()),
     }));
   }
+
+  return { ok: true, session };
+}
+
+export type StartWorkoutResult = { ok: true; id: string } | { ok: false; message: string; activeId?: string };
+
+/**
+ * Training starten: mit Plan (Tag nach Wahl, sonst der nächste in der Reihe) oder frei ohne Übungen. Läuft schon eins,
+ * kommt dessen ID zurück (Fortsetzen oder Verwerfen entscheidet der Nutzer).
+ */
+export async function startWorkoutAction(input: { planId: string | null; dayId: string | null }): Promise<StartWorkoutResult> {
+  const user = await requireUser();
+  if ((input.planId && !idSchema.safeParse(input.planId).success) || (input.dayId && !idSchema.safeParse(input.dayId).success)) {
+    return { ok: false, message: "Ungültiger Plan." };
+  }
+  const active = await getActiveWorkout(user.id);
+  if (active) return { ok: false, message: "Es läuft schon ein Training.", activeId: active.id };
+
+  const built = await buildSession(user.id, input.planId, input.dayId);
+  if (!built.ok) return built;
+  const session = built.session;
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("sync_workout", { p_workout: toSyncPayload(session) });
@@ -183,4 +202,39 @@ export async function applyWorkoutToPlanAction(workoutId: string): Promise<{ ok:
   revalidatePath(`/sport/plaene/${plan.id}`);
   revalidateSport(workoutId);
   return { ok: true, message: `„${plan.days[dayIndex].name}“ in „${plan.title}“ ist aktualisiert.` };
+}
+
+const pastWorkoutSchema = z.object({
+  planId: z.uuid().nullable(),
+  dayId: z.uuid().nullable(),
+  date: z.iso.date(),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+  durationMin: z.number().int().min(1, "Mindestens 1 Minute.").max(600, "Höchstens 10 Stunden."),
+});
+
+/**
+ * Training nachtragen: legt ein beendetes Training mit Datum, Uhrzeit und Dauer an (mit den Übungen eines Plan-Tages
+ * oder frei); die Sätze trägt man danach in der Bearbeiten-Ansicht ein.
+ */
+export async function createPastWorkoutAction(input: z.input<typeof pastWorkoutSchema>): Promise<StartWorkoutResult> {
+  const user = await requireUser();
+  const parsed = pastWorkoutSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Bitte prüfe Datum, Uhrzeit und Dauer." };
+  const { planId, dayId, date, time, durationMin } = parsed.data;
+  const startedAt = berlinToIso(date, time);
+  if (!startedAt) return { ok: false, message: "Bitte prüfe Datum und Uhrzeit." };
+  if (new Date(startedAt).getTime() > Date.now()) return { ok: false, message: "Nachtragen geht nur für vergangene Trainings." };
+
+  const built = await buildSession(user.id, planId, planId ? dayId : null);
+  if (!built.ok) return built;
+  const session: Session = {
+    ...built.session,
+    startedAt,
+    endedAt: new Date(new Date(startedAt).getTime() + durationMin * 60_000).toISOString(),
+  };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("sync_workout", { p_workout: toSyncPayload(session) });
+  if (error) return { ok: false, message: "Das Training konnte nicht angelegt werden." };
+  revalidateSport(session.id);
+  return { ok: true, id: session.id };
 }

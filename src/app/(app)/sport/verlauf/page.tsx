@@ -4,10 +4,12 @@ import { History } from "lucide-react";
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { ActiveWorkoutBanner } from "@/components/sport/active-workout-banner";
+import { LogPastWorkout } from "@/components/sport/log-past-workout";
 import { SportTabs } from "@/components/sport/sport-tabs";
 import { requireUser } from "@/lib/auth";
 import { workoutDuration } from "@/lib/domain/workout";
 import { formatDayShort, formatNumber } from "@/lib/format";
+import { getTrainingPlans } from "@/lib/server/sport";
 import { getActiveWorkout, getWorkoutHistory, type WorkoutListItem } from "@/lib/server/workouts";
 
 export const metadata: Metadata = { title: "Verlauf" };
@@ -21,7 +23,11 @@ function duration(w: WorkoutListItem) {
 /** Alle Trainings, neueste zuerst, nach Monat gruppiert. */
 export default async function HistoryPage() {
   const user = await requireUser();
-  const [list, active] = await Promise.all([getWorkoutHistory(user.id), getActiveWorkout(user.id)]);
+  const [list, active, plans] = await Promise.all([getWorkoutHistory(user.id), getActiveWorkout(user.id), getTrainingPlans(user.id)]);
+  // Für „Nachtragen“: aktive Pläne zuerst, nur Name und Tage
+  const planOptions = [...plans]
+    .sort((a, b) => Number(a.isArchived) - Number(b.isArchived))
+    .map((p) => ({ id: p.id, title: p.isArchived ? `${p.title} (ausgeblendet)` : p.title, days: p.days.map((d) => ({ id: d.id, name: d.name })) }));
   const finished = list.filter((w) => w.endedAt);
   const groups = new Map<string, WorkoutListItem[]>();
   for (const w of finished) {
@@ -31,12 +37,12 @@ export default async function HistoryPage() {
 
   return (
     <>
-      <PageHeader title="Training" />
+      <PageHeader title="Training" actions={<LogPastWorkout plans={planOptions} />} />
       <SportTabs active="verlauf" />
       {active ? <ActiveWorkoutBanner workout={active} /> : null}
       {finished.length === 0 ? (
         <EmptyState icon={History} title="Noch kein Training">
-          Starte ein Training über einen deiner Pläne. Danach findest du es hier mit allen Sätzen.
+          Starte ein Training über einen deiner Pläne oder trag ein vergangenes nach. Danach findest du es hier mit allen Sätzen.
         </EmptyState>
       ) : (
         <div className="space-y-6">
