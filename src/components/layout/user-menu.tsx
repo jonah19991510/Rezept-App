@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useTransition } from "react";
 import { useTheme } from "next-themes";
 import { Calculator, Carrot, Euro, LogOut, Monitor, Moon, Ruler, Scale, Settings, ShieldCheck, Sun } from "lucide-react";
@@ -20,7 +19,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { initials } from "@/lib/initials";
-import { areaForPath } from "./nav-items";
+import { sharedHref } from "./nav-items";
+import { useArea } from "./use-area";
 
 const ITEM = "min-h-11 gap-2.5 px-2.5";
 
@@ -31,7 +31,7 @@ const ITEM = "min-h-11 gap-2.5 px-2.5";
 export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmin: boolean }) {
   const { theme, setTheme } = useTheme();
   const [pending, startTransition] = useTransition();
-  const area = areaForPath(usePathname());
+  const area = useArea();
 
   return (
     <DropdownMenu>
@@ -47,7 +47,7 @@ export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmi
           <DropdownMenuLabel className="px-2.5 py-2 text-sm text-foreground">{displayName}</DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className={ITEM} render={<Link href="/einstellungen" />}>
+        <DropdownMenuItem className={ITEM} render={<Link href={sharedHref("/einstellungen", area)} />}>
           <Settings aria-hidden />
           Einstellungen
         </DropdownMenuItem>
@@ -80,7 +80,7 @@ export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmi
           </>
         ) : null}
         {isAdmin ? (
-          <DropdownMenuItem className={ITEM} render={<Link href="/admin" />}>
+          <DropdownMenuItem className={ITEM} render={<Link href={sharedHref("/admin", area)} />}>
             <ShieldCheck aria-hidden />
             Nutzerverwaltung
           </DropdownMenuItem>

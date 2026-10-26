@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Check, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -13,7 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { AreaTile } from "./area-tile";
-import { AREAS, areaForPath } from "./nav-items";
+import { AREAS } from "./nav-items";
+import { useArea } from "./use-area";
 
 /**
  * Umschalter oben links: zeigt den aktuellen Bereich (Start, Essen & Trinken, Sport & Gesundheit) und klappt die
@@ -21,7 +21,7 @@ import { AREAS, areaForPath } from "./nav-items";
  */
 /** compact: schmalere Fassung für die Seitenleiste am Desktop. */
 export function AreaSwitcher({ compact = false, className }: { compact?: boolean; className?: string }) {
-  const key = areaForPath(usePathname());
+  const key = useArea();
   const current = AREAS.find((a) => a.key === key) ?? AREAS[0];
 
   return (

@@ -131,7 +131,8 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
   Übungen mit `created_by`), `training_plans`, `training_plan_days`, `training_plan_exercises` (RLS: nur Owner bzw.
   öffentliche Pläne lesbar, Kindtabellen über Security-Definer-Prüfungen; Cascade am Profil). Im Datenexport als
   `trainingsplaene` und `eigene_uebungen`. Trainingspläne lassen Rückschlüsse auf Sport und Gesundheit zu (wie
-  Wochenplan und Ziele). Keine neuen Dienstleister.
+  Wochenplan und Ziele). Keine neuen Dienstleister. Dazu die Sport-Sicherung (Datei mit eigenen Plänen und Übungen,
+  wird beim Abruf erzeugt und nicht gespeichert) und ihr Import (legt Pläne und ggf. eigene Übungen an).
 - **26.10.2026, Startseite:** Neue Spalte `user_settings.home_widgets` (Reihenfolge und Sichtbarkeit der Widgets,
   keine personenbezogenen Inhalte; RLS wie `user_settings`, im Datenexport enthalten). Die Widgets zeigen nur vorhandene
   eigene Daten (Wochenplan, Ziele, Einkaufsliste, Vorrat, Koch-Log). Keine neuen Dienstleister.

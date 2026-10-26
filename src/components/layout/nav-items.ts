@@ -34,9 +34,9 @@ export const SPORT_NAV_ITEMS: NavItem[] = [
   { href: "/sport/entdecken", label: "Entdecken", icon: Compass },
 ];
 
-/** Navigation des Bereichs, zu dem die Seite gehört. */
-export function navItemsFor(pathname: string): NavItem[] {
-  return areaForPath(pathname) === "sport" ? SPORT_NAV_ITEMS : NAV_ITEMS;
+/** Navigation eines Bereichs. */
+export function navItemsFor(area: AreaKey): NavItem[] {
+  return area === "sport" ? SPORT_NAV_ITEMS : NAV_ITEMS;
 }
 
 export function isActivePath(pathname: string, href: string) {
@@ -68,9 +68,26 @@ export const AREAS: Area[] = [
   { key: "sport", label: "Sport & Gesundheit", href: "/sport/plaene", icon: HeartPulse, tile: { background: "var(--sport)", color: "var(--sport-foreground)" } },
 ];
 
-/** Zu welchem Bereich eine Seite gehört. Alles außer Start und Sport ist Essen & Trinken. */
-export function areaForPath(pathname: string): AreaKey {
+/** Seiten für beide Bereiche (Einstellungen, Nutzerverwaltung): Sie bleiben im Bereich, aus dem man kommt. */
+const SHARED_PATHS = ["/einstellungen", "/admin"];
+
+/** Parameter, mit dem gemeinsame Seiten ihren Bereich mitbekommen (`?bereich=sport`). */
+export const AREA_PARAM = "bereich";
+
+/**
+ * Zu welchem Bereich eine Seite gehört. Alles außer Start und Sport ist Essen & Trinken; gemeinsame Seiten
+ * gehören zum Bereich aus `?bereich=` (sonst Essen & Trinken).
+ */
+export function areaForPath(pathname: string, areaParam?: string | null): AreaKey {
   if (pathname === "/") return "start";
   if (isActivePath(pathname, "/sport")) return "sport";
+  if (SHARED_PATHS.some((p) => isActivePath(pathname, p)) && areaParam === "sport") return "sport";
   return "food";
+}
+
+/** Link auf eine gemeinsame Seite, die im aktuellen Bereich bleiben soll, z. B. „/einstellungen?bereich=sport“. */
+export function sharedHref(path: string, area: AreaKey): string {
+  if (area !== "sport") return path;
+  const [base, hash] = path.split("#");
+  return `${base}?${AREA_PARAM}=sport${hash ? `#${hash}` : ""}`;
 }

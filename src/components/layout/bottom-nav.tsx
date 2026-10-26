@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { areaForPath, navItemsFor, isActivePath, isEditorPath } from "./nav-items";
+import { navItemsFor, isActivePath, isEditorPath } from "./nav-items";
+import { useArea } from "./use-area";
 
 /** Navigation am unteren Rand, nur auf dem Handy (Essen & Trinken). */
 export function BottomNav() {
   const pathname = usePathname();
+  const area = useArea();
   // Im Rezept-Editor ersetzt die Speicherleiste die Navigation; die Startseite führt über ihre Kacheln weiter
-  if (isEditorPath(pathname) || areaForPath(pathname) === "start") return null;
+  if (isEditorPath(pathname) || area === "start") return null;
 
   return (
     <nav
@@ -17,7 +19,7 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pr-[max(0.375rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(0.375rem,env(safe-area-inset-left))] backdrop-blur md:hidden"
     >
       <ul className="mx-auto grid max-w-lg grid-cols-5">
-        {navItemsFor(pathname).map(({ href, label, icon: Icon }) => {
+        {navItemsFor(area).map(({ href, label, icon: Icon }) => {
           const active = isActivePath(pathname, href);
           return (
             <li key={href} className="min-w-0">

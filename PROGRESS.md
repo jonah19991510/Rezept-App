@@ -1350,6 +1350,20 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Phase S1: Gerüst, Übungsdatenbank, Trainingspläne
 
+**Nachtrag 26.10.2026 (Rückmeldung des Nutzers nach dem ersten Test):**
+- **Einstellungen im Sport-Bereich** sprangen auf Essen & Trinken. Einstellungen und Nutzerverwaltung sind jetzt
+  gemeinsame Seiten: Das Profilmenü verlinkt im Sport-Bereich auf `/einstellungen?bereich=sport` (`sharedHref`),
+  Kopf, Umschalter, Seiten- und untere Leiste lesen den Bereich über `useArea()` (Pfad + `?bereich=`). Die
+  Einstellungen zeigen je Bereich die passenden Abschnitte: Sport = Profil, Passwort, **Trainingsdaten**, Account
+  löschen; Essen & Trinken wie bisher.
+- **Trainingsdaten exportieren/importieren** (eigentlich für S4 geplant, vorgezogen): `/einstellungen/sport-sichern`
+  lädt eine Sport-Sicherung (`rezeptbuch-sport`, Version 1: Pläne mit Tagen und Übungen, auch ausgeblendete, und
+  eigene Übungen; Übungen mit Namen und Eckdaten). Import (`importSportBackupAction`): Übungen über den Namen
+  zuordnen (eigene vor Grundbestand, Umlaute/Groß-Klein egal), fehlende als eigene anlegen, Pläne als neue eigene
+  speichern; Pläne mit schon vorhandenem Namen werden übersprungen. Logik in `domain/sport-backup.ts` (Tests).
+  Trainings kommen mit S2 als Version 2 dazu.
+- 386 Tests, Typecheck, Lint, Build grün. **Nicht im Browser geprüft** (Einstellungen brauchen Login).
+
 - **Migration** `…20261026120000_sport_plans` (additiv): Enums `muscle_group`, `exercise_equipment`,
   `exercise_tracking`; Tabellen `exercises` (Grundbestand 120 Übungen auf Deutsch, eigene mit `created_by`, alle
   lesen wie Zutaten), `training_plans` (privat/öffentlich, `is_archived` = ausgeblendet, `forked_from_id`),

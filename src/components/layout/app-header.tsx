@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { AreaSwitcher } from "./area-switcher";
-import { areaForPath, isEditorPath } from "./nav-items";
+import { isEditorPath } from "./nav-items";
+import { useArea } from "./use-area";
 
 /**
  * Kopf mit Bereichs-Umschalter und Profil (children). Am Desktop steht der Umschalter in der Seitenleiste, nur auf der
@@ -13,7 +14,7 @@ import { areaForPath, isEditorPath } from "./nav-items";
 export function AppHeader({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const editor = isEditorPath(pathname);
-  const start = areaForPath(pathname) === "start";
+  const start = useArea() === "start";
   return (
     <header
       className={cn(

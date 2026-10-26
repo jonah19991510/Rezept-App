@@ -2,6 +2,7 @@ import "server-only";
 import type { CurrentUser } from "@/lib/auth";
 import { toBackupFile, type BackupFile, type RecipeRowForBackup } from "@/lib/domain/recipe-backup";
 import type { MarkdownRecipe } from "@/lib/domain/recipe-markdown";
+import { toSportBackupFile, type SportBackupFile } from "@/lib/domain/sport-backup";
 import { RECIPE_PHOTO_BUCKET } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/server";
 
@@ -184,4 +185,20 @@ export async function getOwnRecipesForMarkdown(userId: string): Promise<Markdown
   const supabase = await createClient();
   const result = await supabase.from("recipes").select(MARKDOWN_SELECT).eq("owner_id", userId);
   return toMarkdownRecipes(supabase, must(result, "Rezepte"));
+}
+
+/** Sport-Sicherung: eigene Trainingspläne (mit Tagen und Übungen) und eigene Übungen, wieder importierbar. */
+export async function buildSportBackup(userId: string): Promise<SportBackupFile> {
+  const supabase = await createClient();
+  const [plans, exercises] = await Promise.all([
+    supabase
+      .from("training_plans")
+      .select(
+        "title, description, is_archived, training_plan_days!training_plan_days_plan_id_fkey(position, name, focus, training_plan_exercises!training_plan_exercises_day_id_fkey(position, sets, reps_min, reps_max, target_seconds, rest_seconds, warmup, note, exercises!training_plan_exercises_exercise_id_fkey(name, muscle_group, secondary_muscles, equipment, tracking)))",
+      )
+      .eq("owner_id", userId)
+      .order("created_at"),
+    supabase.from("exercises").select("name, muscle_group, secondary_muscles, equipment, tracking").eq("created_by", userId).order("name"),
+  ]);
+  return toSportBackupFile(must(plans, "Trainingspläne"), must(exercises, "Übungen"), new Date());
 }

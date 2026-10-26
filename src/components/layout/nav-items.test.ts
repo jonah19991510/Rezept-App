@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { areaForPath, isEditorPath, navItemsFor } from "./nav-items";
+import { areaForPath, isEditorPath, navItemsFor, sharedHref } from "./nav-items";
 
 describe("isEditorPath", () => {
   it("erkennt Neu und Bearbeiten", () => {
@@ -31,7 +31,22 @@ describe("areaForPath", () => {
 
 describe("navItemsFor", () => {
   it("zeigt im Sport-Bereich die Sport-Navigation", () => {
-    expect(navItemsFor("/sport/plaene")[0].label).toBe("Pläne");
-    expect(navItemsFor("/rezepte")[0].label).toBe("Rezepte");
+    expect(navItemsFor("sport")[0].label).toBe("Pläne");
+    expect(navItemsFor("food")[0].label).toBe("Rezepte");
+  });
+});
+
+describe("gemeinsame Seiten", () => {
+  it("bleiben im Bereich aus ?bereich=", () => {
+    expect(areaForPath("/einstellungen", "sport")).toBe("sport");
+    expect(areaForPath("/einstellungen")).toBe("food");
+    expect(areaForPath("/admin", "sport")).toBe("sport");
+    expect(areaForPath("/rezepte", "sport")).toBe("food");
+  });
+
+  it("bekommen den Bereich im Link mit", () => {
+    expect(sharedHref("/einstellungen", "sport")).toBe("/einstellungen?bereich=sport");
+    expect(sharedHref("/einstellungen#daten", "sport")).toBe("/einstellungen?bereich=sport#daten");
+    expect(sharedHref("/einstellungen", "food")).toBe("/einstellungen");
   });
 });

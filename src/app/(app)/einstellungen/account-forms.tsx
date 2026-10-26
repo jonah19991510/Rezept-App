@@ -168,7 +168,7 @@ export function DataSection() {
         <li>
           <strong className="font-medium text-foreground">Meine Daten</strong>: alles, was die App über dich speichert
           (Profil, Rezepte und Cocktails mit Versionen, Wochenpläne, Ziele, Einkaufsliste, Vorrat mit Bar, Preise,
-          Koch-Log, Favoriten, Liste deiner Fotos).
+          Koch-Log, Favoriten, Liste deiner Fotos, Trainingspläne und eigene Übungen).
         </li>
         <li>
           <strong className="font-medium text-foreground">Rezepte sichern</strong>: deine Rezepte und Cocktails in einem

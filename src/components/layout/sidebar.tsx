@@ -4,19 +4,21 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { AreaSwitcher } from "./area-switcher";
-import { areaForPath, navItemsFor, isActivePath } from "./nav-items";
+import { navItemsFor, isActivePath } from "./nav-items";
+import { useArea } from "./use-area";
 
 /** Seitenleiste am Desktop (ab md), oben der Bereichs-Umschalter. Die Startseite hat keine. */
 export function Sidebar() {
   const pathname = usePathname();
-  if (areaForPath(pathname) === "start") return null;
+  const area = useArea();
+  if (area === "start") return null;
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r bg-sidebar px-4 py-6 text-sidebar-foreground md:flex">
       <AreaSwitcher compact className="ml-0 w-full" />
       <nav aria-label="Hauptnavigation">
         <ul className="grid gap-1">
-          {navItemsFor(pathname).map(({ href, label, icon: Icon }) => {
+          {navItemsFor(area).map(({ href, label, icon: Icon }) => {
             const active = isActivePath(pathname, href);
             return (
               <li key={href}>
