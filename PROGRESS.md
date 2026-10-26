@@ -1350,6 +1350,12 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Phase S1: Gerüst, Übungsdatenbank, Trainingspläne
 
+**Live** seit 26.10.2026: vom Nutzer am LAN-Server getestet (Pläne, Einstellungen je Bereich, Trainingsdaten);
+Push `328a111` (mit `3345c5d`, `110e75f`, `236bd4b`, `c3c42ea`) → Deployment `dpl_8osHw7M2azqMqieyhkDKcFKAbVyF`
+(`production`, `fra1`, `source: git`, nach ca. 77 s „READY“, auf unser-rezeptbuch.vercel.app geschaltet; per
+Vercel-Connector geprüft). Migration `sport_plans` war vorher eingespielt. **Nächster Schritt:** Phase S2 (Training im
+Gym) nach OK des Nutzers.
+
 **Nachtrag 26.10.2026 (Rückmeldung des Nutzers nach dem ersten Test):**
 - **Einstellungen im Sport-Bereich** sprangen auf Essen & Trinken. Einstellungen und Nutzerverwaltung sind jetzt
   gemeinsame Seiten: Das Profilmenü verlinkt im Sport-Bereich auf `/einstellungen?bereich=sport` (`sharedHref`),
