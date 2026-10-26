@@ -1348,6 +1348,24 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Nachtrag 26.10.2026: Übungsdatenbank im Profilmenü
+
+Wunsch des Nutzers: alle Übungen sehen, bearbeiten/umbenennen, neue anlegen. Entscheidung des Nutzers: eigene Übungen
+und als **Admin auch den Grundbestand** (gilt für alle).
+
+- **Seite** `/sport/uebungen` (Profilmenü im Sport-Bereich → „Übungen“): Suche, Chips Alle / Eigene / In meinen Plänen /
+  Trainiert (mit Zahlen) und Muskelgruppe, „Nach Muskelgruppe“ (aufklappbar, beim Filtern offen) oder A–Z, Zeile mit
+  Muskel · Gerät · „2 Pläne · 7× trainiert“. Antippen öffnet ein Sheet: bearbeitbar (Name, Muskelgruppe, Gerät,
+  Erfassung, Nebenmuskeln als Chips; Hinweis „gilt für alle“ beim Grundbestand) oder nur lesbar (fremde Übungen,
+  Grundbestand ohne Admin). Löschen geht nur, wenn die Übung in keinem Plan/Training steckt (auch bei anderen;
+  `on delete restrict`), sonst Hinweis. „+“ legt eine neue an (jetzt mit Nebenmuskeln).
+- **Migration** `…20261026170000_exercises_admin_edit` (additiv): Policies `exercises_update_seed_admin`,
+  `exercises_delete_seed_admin` (Grundbestand ändern/löschen nur mit `private.is_admin()`).
+- Logik `filterLibrary`, `canEditExercise` mit Tests; `getExerciseLibrary` (Nutzung in eigenen Plänen/Trainings);
+  `updateExerciseAction`, `deleteExerciseAction`. Lexikon-Platzhalter verweist auf die neue Seite.
+- 416 Tests, Typecheck, Lint, Build grün. Über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft: Filter,
+  Gruppen, Sheet. **Nicht geprüft:** Speichern/Löschen mit Login.
+
 ### Phase S4: Entdecken und Daten
 
 **Bugfix 26.10.2026 (nach dem Push von S4):** Die Pläne-Seite (Einstieg in Sport & Gesundheit) zeigte live „Da ist etwas

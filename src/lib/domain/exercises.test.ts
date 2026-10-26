@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupByMuscle, normalizeSearch, searchExercises, type ExerciseOption } from "./exercises";
+import { canEditExercise, filterLibrary, groupByMuscle, normalizeSearch, searchExercises, type ExerciseOption } from "./exercises";
 
 const ex = (name: string, muscleGroup: ExerciseOption["muscleGroup"], extra: Partial<ExerciseOption> = {}): ExerciseOption => ({
   id: name,
@@ -51,5 +51,28 @@ describe("groupByMuscle", () => {
     const groups = groupByMuscle(list);
     expect(groups.map((g) => g.muscle)).toEqual(["chest", "back", "triceps", "quads"]);
     expect(groups[0].items.map((e) => e.name)).toEqual(["Bankdrücken (Langhantel)", "Schrägbankdrücken (Kurzhantel)"]);
+  });
+});
+
+describe("Übungsdatenbank", () => {
+  const lib = [
+    { ...ex("Bankdrücken (Langhantel)", "chest"), origin: "seed" as const, planCount: 2, workoutCount: 5 },
+    { ...ex("Meine Kabelpresse", "chest", { own: true }), origin: "own" as const, planCount: 0, workoutCount: 0 },
+    { ...ex("Klimmzug", "back"), origin: "seed" as const, planCount: 0, workoutCount: 1 },
+    { ...ex("Mias Spezialrudern", "back"), origin: "other" as const, planCount: 0, workoutCount: 0 },
+  ];
+
+  it("filtert nach Ansicht, Muskelgruppe und Suche", () => {
+    expect(filterLibrary(lib, { query: "", view: "eigene", muscle: null }).map((e) => e.name)).toEqual(["Meine Kabelpresse"]);
+    expect(filterLibrary(lib, { query: "", view: "trainiert", muscle: "back" }).map((e) => e.name)).toEqual(["Klimmzug"]);
+    expect(filterLibrary(lib, { query: "", view: "plaene", muscle: null })).toHaveLength(1);
+    expect(filterLibrary(lib, { query: "rudern", view: "alle", muscle: null }).map((e) => e.name)).toEqual(["Mias Spezialrudern"]);
+  });
+
+  it("erlaubt Ändern bei eigenen, beim Grundbestand nur Admins, nie bei fremden", () => {
+    expect(canEditExercise({ origin: "own" }, false)).toBe(true);
+    expect(canEditExercise({ origin: "seed" }, false)).toBe(false);
+    expect(canEditExercise({ origin: "seed" }, true)).toBe(true);
+    expect(canEditExercise({ origin: "other" }, true)).toBe(false);
   });
 });

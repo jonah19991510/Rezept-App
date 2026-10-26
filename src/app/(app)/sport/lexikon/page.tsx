@@ -9,8 +9,8 @@ export default function LexiconPage() {
     <ComingSoon
       icon={BookOpenText}
       title="Lexikon"
-      intro="Das Nachschlagewerk zu allen Übungen kommt in einer späteren Phase."
-      features={["Alle Übungen nach Muskelgruppe und Gerät", "Ausführung, typische Fehler, Varianten", "Eigene Übungen bearbeiten"]}
+      intro="Das Nachschlagewerk zu allen Übungen kommt in einer späteren Phase. Die Übungen selbst findest du schon im Profilmenü unter „Übungen“."
+      features={["Ausführung Schritt für Schritt", "Typische Fehler und Varianten", "Welche Muskeln arbeiten"]}
     />
   );
 }

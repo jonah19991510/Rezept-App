@@ -43,6 +43,8 @@ export const exerciseInputSchema = z.object({
   muscle_group: z.enum(Constants.public.Enums.muscle_group, { error: "Bitte eine Muskelgruppe wählen." }),
   equipment: z.enum(Constants.public.Enums.exercise_equipment, { error: "Bitte ein Gerät wählen." }),
   tracking: z.enum(Constants.public.Enums.exercise_tracking),
+  /** Nebenmuskeln (ohne den Hauptmuskel) */
+  secondary_muscles: z.array(z.enum(Constants.public.Enums.muscle_group)).max(8).default([]),
 });
 
 export type ExerciseInput = z.input<typeof exerciseInputSchema>;

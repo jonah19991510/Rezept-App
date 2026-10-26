@@ -141,3 +141,46 @@ export function searchExercises<E extends ExerciseOption>(list: E[], query: stri
     return byName(a, b);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Übungsdatenbank im Profilmenü
+// ---------------------------------------------------------------------------
+
+export type LibraryExercise = ExerciseOption & {
+  /** Grundbestand, selbst angelegt oder von jemand anderem angelegt */
+  origin: "seed" | "own" | "other";
+  /** in wie vielen eigenen Plänen */
+  planCount: number;
+  /** in wie vielen eigenen Trainings */
+  workoutCount: number;
+};
+
+export type LibraryView = "alle" | "eigene" | "plaene" | "trainiert";
+
+export const LIBRARY_VIEW_LABELS: Record<LibraryView, string> = {
+  alle: "Alle",
+  eigene: "Eigene",
+  plaene: "In meinen Plänen",
+  trainiert: "Trainiert",
+};
+
+export function matchesLibraryView(e: LibraryExercise, view: LibraryView): boolean {
+  if (view === "eigene") return e.origin === "own";
+  if (view === "plaene") return e.planCount > 0;
+  if (view === "trainiert") return e.workoutCount > 0;
+  return true;
+}
+
+/** Übungen für die Datenbank-Seite filtern (Ansicht, Muskelgruppe inkl. Nebenmuskeln, Suche wie in der Auswahl). */
+export function filterLibrary<E extends LibraryExercise>(list: E[], options: { query: string; view: LibraryView; muscle: MuscleGroup | null }): E[] {
+  return searchExercises(
+    list.filter((e) => matchesLibraryView(e, options.view)),
+    options.query,
+    options.muscle,
+  );
+}
+
+/** Darf der Nutzer die Übung ändern? Eigene immer, den Grundbestand nur Admins. */
+export function canEditExercise(e: Pick<LibraryExercise, "origin">, isAdmin: boolean): boolean {
+  return e.origin === "own" || (e.origin === "seed" && isAdmin);
+}

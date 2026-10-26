@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { authorName } from "@/lib/domain/community";
-import type { ExerciseOption, MuscleGroup } from "@/lib/domain/exercises";
+import type { ExerciseOption, LibraryExercise, MuscleGroup } from "@/lib/domain/exercises";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -194,4 +194,37 @@ export async function getOwnCopyOf(userId: string, planId: string): Promise<stri
     .limit(1)
     .maybeSingle();
   return data?.id ?? null;
+}
+
+/** Übungsdatenbank: alle Übungen mit Herkunft und wie oft sie in eigenen Plänen bzw. Trainings vorkommen. */
+export async function getExerciseLibrary(userId: string): Promise<LibraryExercise[]> {
+  const supabase = await createClient();
+  const [exercises, planRows, workoutRows] = await Promise.all([
+    supabase.from("exercises").select(EXERCISE_COLUMNS).order("name"),
+    supabase
+      .from("training_plan_exercises")
+      .select("exercise_id, training_plan_days!inner(plan_id, training_plans!inner(owner_id))")
+      .eq("training_plan_days.training_plans.owner_id", userId),
+    // RLS: nur eigene Trainings
+    supabase.from("workout_exercises").select("exercise_id, workout_id"),
+  ]);
+  if (exercises.error) throw new Error(`Übungen konnten nicht geladen werden (${exercises.error.code})`);
+  const plans = new Map<string, Set<string>>();
+  for (const r of planRows.data ?? []) {
+    const set = plans.get(r.exercise_id) ?? new Set<string>();
+    set.add(r.training_plan_days.plan_id);
+    plans.set(r.exercise_id, set);
+  }
+  const workouts = new Map<string, Set<string>>();
+  for (const r of workoutRows.data ?? []) {
+    const set = workouts.get(r.exercise_id) ?? new Set<string>();
+    set.add(r.workout_id);
+    workouts.set(r.exercise_id, set);
+  }
+  return exercises.data.map((row) => ({
+    ...toExerciseOption(row, userId),
+    origin: row.created_by == null ? "seed" : row.created_by === userId ? "own" : "other",
+    planCount: plans.get(row.id)?.size ?? 0,
+    workoutCount: workouts.get(row.id)?.size ?? 0,
+  }));
 }
