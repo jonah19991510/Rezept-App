@@ -1363,6 +1363,9 @@ und als **Admin auch den Grundbestand** (gilt für alle).
   `exercises_delete_seed_admin` (Grundbestand ändern/löschen nur mit `private.is_admin()`).
 - Logik `filterLibrary`, `canEditExercise` mit Tests; `getExerciseLibrary` (Nutzung in eigenen Plänen/Trainings);
   `updateExerciseAction`, `deleteExerciseAction`. Lexikon-Platzhalter verweist auf die neue Seite.
+- **Migration eingespielt** am 26.10.2026 von Claude (mit Freigabe des Nutzers; in Supabase `exercises_admin_edit`).
+  Per SQL geprüft (zurückgerollt): fremdes Konto ohne Admin kann Grundbestand weder ändern noch löschen, Admin kann
+  umbenennen, eine Übung in einem Plan lässt sich nicht löschen (23503). Danach Name wieder wie vorher.
 - 416 Tests, Typecheck, Lint, Build grün. Über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft: Filter,
   Gruppen, Sheet. **Nicht geprüft:** Speichern/Löschen mit Login.
 
