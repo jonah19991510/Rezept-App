@@ -1378,7 +1378,12 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 - Geprüft: 380 Tests, Typecheck, Lint, Build grün. Editor über eine temporäre Vorschauseite mit Beispieldaten
   (danach gelöscht) bei 375 px hell und 1280 px dunkel: kein seitliches Scrollen, Sheet, Prüfung beim Speichern
   (rote Markierung), Auswahl mit aufklappbaren Gruppen und Mehrfachauswahl, Verschieben per Tastatur.
-  **Nicht geprüft:** Speichern/Laden mit echter Datenbank und Login (Migration bei Abschluss noch nicht eingespielt).
+- **Migration eingespielt** am 26.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in
+  Supabase unter dem Namen `sport_plans`). Geprüft: 120 Übungen im Grundbestand, RLS auf allen vier Tabellen, keine
+  Rechte für `anon`, Security-Advisor ohne neue Hinweise. Per SQL als Admin getestet (zurückgerollt):
+  Plan mit zwei Tagen anlegen, erneut speichern (Tag A behält seine ID, Tag B fällt weg, neue Reihenfolge der
+  Übungen), Kopieren (gleiche Übungen, ohne `forked_from_id` bei eigenem Plan), leerer Plan wird abgelehnt.
+  **Nicht geprüft:** die Seiten mit Login (vom Nutzer am LAN-Server zu testen).
 
 ## Wünsche vom 26.10.2026: Startseite mit Bereichen und Widgets
 
