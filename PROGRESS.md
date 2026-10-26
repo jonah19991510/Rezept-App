@@ -1350,6 +1350,11 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Phase S4: Entdecken und Daten
 
+**Live** seit 26.10.2026: Push `014933b` → Deployment `dpl_ES56E2vh9mYSz6br2DtVr5j16AfQ` (`production`, „READY“; per
+Vercel-Connector geprüft). Damit ist der Sport-Plan S1–S4 umgesetzt. **Offen für später** (eigene Phasen nach Wunsch des
+Nutzers): Getränketracker, Lexikon (inkl. eigene Übungen bearbeiten), Körpermaße, Energiebedarfsrechner; Idee:
+erledigtes Training markiert den Tag im Wochenplan als Trainingstag.
+
 Keine Migration (Spalten `is_public`, `forked_from_id` und `copy_training_plan` gibt es seit S1).
 
 - **Veröffentlichen:** Umschalter „Privat | Öffentlich“ auf der eigenen Planseite (wie bei Rezepten, wirkt sofort,
