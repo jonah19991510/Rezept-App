@@ -1350,8 +1350,9 @@ zum Ausbau sichtbar, ausgegraut mit „Kommt bald“. Vorlage: Design-Entwurf �
 - **Neue Farben** (`globals.css`): `--sport`, `--sport-soft`, `--bar`, `--bar-foreground` (hell/dunkel).
 - **Weiterleitungen auf die Startseite:** nach dem Login (ohne `?weiter=`), eingeloggt auf `/login`, nach
   Passwort setzen, nach E-Mail-Links, PWA-`start_url`.
-- **Migration** `…20261026090000_home_widgets` (additiv, nullable): **noch nicht eingespielt** (Stand 26.10.2026).
-  Ohne sie zeigt die Startseite den Standard, Speichern der Anordnung schlägt mit Hinweis fehl.
+- **Migration** `…20261026090000_home_widgets` (additiv, nullable) am 26.10.2026 von Claude über die
+  Supabase-Verbindung eingespielt (mit Freigabe des Nutzers; in Supabase Version `20261026093836`). Vorher schlug das
+  Speichern der Anordnung fehl (vom Nutzer bemerkt). Ohne Spalte zeigt die Startseite den Standard.
 - Geprüft: Tests, Typecheck, Lint, Build grün. Layout über eine temporäre Vorschauseite mit Beispieldaten (danach
   gelöscht) bei 375 px hell/dunkel und 1280 px: kein seitliches Scrollen, Umschalter, Anpassen (Ausblenden, Sortieren
   per Tastatur). **Nicht geprüft:** mit echten Daten/Login, Speichern, Seitenleiste in Essen & Trinken.
