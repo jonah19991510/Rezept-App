@@ -1348,6 +1348,23 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Nachtrag 26.10.2026: Import aus der früheren Gym-App
+
+Der Nutzer wollte den Export seiner früheren Gym-App (`gym-export-2026-10-26.json`, „Sport & Gesundheit – Gym“)
+importieren; der Import meldete „keine Sport-Sicherung“. Jetzt erkennt „Trainingsdaten importieren“ dieses Format
+(`domain/gym-import.ts`, Tests) und wandelt es im Browser in eine Sport-Sicherung um:
+- Jeder dortige Plan ist ein Tag; aktuelle werden zu „Mein Trainingsplan“, ausgeblendete zu „Mein Trainingsplan (alt)“
+  (ausgeblendet), Tage nach Wochentag sortiert. „Tag A: Fokus Brust“ / „Tag A - GK - Fokus Brust“ → Tag „Tag A“, Fokus
+  „Brust“. Wdh. „6-10“ → von/bis, Sätze und Aufwärmen übernommen.
+- Übungen behalten ihre Namen (gleicher Name wie im Grundbestand, z. B. „Beinpresse“, wird zugeordnet, sonst eigene
+  Übung). Muskelgruppe aus der deutschen Angabe, „Beine“ über den Namen (Beinbeugen → Beinbeuger, Waden, sonst
+  Beinstrecker); Gerät aus dem Namen geraten (Kabel/Latzug, Hanteln, sonst Maschine).
+- Trainings: Start aus `datetime` (sonst `ts`, sonst 12 Uhr), Ende = Start + Dauer, alle Sätze erledigt, Plan und Tag
+  zugeordnet. Doppelte Trainings (gleiche Startzeit) und Pläne (gleicher Name) werden beim erneuten Import übersprungen.
+- Mit der echten Datei geprüft (einmaliger Test, nicht eingecheckt): 2 Pläne mit je Tag A/B/C, 16 Übungen, 6 Trainings
+  mit 111 Sätzen, gültige Sicherung. 423 Tests, Typecheck, Lint, Build grün. **Nicht geprüft:** der Import selbst mit
+  Login.
+
 ### Nachtrag 26.10.2026: Übungsdatenbank im Profilmenü
 
 **Live** seit 26.10.2026: Push `c1e2a08` (mit `e5dc1f2`) → Deployment `dpl_3DnQxuZLfz8Zv69cxv6kz4UhwfvA` („READY“; per

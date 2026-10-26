@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { Download, FileUp, Loader2 } from "lucide-react";
 import { FormMessage } from "@/components/forms/form-message";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { convertGymExport, gymExportSchema } from "@/lib/domain/gym-import";
 import { sportBackupFileSchema } from "@/lib/domain/sport-backup";
 import { importSportBackupAction } from "./sport-backup-actions";
 
@@ -31,11 +32,15 @@ export function SportDataSection({ showAllData }: { showAllData: boolean }) {
       setMessage({ text: "Die Datei ist keine gültige JSON-Datei.", ok: false });
       return;
     }
-    const parsed = sportBackupFileSchema.safeParse(json);
+    let parsed = sportBackupFileSchema.safeParse(json);
+    // Export der früheren Gym-App: erst umwandeln, dann wie eine Sicherung einspielen
+    const gym = parsed.success ? null : gymExportSchema.safeParse(json);
+    if (gym?.success) parsed = sportBackupFileSchema.safeParse(convertGymExport(gym.data, new Date()));
     if (!parsed.success) {
       setMessage({ text: parsed.error.issues[0]?.message ?? "Die Datei ist keine gültige Sport-Sicherung.", ok: false });
       return;
     }
+    const fromGym = Boolean(gym?.success);
     startTransition(async () => {
       const result = await importSportBackupAction(parsed.data);
       if (!result.ok) {
@@ -47,7 +52,7 @@ export function SportDataSection({ showAllData }: { showAllData: boolean }) {
       if (result.importedWorkouts) parts.push(`${result.importedWorkouts} ${result.importedWorkouts === 1 ? "Training" : "Trainings"} importiert`);
       if (result.skippedWorkouts) parts.push(`${result.skippedWorkouts} Trainings übersprungen (gab es schon)`);
       if (result.createdExercises) parts.push(`${result.createdExercises} fehlende Übungen als eigene angelegt`);
-      setMessage({ text: `${parts.join(", ")}.`, ok: true });
+      setMessage({ text: `${fromGym ? "Export der früheren Gym-App erkannt: " : ""}${parts.join(", ")}.`, ok: true });
     });
   }
 
@@ -93,7 +98,8 @@ export function SportDataSection({ showAllData }: { showAllData: boolean }) {
         <li>
           <strong className="font-medium text-foreground">Importieren</strong> legt Pläne und Trainings zusätzlich an; Pläne
           mit vorhandenem Namen und Trainings mit derselben Startzeit werden übersprungen. Fehlende Übungen werden als eigene
-          Übungen angelegt.
+          Übungen angelegt. Auch der Export deiner früheren Gym-App geht: Aus den Tagesplänen werden „Mein Trainingsplan“
+          (aktuell) und „Mein Trainingsplan (alt)“ (ausgeblendet).
         </li>
         {showAllData ? (
           <li>
