@@ -1350,6 +1350,9 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Nachtrag 26.10.2026: Import aus der früheren Gym-App
 
+**Live** seit 26.10.2026: Push `2780a09` → Deployment `dpl_EhFndyufqyDyecot1VYPFrkq1cET` („READY“; per Vercel-Connector
+geprüft, keine Fehler im Log).
+
 Der Nutzer wollte den Export seiner früheren Gym-App (`gym-export-2026-10-26.json`, „Sport & Gesundheit – Gym“)
 importieren; der Import meldete „keine Sport-Sicherung“. Jetzt erkennt „Trainingsdaten importieren“ dieses Format
 (`domain/gym-import.ts`, Tests) und wandelt es im Browser in eine Sport-Sicherung um:
