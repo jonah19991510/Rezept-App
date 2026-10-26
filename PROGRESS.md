@@ -1395,6 +1395,11 @@ zum Ausbau sichtbar, ausgegraut mit „Kommt bald“. Vorlage: Design-Entwurf �
 
 ## Bekannte Probleme
 
+- **Alte Homescreen-Icons starten bei den Rezepten (26.10.2026):** Die Startadresse war bis zur Startseite
+  `/rezepte`. iPhones speichern sie beim Hinzufügen fest im Icon (Android aktualisiert erst nach Tagen). Abhilfe: Icon
+  löschen und die App neu zum Homescreen hinzufügen (Nutzer macht das so). Eine Umleitung im Code war angeboten, ist
+  aber nicht gebaut.
+
 - **Alte Einladungsmails (19.10., Test Phase 8):** Jede Einladung trägt ihr Ziel fest im Link (lokal versendet →
   localhost:3000, live versendet → Vercel). Nach Löschen und erneutem Einladen derselben Adresse sind alle älteren
   Links ungültig; ein Klick darauf zeigt „Link abgelaufen“ und landet beim alten Ziel. Immer die neueste Mail nehmen.
