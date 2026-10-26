@@ -17,6 +17,187 @@ export type Database = {
   }
   public: {
     Tables: {
+      exercises: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          equipment: Database["public"]["Enums"]["exercise_equipment"]
+          id: string
+          muscle_group: Database["public"]["Enums"]["muscle_group"]
+          name: string
+          secondary_muscles: Database["public"]["Enums"]["muscle_group"][]
+          tracking: Database["public"]["Enums"]["exercise_tracking"]
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          equipment: Database["public"]["Enums"]["exercise_equipment"]
+          id?: string
+          muscle_group: Database["public"]["Enums"]["muscle_group"]
+          name: string
+          secondary_muscles?: Database["public"]["Enums"]["muscle_group"][]
+          tracking?: Database["public"]["Enums"]["exercise_tracking"]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          equipment?: Database["public"]["Enums"]["exercise_equipment"]
+          id?: string
+          muscle_group?: Database["public"]["Enums"]["muscle_group"]
+          name?: string
+          secondary_muscles?: Database["public"]["Enums"]["muscle_group"][]
+          tracking?: Database["public"]["Enums"]["exercise_tracking"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercises_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plan_days: {
+        Row: {
+          focus: string | null
+          id: string
+          name: string
+          plan_id: string
+          position: number
+        }
+        Insert: {
+          focus?: string | null
+          id?: string
+          name: string
+          plan_id: string
+          position: number
+        }
+        Update: {
+          focus?: string | null
+          id?: string
+          name?: string
+          plan_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_days_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plan_exercises: {
+        Row: {
+          day_id: string
+          exercise_id: string
+          id: string
+          note: string | null
+          position: number
+          reps_max: number | null
+          reps_min: number | null
+          rest_seconds: number | null
+          sets: number
+          target_seconds: number | null
+          warmup: boolean
+        }
+        Insert: {
+          day_id: string
+          exercise_id: string
+          id?: string
+          note?: string | null
+          position: number
+          reps_max?: number | null
+          reps_min?: number | null
+          rest_seconds?: number | null
+          sets?: number
+          target_seconds?: number | null
+          warmup?: boolean
+        }
+        Update: {
+          day_id?: string
+          exercise_id?: string
+          id?: string
+          note?: string | null
+          position?: number
+          reps_max?: number | null
+          reps_min?: number | null
+          rest_seconds?: number | null
+          sets?: number
+          target_seconds?: number | null
+          warmup?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_exercises_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "training_plan_days"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plan_exercises_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          forked_from_id: string | null
+          id: string
+          is_archived: boolean
+          is_public: boolean
+          owner_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          forked_from_id?: string | null
+          id?: string
+          is_archived?: boolean
+          is_public?: boolean
+          owner_id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          forked_from_id?: string | null
+          id?: string
+          is_archived?: boolean
+          is_public?: boolean
+          owner_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plans_forked_from_id_fkey"
+            columns: ["forked_from_id"]
+            isOneToOne: false
+            referencedRelation: "training_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plans_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_config: {
         Row: {
           description: string | null
@@ -1033,6 +1214,14 @@ export type Database = {
       }
     }
     Functions: {
+      copy_training_plan: {
+        Args: { p_plan_id: string; p_title?: string }
+        Returns: string
+      }
+      save_training_plan: {
+        Args: { p_days: Json; p_plan: Json }
+        Returns: string
+      }
       copy_plan_week: {
         Args: { p_from_monday: string; p_replace: boolean; p_to_monday: string }
         Returns: number
@@ -1099,6 +1288,33 @@ export type Database = {
     }
     Enums: {
       cocktail_method: "shaken" | "stirred" | "built" | "blended"
+      exercise_equipment:
+        | "barbell"
+        | "dumbbell"
+        | "ez_bar"
+        | "machine"
+        | "smith_machine"
+        | "cable"
+        | "bodyweight"
+        | "kettlebell"
+        | "band"
+        | "other"
+      exercise_tracking: "weight_reps" | "bodyweight_reps" | "time" | "distance_time"
+      muscle_group:
+        | "chest"
+        | "back"
+        | "shoulders"
+        | "biceps"
+        | "triceps"
+        | "forearms"
+        | "core"
+        | "quads"
+        | "hamstrings"
+        | "glutes"
+        | "adductors"
+        | "calves"
+        | "full_body"
+        | "cardio"
       food_group:
         | "vegetables"
         | "fruit"
@@ -1275,6 +1491,35 @@ export const Constants = {
   public: {
     Enums: {
       cocktail_method: ["shaken", "stirred", "built", "blended"],
+      exercise_equipment: [
+        "barbell",
+        "dumbbell",
+        "ez_bar",
+        "machine",
+        "smith_machine",
+        "cable",
+        "bodyweight",
+        "kettlebell",
+        "band",
+        "other",
+      ],
+      exercise_tracking: ["weight_reps", "bodyweight_reps", "time", "distance_time"],
+      muscle_group: [
+        "chest",
+        "back",
+        "shoulders",
+        "biceps",
+        "triceps",
+        "forearms",
+        "core",
+        "quads",
+        "hamstrings",
+        "glutes",
+        "adductors",
+        "calves",
+        "full_body",
+        "cardio",
+      ],
       food_group: [
         "vegetables",
         "fruit",

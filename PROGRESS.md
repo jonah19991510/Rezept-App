@@ -1328,6 +1328,58 @@ unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft).
   werden; die Aktion selbst gilt weiter als erfolgreich.
 - 353 Tests, Typecheck, Lint grün. Nicht im Browser geprüft (Foto hochladen braucht Login).
 
+## Sport & Gesundheit (ab 26.10.2026)
+
+Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und OK:
+
+- **S1 – Gerüst, Übungen, Pläne** (dieser Stand)
+- **S2 – Training im Gym:** „Training starten“ (nächster Tag der Reihe), Trainingsdauer, Werte vom letzten Mal hell im
+  Satz (antippen übernimmt), Aufwärmsätze aus dem Arbeitsgewicht (auf Scheiben gerundet), Pausentimer mit Vibration,
+  Bildschirm an, Übungen tauschen/hinzufügen/entfernen und verschieben, am Ende „Änderungen in den Plan übernehmen?“,
+  **Speichern auch ohne Netz** (jeder Satz zuerst auf dem Handy, Hochladen sobald Netz da ist), Verlauf, Widgets
+- **S3 – Statistik:** je Übung Gewicht/geschätztes 1RM (Epley), Volumen, Bestwerte; Trainings pro Woche, Dauer,
+  Volumen, Sätze pro Muskelgruppe und Woche, Serie, Kalender; Zeiträume als Chips; später Getränke/Gewicht/Körpermaße
+- **S4 – Entdecken und Daten:** Pläne veröffentlichen, fremde Pläne starten oder übernehmen
+  (`copy_training_plan` ist schon da), Sport-Sicherung exportieren/importieren (nur eigenes Format), Prüfung
+  Datenexport/Account-Löschung, `DATENVERARBEITUNG.md`
+- Später als eigene Phasen: Getränketracker, Lexikon, Körpermaße, Energiebedarfsrechner (bis dahin „Kommt bald“-Seiten)
+- Idee (nur auf Wunsch): erledigtes Training markiert den Tag im Wochenplan als Trainingstag
+
+Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
+Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
+
+### Phase S1: Gerüst, Übungsdatenbank, Trainingspläne
+
+- **Migration** `…20261026120000_sport_plans` (additiv): Enums `muscle_group`, `exercise_equipment`,
+  `exercise_tracking`; Tabellen `exercises` (Grundbestand 120 Übungen auf Deutsch, eigene mit `created_by`, alle
+  lesen wie Zutaten), `training_plans` (privat/öffentlich, `is_archived` = ausgeblendet, `forked_from_id`),
+  `training_plan_days` (Name, Fokus, Reihenfolge), `training_plan_exercises` (Sätze, Wdh. von–bis oder Sekunden,
+  Pause, Aufwärmen, Notiz; Übung `on delete restrict`). RLS wie Rezepte (Kindtabellen über
+  `private.owns_training_plan`/`can_read_training_plan`). `save_training_plan` speichert atomar und behält die IDs
+  der Tage (spätere Trainings verweisen darauf), `copy_training_plan` kopiert (Duplizieren, später Übernehmen).
+  Hinweis: `plan_days` gibt es schon (Wochenplan), daher die Präfixe `training_`.
+- **Navigation:** Bereich Sport ist aktiv (Umschalter, Startseite). Untere Leiste bzw. Seitenleiste je Bereich
+  (`navItemsFor`): Pläne · Getränke · Statistik · Lexikon · Entdecken. Getränke, Lexikon, Statistik, Entdecken sowie
+  Körpermaße und Energiebedarfsrechner (Profilmenü, nur im Sport-Bereich) sind „Kommt bald“-Seiten mit Vorschau
+  (`components/sport/coming-soon.tsx`). Im Profilmenü stehen Zutaten/Preise/Umrechner nur noch in Essen & Trinken.
+- **Pläne** (`/sport/plaene`): Karten mit Tagen als Chips, Menü (Bearbeiten, Duplizieren, Ausblenden, Löschen mit
+  Rückfrage), ausgeblendete Pläne zugeklappt unten, „+“ unten rechts. Planseite mit allen Tagen und Übungen;
+  „Training starten“ ist ausgegraut (kommt mit S2).
+- **Plan-Editor** (`/sport/plaene/neu`, `…/bearbeiten`, wie der Rezept-Editor ohne Navigation, Speicherleiste unten):
+  Name, Beschreibung, Tage als aufklappbare Karten (Griff zum Verschieben, Stift für Name/Fokus mit Vorschlag aus den
+  Muskelgruppen, Löschen mit Rückgängig), Übungen per Drag & Drop, Sheet je Übung (Sätze −/+, Wdh. von–bis bzw.
+  Sekunden, Pause als Segmente, Aufwärmsätze an/aus, Notiz, anderer Tag, Austauschen, Entfernen mit Rückgängig).
+  Übungsauswahl: Suche (Umlaute egal), Muskelgruppen als wischbare Chips mit Zahl, ohne Filter aufklappbare Gruppen,
+  Mehrfachauswahl, „Eigene Übung“ (Name, Muskelgruppe, Gerät, Erfassung). Formular-Logik in `plan-model.ts` (Tests).
+- **Startseite:** Sport-Karte mit dem zuletzt geänderten aktiven Plan und Kacheln Training, Körper, Energie,
+  Lexikon. Fehler beim Laden der Pläne kosten nicht mehr die ganze Startseite.
+- **Datenexport:** `trainingsplaene`, `eigene_uebungen`. Account löschen: Cascade (Pläne), eigene Übungen bleiben
+  ohne Bezug (wie Zutaten).
+- Geprüft: 380 Tests, Typecheck, Lint, Build grün. Editor über eine temporäre Vorschauseite mit Beispieldaten
+  (danach gelöscht) bei 375 px hell und 1280 px dunkel: kein seitliches Scrollen, Sheet, Prüfung beim Speichern
+  (rote Markierung), Auswahl mit aufklappbaren Gruppen und Mehrfachauswahl, Verschieben per Tastatur.
+  **Nicht geprüft:** Speichern/Laden mit echter Datenbank und Login (Migration bei Abschluss noch nicht eingespielt).
+
 ## Wünsche vom 26.10.2026: Startseite mit Bereichen und Widgets
 
 **Live** seit 26.10.2026: vom Nutzer am LAN-Server getestet (Speichern schlug vor der Migration fehl; danach nicht ausdrücklich bestätigt);

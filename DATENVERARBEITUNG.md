@@ -52,6 +52,8 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `cook_logs` | Kochdatum, Bewertung, Notiz, Portionen, Rezeptversion | 9 (Eintrag über den Kochmodus) / 12 (Anzeige) | nur Nutzer selbst |
 | `favorites` | Lieblingsrezepte | 2 | nur Nutzer selbst |
 | `ingredients` (Spalte `created_by`) | selbst angelegte Zutaten | 2 | Zutaten sind global für alle lesbar; `created_by` wird beim Löschen auf leer gesetzt |
+| `training_plans` (+ `training_plan_days`, `training_plan_exercises`) | Trainingspläne mit Tagen und Übungen (Sätze, Wiederholungen, Pause, Notiz), „ausgeblendet“; `forked_from_id` für spätere Übernahmen | S1 (26.10.2026) | nur Owner; öffentlich erst mit Phase S4 (Schalter, alle Eingeloggten mit Anzeigename) |
+| `exercises` (Spalte `created_by`) | selbst angelegte Übungen (Name, Muskelgruppe, Gerät) | S1 (26.10.2026) | Übungen sind wie Zutaten für alle lesbar; ändern nur, wer sie angelegt hat; `created_by` wird beim Löschen auf leer gesetzt |
 | Storage-Bucket `recipe-photos/<user-id>/<rezept-id>/…` (privat) | Rezeptfotos (groß + Vorschaubild), vor dem Upload im Browser verkleinert und neu kodiert, dadurch **ohne EXIF/GPS** | 7 | wie das Rezept (Owner; bei öffentlichen Rezepten alle Eingeloggten), ausgeliefert nur über die App-Route `/foto/…` |
 
 **Veröffentlichte Rezepte (ab Phase 6):** Rezepte sind standardmäßig privat. Erst der Schalter „Öffentlich“ auf
@@ -125,6 +127,11 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **26.10.2026, Sport & Gesundheit Phase S1:** Neue Tabellen `exercises` (Grundbestand ohne Personenbezug, eigene
+  Übungen mit `created_by`), `training_plans`, `training_plan_days`, `training_plan_exercises` (RLS: nur Owner bzw.
+  öffentliche Pläne lesbar, Kindtabellen über Security-Definer-Prüfungen; Cascade am Profil). Im Datenexport als
+  `trainingsplaene` und `eigene_uebungen`. Trainingspläne lassen Rückschlüsse auf Sport und Gesundheit zu (wie
+  Wochenplan und Ziele). Keine neuen Dienstleister.
 - **26.10.2026, Startseite:** Neue Spalte `user_settings.home_widgets` (Reihenfolge und Sichtbarkeit der Widgets,
   keine personenbezogenen Inhalte; RLS wie `user_settings`, im Datenexport enthalten). Die Widgets zeigen nur vorhandene
   eigene Daten (Wochenplan, Ziele, Einkaufsliste, Vorrat, Koch-Log). Keine neuen Dienstleister.

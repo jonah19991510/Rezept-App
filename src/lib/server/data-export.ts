@@ -35,6 +35,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
   const id = user.id;
   const [
     profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
+    trainingPlans, ownExercises,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, created_at").eq("id", id).maybeSingle(),
     supabase
@@ -56,6 +57,15 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     supabase.from("favorites").select("*, recipes!favorites_recipe_id_fkey(title)").eq("user_id", id),
     supabase.from("ingredients").select("*").eq("created_by", id).order("created_at"),
     supabase.from("recipe_categories").select("name, position, created_at").eq("user_id", id).order("position"),
+    // Sport & Gesundheit (Phase S1)
+    supabase
+      .from("training_plans")
+      .select(
+        "*, training_plan_days!training_plan_days_plan_id_fkey(*, training_plan_exercises!training_plan_exercises_day_id_fkey(*, exercises!training_plan_exercises_exercise_id_fkey(name)))",
+      )
+      .eq("owner_id", id)
+      .order("created_at"),
+    supabase.from("exercises").select("*").eq("created_by", id).order("created_at"),
   ]);
 
   return {
@@ -77,6 +87,8 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     favoriten: must(favorites, "Favoriten"),
     eigene_zutaten: must(ownIngredients, "Zutaten"),
     kategorien: must(categories, "Kategorien"),
+    trainingsplaene: must(trainingPlans, "Trainingspläne"),
+    eigene_uebungen: must(ownExercises, "Übungen"),
   };
 }
 

@@ -117,73 +117,39 @@ export function TodayWidget({ plan }: { plan: TodayPlan }) {
   );
 }
 
-type Tile = { href?: string; label: string; icon: LucideIcon };
+type Tile = { href: string; label: string; icon: LucideIcon };
 
 /** Bereichskarte: Kachel, Titel, Untertitel und vier Abkürzungen in den Bereich. */
-function AreaCard({
-  areaKey,
-  subtitle,
-  tiles,
-  tileClass,
-  soon = false,
-}: {
-  areaKey: "food" | "sport";
-  subtitle?: string;
-  tiles: Tile[];
-  tileClass: string;
-  soon?: boolean;
-}) {
+function AreaCard({ areaKey, subtitle, tiles, tileClass }: { areaKey: "food" | "sport"; subtitle: string; tiles: Tile[]; tileClass: string }) {
   const area = AREAS.find((a) => a.key === areaKey)!;
-  const head = (
-    <>
-      <AreaTile area={area} size="lg" />
-      <span className="min-w-0 flex-1">
-        <span className="block font-heading text-2xl leading-tight font-semibold tracking-tight">{area.label}</span>
-        {soon ? (
-          <span className="mt-1 inline-block rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">Kommt bald</span>
-        ) : (
-          <span className="block text-muted-foreground">{subtitle}</span>
-        )}
-      </span>
-    </>
-  );
-
   return (
     <section className={cn(CARD, "p-2.5 md:p-4")} aria-label={area.label}>
-      {soon ? (
-        <div className="flex items-center gap-4 p-2">{head}</div>
-      ) : (
-        <Link
-          href={area.href}
-          className="flex items-center gap-4 rounded-2xl p-2 transition-colors hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-        >
-          {head}
-          <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-        </Link>
-      )}
+      <Link
+        href={area.href}
+        className="flex items-center gap-4 rounded-2xl p-2 transition-colors hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      >
+        <AreaTile area={area} size="lg" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-heading text-2xl leading-tight font-semibold tracking-tight">{area.label}</span>
+          <span className="block text-muted-foreground">{subtitle}</span>
+        </span>
+        <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+      </Link>
       <ul className="mt-2 grid grid-cols-2 gap-2.5 md:mt-3 md:gap-3">
-        {tiles.map(({ href, label, icon: Icon }) => {
-          const inner = (
-            <>
+        {tiles.map(({ href, label, icon: Icon }) => (
+          <li key={label} className="min-w-0">
+            <Link
+              href={href}
+              className={cn(
+                "flex min-h-14 items-center gap-2.5 rounded-2xl px-3 font-medium transition-[filter] hover:brightness-95 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:gap-3 md:px-4 dark:hover:brightness-110",
+                tileClass,
+              )}
+            >
               <Icon className="size-5 shrink-0" aria-hidden />
               <span className="truncate">{label}</span>
-            </>
-          );
-          const base = cn("flex min-h-14 items-center gap-2.5 rounded-2xl px-3 font-medium md:gap-3 md:px-4", tileClass);
-          return (
-            <li key={label} className="min-w-0">
-              {href ? (
-                <Link href={href} className={cn(base, "transition-[filter] hover:brightness-95 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none dark:hover:brightness-110")}>
-                  {inner}
-                </Link>
-              ) : (
-                <div className={cn(base, "opacity-60")} aria-disabled>
-                  {inner}
-                </div>
-              )}
-            </li>
-          );
-        })}
+            </Link>
+          </li>
+        ))}
       </ul>
     </section>
   );
@@ -212,18 +178,18 @@ export function FoodAreaWidget({ plan, hour, shoppingCount }: { plan: TodayPlan 
   );
 }
 
-/** Sport & Gesundheit: noch nicht gebaut, zeigt schon, was kommt. */
-export function SportAreaWidget() {
+/** Sport & Gesundheit: zuletzt geänderter aktiver Plan, Abkürzungen zu Plänen, Körper, Energie und Lexikon. */
+export function SportAreaWidget({ plan }: { plan: { title: string; days: number } | null }) {
   return (
     <AreaCard
       areaKey="sport"
-      soon
+      subtitle={plan ? `${plan.title} · ${plan.days === 1 ? "1 Tag" : `${plan.days} Tage`}` : "Leg deinen ersten Trainingsplan an"}
       tileClass="bg-sport-soft text-sport"
       tiles={[
-        { label: "Training", icon: Dumbbell },
-        { label: "Körper", icon: Ruler },
-        { label: "Energie", icon: Flame },
-        { label: "Lexikon", icon: BookOpenText },
+        { href: "/sport/plaene", label: "Training", icon: Dumbbell },
+        { href: "/sport/koerper", label: "Körper", icon: Ruler },
+        { href: "/sport/energie", label: "Energie", icon: Flame },
+        { href: "/sport/lexikon", label: "Lexikon", icon: BookOpenText },
       ]}
     />
   );

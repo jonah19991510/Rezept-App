@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTransition } from "react";
 import { useTheme } from "next-themes";
-import { Carrot, Euro, LogOut, Monitor, Moon, Scale, Settings, ShieldCheck, Sun } from "lucide-react";
+import { Calculator, Carrot, Euro, LogOut, Monitor, Moon, Ruler, Scale, Settings, ShieldCheck, Sun } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -19,13 +20,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { initials } from "@/lib/initials";
+import { areaForPath } from "./nav-items";
 
 const ITEM = "min-h-11 gap-2.5 px-2.5";
 
-/** Profilmenü oben rechts: Einstellungen, Zutaten, Preise, Umrechner, Admin (nur Admins), Darstellung, Abmelden. */
+/**
+ * Profilmenü oben rechts: Einstellungen, je Bereich die passenden Werkzeuge (Essen & Trinken: Zutaten, Preise, Umrechner;
+ * Sport: Körpermaße, Energiebedarf), Admin (nur Admins), Darstellung, Abmelden.
+ */
 export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmin: boolean }) {
   const { theme, setTheme } = useTheme();
   const [pending, startTransition] = useTransition();
+  const area = areaForPath(usePathname());
 
   return (
     <DropdownMenu>
@@ -45,18 +51,34 @@ export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmi
           <Settings aria-hidden />
           Einstellungen
         </DropdownMenuItem>
-        <DropdownMenuItem className={ITEM} render={<Link href="/zutaten" />}>
-          <Carrot aria-hidden />
-          Zutaten
-        </DropdownMenuItem>
-        <DropdownMenuItem className={ITEM} render={<Link href="/preise" />}>
-          <Euro aria-hidden />
-          Preise
-        </DropdownMenuItem>
-        <DropdownMenuItem className={ITEM} render={<Link href="/umrechner" />}>
-          <Scale aria-hidden />
-          Einheiten-Umrechner
-        </DropdownMenuItem>
+        {area === "food" ? (
+          <>
+            <DropdownMenuItem className={ITEM} render={<Link href="/zutaten" />}>
+              <Carrot aria-hidden />
+              Zutaten
+            </DropdownMenuItem>
+            <DropdownMenuItem className={ITEM} render={<Link href="/preise" />}>
+              <Euro aria-hidden />
+              Preise
+            </DropdownMenuItem>
+            <DropdownMenuItem className={ITEM} render={<Link href="/umrechner" />}>
+              <Scale aria-hidden />
+              Einheiten-Umrechner
+            </DropdownMenuItem>
+          </>
+        ) : null}
+        {area === "sport" ? (
+          <>
+            <DropdownMenuItem className={ITEM} render={<Link href="/sport/koerper" />}>
+              <Ruler aria-hidden />
+              Körpermaße
+            </DropdownMenuItem>
+            <DropdownMenuItem className={ITEM} render={<Link href="/sport/energie" />}>
+              <Calculator aria-hidden />
+              Energiebedarfsrechner
+            </DropdownMenuItem>
+          </>
+        ) : null}
         {isAdmin ? (
           <DropdownMenuItem className={ITEM} render={<Link href="/admin" />}>
             <ShieldCheck aria-hidden />

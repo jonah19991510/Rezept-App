@@ -6,7 +6,7 @@ import type { MealSlot } from "./plan";
 export const HOME_WIDGETS = [
   { id: "today", label: "Heute", description: "kcal und Protein von heute", visible: true },
   { id: "food", label: "Essen & Trinken", description: "Bereich mit Rezepte, Wochenplan, Einkauf, Bar", visible: true },
-  { id: "sport", label: "Sport & Gesundheit", description: "Bereich (kommt bald)", visible: true },
+  { id: "sport", label: "Sport & Gesundheit", description: "Bereich mit Plänen, Körper, Energie, Lexikon", visible: true },
   { id: "meals", label: "Heute geplant", description: "Mahlzeiten aus dem Wochenplan", visible: true },
   { id: "shopping", label: "Einkaufsliste", description: "Was noch fehlt", visible: true },
   { id: "ready", label: "Was kann ich kochen?", description: "Rezepte und Cocktails aus dem Vorrat", visible: true },
