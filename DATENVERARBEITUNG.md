@@ -125,6 +125,9 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **26.10.2026, Startseite:** Neue Spalte `user_settings.home_widgets` (Reihenfolge und Sichtbarkeit der Widgets,
+  keine personenbezogenen Inhalte; RLS wie `user_settings`, im Datenexport enthalten). Die Widgets zeigen nur vorhandene
+  eigene Daten (Wochenplan, Ziele, Einkaufsliste, Vorrat, Koch-Log). Keine neuen Dienstleister.
 - **24.10.2026, eigene Kategorien:** Neue Tabelle `recipe_categories` (Name, Reihenfolge je Nutzer; RLS nur eigene,
   Cascade über `profiles`), Spalte `recipes.category_name`. Startliste: die bisherigen festen Kategorien. Keine
   personenbezogenen Daten im engeren Sinn. Datenexport enthält die Liste (`kategorien`), die Rezept-Sicherung den

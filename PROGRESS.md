@@ -1328,6 +1328,34 @@ unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector geprüft).
   werden; die Aktion selbst gilt weiter als erfolgreich.
 - 353 Tests, Typecheck, Lint grün. Nicht im Browser geprüft (Foto hochladen braucht Login).
 
+## Wünsche vom 26.10.2026: Startseite mit Bereichen und Widgets
+
+Entscheidungen des Nutzers: Anordnung **im Konto** gespeichert (gleich auf PC und Handy); **Sport & Gesundheit** bis
+zum Ausbau sichtbar, ausgegraut mit „Kommt bald“. Vorlage: Design-Entwurf „Start“ des Nutzers.
+
+- **Bereiche** (`AREAS`, `areaForPath` in `nav-items.ts`, Tests): Start (`/`), Essen & Trinken (alles Bisherige, Einstieg
+  `/rezepte`), Sport & Gesundheit (`/sport`, noch nicht gebaut). Umschalter oben links (`area-switcher.tsx`): Kachel,
+  Name des Bereichs, Pfeil; klappt die Bereiche auf (Sport ausgegraut). Am Handy im Kopf statt des Logos, am Desktop
+  oben in der Seitenleiste; auf der Startseite gibt es weder Seitenleiste noch untere Navigation (Umschalter im Kopf).
+- **Startseite** `src/app/(app)/page.tsx` (vorher Weiterleitung auf `/rezepte`): „Guten Morgen/Hallo/Guten Abend,
+  <Vorname>“, Wochentag und Datum, dann die Widgets (`components/home/widgets.tsx`): Heute (kcal laut Plan gegen
+  Tagesziel, Trainingstag, Protein mit Balken), Essen & Trinken (nächste Mahlzeit von heute, Kacheln Rezepte,
+  Wochenplan, Einkauf · offene Einträge, Bar), Sport & Gesundheit (Kommt bald), Heute geplant, Einkaufsliste,
+  Was kann ich kochen? (Gerichte/Cocktails, die der Vorrat ganz abdeckt), Läuft bald ab, Lange nicht gekocht. Die
+  letzten beiden sind anfangs ausgeblendet. Geladen werden nur Daten sichtbarer Widgets (`lib/server/home.ts`).
+- **Anpassen** (`home-widgets.tsx`): „Startseite anpassen“ zeigt eine Liste mit Griff (Ziehen per dnd-kit, auch
+  Tastatur) und Auge zum Ein-/Ausblenden, „Standard“, „Abbrechen“, „Fertig“ (speichert per `saveHomeLayoutAction`).
+  Gespeichert in `user_settings.home_widgets` (jsonb `[{id, visible}]`); `normalizeHomeLayout` verwirft Unbekanntes und
+  hängt neue Widgets hinten an (später z. B. aus Sport). Fehlt die Spalte noch, gilt der Standard.
+- **Neue Farben** (`globals.css`): `--sport`, `--sport-soft`, `--bar`, `--bar-foreground` (hell/dunkel).
+- **Weiterleitungen auf die Startseite:** nach dem Login (ohne `?weiter=`), eingeloggt auf `/login`, nach
+  Passwort setzen, nach E-Mail-Links, PWA-`start_url`.
+- **Migration** `…20261026090000_home_widgets` (additiv, nullable): **noch nicht eingespielt** (Stand 26.10.2026).
+  Ohne sie zeigt die Startseite den Standard, Speichern der Anordnung schlägt mit Hinweis fehl.
+- Geprüft: Tests, Typecheck, Lint, Build grün. Layout über eine temporäre Vorschauseite mit Beispieldaten (danach
+  gelöscht) bei 375 px hell/dunkel und 1280 px: kein seitliches Scrollen, Umschalter, Anpassen (Ausblenden, Sortieren
+  per Tastatur). **Nicht geprüft:** mit echten Daten/Login, Speichern, Seitenleiste in Essen & Trinken.
+
 ## Offene Punkte
 
 - Vorrat: Zugeklappte Gruppen merkt sich die Seite nur bis zum Neuladen.

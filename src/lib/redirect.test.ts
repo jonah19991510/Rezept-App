@@ -8,15 +8,15 @@ describe("safeRedirectPath", () => {
   });
 
   it("blockt fremde Ziele", () => {
-    expect(safeRedirectPath("https://evil.example")).toBe("/rezepte");
-    expect(safeRedirectPath("//evil.example")).toBe("/rezepte");
-    expect(safeRedirectPath("/\\evil.example")).toBe("/rezepte");
-    expect(safeRedirectPath("javascript:alert(1)")).toBe("/rezepte");
+    expect(safeRedirectPath("https://evil.example")).toBe("/");
+    expect(safeRedirectPath("//evil.example")).toBe("/");
+    expect(safeRedirectPath("/\\evil.example")).toBe("/");
+    expect(safeRedirectPath("javascript:alert(1)")).toBe("/");
   });
 
   it("fällt bei leeren oder ungültigen Werten zurück", () => {
-    expect(safeRedirectPath(null)).toBe("/rezepte");
-    expect(safeRedirectPath("")).toBe("/rezepte");
-    expect(safeRedirectPath("/a\nb")).toBe("/rezepte");
+    expect(safeRedirectPath(null)).toBe("/");
+    expect(safeRedirectPath("")).toBe("/");
+    expect(safeRedirectPath("/a\nb")).toBe("/");
   });
 });

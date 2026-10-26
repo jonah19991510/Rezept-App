@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Brand } from "./brand";
-import { NAV_ITEMS, isActivePath } from "./nav-items";
+import { AreaSwitcher } from "./area-switcher";
+import { NAV_ITEMS, areaForPath, isActivePath } from "./nav-items";
 
-/** Seitenleiste am Desktop (ab md). */
+/** Seitenleiste am Desktop (ab md), oben der Bereichs-Umschalter. Die Startseite hat keine. */
 export function Sidebar() {
   const pathname = usePathname();
+  if (areaForPath(pathname) === "start") return null;
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r bg-sidebar px-4 py-6 text-sidebar-foreground md:flex">
-      <Brand className="px-2" />
+      <AreaSwitcher compact className="ml-0 w-full" />
       <nav aria-label="Hauptnavigation">
         <ul className="grid gap-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => {

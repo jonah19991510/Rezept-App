@@ -72,7 +72,7 @@ export async function updateSession(request: NextRequest) {
 
   if (isLoggedIn && matches(pathname, GUEST_ONLY_PATHS)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/rezepte";
+    url.pathname = "/";
     url.search = "";
     return redirectWithCookies(url, response);
   }

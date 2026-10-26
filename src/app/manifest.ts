@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Rezeptbuch",
     description: "Rezepte, Makros, Wochenplan und Einkaufsliste für Freunde und Familie.",
     lang: "de-DE",
-    start_url: "/rezepte",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

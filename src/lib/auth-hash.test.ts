@@ -29,7 +29,7 @@ describe("targetForLinkType", () => {
   it("führt je nach Link-Art zur passenden Seite", () => {
     expect(targetForLinkType("invite")).toBe("/passwort-setzen?neu=1");
     expect(targetForLinkType("recovery")).toBe("/passwort-setzen");
-    expect(targetForLinkType("signup")).toBe("/rezepte");
-    expect(targetForLinkType(null)).toBe("/rezepte");
+    expect(targetForLinkType("signup")).toBe("/");
+    expect(targetForLinkType(null)).toBe("/");
   });
 });

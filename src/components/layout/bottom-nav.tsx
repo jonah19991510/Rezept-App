@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS, isActivePath, isEditorPath } from "./nav-items";
+import { NAV_ITEMS, areaForPath, isActivePath, isEditorPath } from "./nav-items";
 
-/** Navigation am unteren Rand, nur auf dem Handy. */
+/** Navigation am unteren Rand, nur auf dem Handy (Essen & Trinken). */
 export function BottomNav() {
   const pathname = usePathname();
-  // Im Rezept-Editor ersetzt die Speicherleiste die Navigation
-  if (isEditorPath(pathname)) return null;
+  // Im Rezept-Editor ersetzt die Speicherleiste die Navigation; die Startseite führt über ihre Kacheln weiter
+  if (isEditorPath(pathname) || areaForPath(pathname) === "start") return null;
 
   return (
     <nav

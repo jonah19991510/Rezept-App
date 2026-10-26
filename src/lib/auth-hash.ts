@@ -35,7 +35,7 @@ export function targetForLinkType(type: string | null): string {
     case "email_change":
       return "/einstellungen";
     default:
-      return "/rezepte";
+      return "/";
   }
 }
 

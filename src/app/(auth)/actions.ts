@@ -76,7 +76,7 @@ export async function confirmAction(_prev: ActionState, formData: FormData): Pro
     case "email_change":
       redirect("/einstellungen");
     default:
-      redirect("/rezepte");
+      redirect("/");
   }
 }
 
@@ -110,7 +110,7 @@ export async function setPasswordAction(_prev: ActionState, formData: FormData):
     }
   }
 
-  redirect("/rezepte");
+  redirect("/");
 }
 
 export async function signupAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

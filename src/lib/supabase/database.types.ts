@@ -936,6 +936,7 @@ export type Database = {
         Row: {
           cocktail_sort: string
           hide_staples: boolean
+          home_widgets: Json | null
           long_not_cooked_weeks: number
           recipe_sort: string
           recipe_view: string
@@ -947,6 +948,7 @@ export type Database = {
         Insert: {
           cocktail_sort?: string
           hide_staples?: boolean
+          home_widgets?: Json | null
           long_not_cooked_weeks?: number
           recipe_sort?: string
           recipe_view?: string
@@ -958,6 +960,7 @@ export type Database = {
         Update: {
           cocktail_sort?: string
           hide_staples?: boolean
+          home_widgets?: Json | null
           long_not_cooked_weeks?: number
           recipe_sort?: string
           recipe_view?: string
