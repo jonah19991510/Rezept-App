@@ -1350,7 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Nachtrag 26.10.2026: Trainings nachtragen und bearbeiten
 
-**Noch nicht live** (Commit lokal, Push nach OK des Nutzers). Keine Migration nötig.
+**Live** seit 26.10.2026: Push `6b0f512` → Deployment `dpl_DYN3ZGLA2SXFmVXqTZnBvzsmFZG2` („READY“; per Vercel-Connector
+geprüft, keine Fehler im Log). Keine Migration nötig.
 
 Wunsch: „nachträglich manuell Trainingseinheiten eintragen“. Umsetzung:
 - Verlauf → „Nachtragen“ (`log-past-workout.tsx`): Datum (nicht in der Zukunft), Beginn, Minuten (Vorschlag: vor einer
