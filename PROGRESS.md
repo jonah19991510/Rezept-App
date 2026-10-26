@@ -1356,6 +1356,8 @@ schiefgelaufen“. Laut Vercel-Log: „Functions cannot be passed directly to Cl
 und Typecheck erkennen das nicht, erst der Aufruf. Jetzt steht das Symbol als Kind im `TagLabel`. Alle anderen
 `icon={…}`-Übergaben aus Server-Seiten gehen an Server-Bausteine (`EmptyState`, `ComingSoon`, Widgets) und sind erlaubt.
 Regel für später: In Server-Komponenten keine Komponenten (z. B. Lucide-Symbole) als Props an `"use client"`-Bausteine.
+Live mit Push `32fd63b` → Deployment `dpl_8s1WywF11UiKMh76Mv7TwAnDsM8L` („READY“; per Vercel-Connector geprüft, danach keine
+Fehler mehr im Log dieses Deployments).
 
 **Live** seit 26.10.2026: Push `014933b` → Deployment `dpl_ES56E2vh9mYSz6br2DtVr5j16AfQ` (`production`, „READY“; per
 Vercel-Connector geprüft). Damit ist der Sport-Plan S1–S4 umgesetzt. **Offen für später** (eigene Phasen nach Wunsch des
