@@ -53,8 +53,6 @@
   --color-sport: var(--sport);
   --color-sport-foreground: var(--sport-foreground);
   --color-sport-soft: var(--sport-soft);
-  --color-bar: var(--bar);
-  --color-bar-foreground: var(--bar-foreground);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -88,12 +86,10 @@
   --sage: oklch(0.6 0.075 150);
   --sage-foreground: oklch(0.985 0.01 80);
 
-  /* Bereiche (Startseite): Sport & Gesundheit in Petrol, Bar-Kachel in Flaschengrün mit Bernstein */
+  /* Bereiche (Startseite): Sport & Gesundheit in Petrol */
   --sport: oklch(0.5 0.07 195);
   --sport-foreground: oklch(0.985 0.01 80);
   --sport-soft: oklch(0.935 0.022 190);
-  --bar: oklch(0.31 0.045 165);
-  --bar-foreground: oklch(0.8 0.13 78);
 
   --macro-kcal: oklch(0.6 0.14 38);
   --macro-protein: oklch(0.52 0.14 258);
@@ -147,8 +143,6 @@
   --sport: oklch(0.64 0.08 192);
   --sport-foreground: oklch(0.18 0.015 50);
   --sport-soft: oklch(0.29 0.03 195);
-  --bar: oklch(0.33 0.05 165);
-  --bar-foreground: oklch(0.8 0.13 78);
 
   --macro-kcal: oklch(0.68 0.14 40);
   --macro-protein: oklch(0.62 0.15 258);

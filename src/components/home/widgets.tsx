@@ -117,7 +117,7 @@ export function TodayWidget({ plan }: { plan: TodayPlan }) {
   );
 }
 
-type Tile = { href?: string; label: string; icon: LucideIcon; className?: string };
+type Tile = { href?: string; label: string; icon: LucideIcon };
 
 /** Bereichskarte: Kachel, Titel, Untertitel und vier Abkürzungen in den Bereich. */
 function AreaCard({
@@ -162,14 +162,14 @@ function AreaCard({
         </Link>
       )}
       <ul className="mt-2 grid grid-cols-2 gap-2.5 md:mt-3 md:gap-3">
-        {tiles.map(({ href, label, icon: Icon, className }) => {
+        {tiles.map(({ href, label, icon: Icon }) => {
           const inner = (
             <>
               <Icon className="size-5 shrink-0" aria-hidden />
               <span className="truncate">{label}</span>
             </>
           );
-          const base = cn("flex min-h-14 items-center gap-2.5 rounded-2xl px-3 font-medium md:gap-3 md:px-4", tileClass, className);
+          const base = cn("flex min-h-14 items-center gap-2.5 rounded-2xl px-3 font-medium md:gap-3 md:px-4", tileClass);
           return (
             <li key={label} className="min-w-0">
               {href ? (
@@ -206,7 +206,7 @@ export function FoodAreaWidget({ plan, hour, shoppingCount }: { plan: TodayPlan 
         { href: "/rezepte", label: "Rezepte", icon: BookOpen },
         { href: "/wochenplan", label: "Wochenplan", icon: CalendarDays },
         { href: "/einkauf", label: shoppingCount ? `Einkauf · ${shoppingCount}` : "Einkauf", icon: ShoppingBasket },
-        { href: "/rezepte/bar", label: "Bar", icon: Martini, className: "bg-bar text-bar-foreground dark:bg-bar" },
+        { href: "/rezepte/bar", label: "Bar", icon: Martini },
       ]}
     />
   );

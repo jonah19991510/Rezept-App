@@ -1347,7 +1347,8 @@ zum Ausbau sichtbar, ausgegraut mit „Kommt bald“. Vorlage: Design-Entwurf �
   Tastatur) und Auge zum Ein-/Ausblenden, „Standard“, „Abbrechen“, „Fertig“ (speichert per `saveHomeLayoutAction`).
   Gespeichert in `user_settings.home_widgets` (jsonb `[{id, visible}]`); `normalizeHomeLayout` verwirft Unbekanntes und
   hängt neue Widgets hinten an (später z. B. aus Sport). Fehlt die Spalte noch, gilt der Standard.
-- **Neue Farben** (`globals.css`): `--sport`, `--sport-soft`, `--bar`, `--bar-foreground` (hell/dunkel).
+- **Neue Farben** (`globals.css`): `--sport`, `--sport-soft` (hell/dunkel). Die Bar-Kachel hatte zuerst ein eigenes
+  Flaschengrün; auf Wunsch des Nutzers jetzt wie die anderen Kacheln unter Essen & Trinken.
 - **Weiterleitungen auf die Startseite:** nach dem Login (ohne `?weiter=`), eingeloggt auf `/login`, nach
   Passwort setzen, nach E-Mail-Links, PWA-`start_url`.
 - **Migration** `…20261026090000_home_widgets` (additiv, nullable) am 26.10.2026 von Claude über die
