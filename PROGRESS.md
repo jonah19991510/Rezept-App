@@ -1350,6 +1350,12 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Phase S2: Training im Gym
 
+**Live** seit 26.10.2026: Push `b8a4bc9` (mit `2ad403b`) → Deployment `dpl_CPtPEeRbAhhrzPxe4aLioMk78pyr` (`production`,
+`fra1`, `source: git`, nach ca. 100 s „READY“, auf unser-rezeptbuch.vercel.app geschaltet; per Vercel-Connector
+geprüft). Migration `sport_workouts` war vorher eingespielt. Der Offline-Teil (Service Worker v2) ist erst live
+testbar; vom Nutzer noch zu prüfen: Training im Gym mit Funkloch, Neuladen ohne Netz, Ton/Vibration.
+**Nächster Schritt:** Phase S3 (Statistik) nach OK des Nutzers.
+
 - **Migration** `…20261026150000_sport_workouts` (additiv): Typ `workout_set_kind` (warmup/normal); Tabellen `workouts`
   (Plan/Tag `on delete set null`, Titel, Start, Ende = null solange es läuft, Notiz, `version` = Stand-Zähler des Handys;
   höchstens ein laufendes Training je Nutzer per Teil-Index), `workout_exercises` (Vorgaben aus dem Plan, Übung
