@@ -1350,8 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Körpermaße (27.10.2026)
 
-**Stand:** gebaut, geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des Nutzers
-am LAN-Server, danach Commit und Push.
+**Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `9e2fc5c` → Deployment
+`dpl_33wySDjTnH1EWwwkKt6j2AFNZNqD` (`production`, „READY“; per Vercel-Connector geprüft, keine Fehler im Log).
 
 **Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
 unter `body_measurements`). Per SQL geprüft (zurückgerollt): Messung anlegen, gleicher Tag überschreibt (eine Messung,
