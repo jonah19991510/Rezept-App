@@ -1350,8 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Getränketracker (27.10.2026)
 
-**Stand:** gebaut, lokal geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des
-Nutzers am LAN-Server, danach Commit und Push.
+**Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `cccd866` (mit `ede5f0e`) → Deployment
+`dpl_AcbpzzZ8FsFc5oY2FAqgcJW8Zpqv` (`production`, `fra1`, `source: git`, „READY“; per Vercel-Connector geprüft).
 
 **Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
 unter `drinks`). Per SQL geprüft (zurückgerollt, danach 0 Getränke, 0 Einträge, kein Ziel gesetzt): `drink_days` ordnet
