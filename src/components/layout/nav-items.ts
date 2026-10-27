@@ -25,7 +25,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/entdecken", label: "Entdecken", icon: Compass },
 ];
 
-/** Hauptnavigation Sport & Gesundheit (Getränke und Lexikon kommen später, bis dahin Platzhalterseiten). */
+/** Hauptnavigation Sport & Gesundheit (Lexikon kommt später, bis dahin Platzhalterseite). */
 export const SPORT_NAV_ITEMS: NavItem[] = [
   { href: "/sport/plaene", label: "Pläne", icon: ClipboardList, also: ["/sport/verlauf"] },
   { href: "/sport/getraenke", label: "Getränke", icon: GlassWater },

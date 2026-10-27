@@ -17,6 +17,113 @@ export type Database = {
   }
   public: {
     Tables: {
+      drinks: {
+        Row: {
+          caffeine_mg_per_100ml: number
+          color: string
+          created_at: string
+          id: string
+          ingredients: Json | null
+          name: string
+          position: number
+          sugar_g_per_100ml: number
+          updated_at: string
+          user_id: string
+          water_percent: number
+        }
+        Insert: {
+          caffeine_mg_per_100ml?: number
+          color: string
+          created_at?: string
+          id?: string
+          ingredients?: Json | null
+          name: string
+          position?: number
+          sugar_g_per_100ml?: number
+          updated_at?: string
+          user_id?: string
+          water_percent?: number
+        }
+        Update: {
+          caffeine_mg_per_100ml?: number
+          color?: string
+          created_at?: string
+          id?: string
+          ingredients?: Json | null
+          name?: string
+          position?: number
+          sugar_g_per_100ml?: number
+          updated_at?: string
+          user_id?: string
+          water_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drinks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drink_entries: {
+        Row: {
+          amount_ml: number
+          caffeine_mg: number
+          created_at: string
+          drink_color: string
+          drink_id: string | null
+          drink_name: string
+          drunk_at: string
+          id: string
+          sugar_g: number
+          user_id: string
+          water_ml: number
+        }
+        Insert: {
+          amount_ml: number
+          caffeine_mg?: number
+          created_at?: string
+          drink_color: string
+          drink_id?: string | null
+          drink_name: string
+          drunk_at?: string
+          id?: string
+          sugar_g?: number
+          user_id?: string
+          water_ml?: number
+        }
+        Update: {
+          amount_ml?: number
+          caffeine_mg?: number
+          created_at?: string
+          drink_color?: string
+          drink_id?: string | null
+          drink_name?: string
+          drunk_at?: string
+          id?: string
+          sugar_g?: number
+          user_id?: string
+          water_ml?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drink_entries_drink_id_fkey"
+            columns: ["drink_id"]
+            isOneToOne: false
+            referencedRelation: "drinks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drink_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_exercises: {
         Row: {
           exercise_id: string
@@ -1281,6 +1388,7 @@ export type Database = {
       user_settings: {
         Row: {
           cocktail_sort: string
+          drink_goal_ml: number | null
           hide_staples: boolean
           home_widgets: Json | null
           long_not_cooked_weeks: number
@@ -1293,6 +1401,7 @@ export type Database = {
         }
         Insert: {
           cocktail_sort?: string
+          drink_goal_ml?: number | null
           hide_staples?: boolean
           home_widgets?: Json | null
           long_not_cooked_weeks?: number
@@ -1305,6 +1414,7 @@ export type Database = {
         }
         Update: {
           cocktail_sort?: string
+          drink_goal_ml?: number | null
           hide_staples?: boolean
           home_widgets?: Json | null
           long_not_cooked_weeks?: number
@@ -1379,6 +1489,16 @@ export type Database = {
       }
     }
     Functions: {
+      drink_days: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          amount_ml: number
+          caffeine_mg: number
+          day: string
+          entries: number
+          sugar_g: number
+        }[]
+      }
       last_exercise_sets: {
         Args: { p_exclude?: string; p_exercise_ids: string[] }
         Returns: {

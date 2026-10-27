@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { GlassWater } from "lucide-react";
-import { ComingSoon } from "@/components/sport/coming-soon";
+import { TodayView } from "@/components/sport/drinks/today-view";
+import { requireUser } from "@/lib/auth";
+import { berlinParts } from "@/lib/domain/workout";
+import { todayInBerlin } from "@/lib/domain/week";
+import { getDrinkEntries, getDrinkSetup } from "@/lib/server/drinks";
 
 export const metadata: Metadata = { title: "Getränke" };
 
-export default function DrinksPage() {
-  return (
-    <ComingSoon
-      icon={GlassWater}
-      title="Getränke"
-      intro="Hier trägst du bald ein, was du über den Tag trinkst."
-      features={["Wasser, Kaffee, Shakes mit einem Tipp eintragen", "Tagesziel für Flüssigkeit mit Fortschritt", "Verlauf in der Statistik"]}
-    />
-  );
+/** Getränketracker, Tab „Heute“. */
+export default async function DrinksTodayPage() {
+  const user = await requireUser();
+  const today = todayInBerlin();
+  const [{ goalMl, drinks }, entries] = await Promise.all([getDrinkSetup(user.id), getDrinkEntries(user.id, today, today)]);
+  const [h, m] = berlinParts(new Date().toISOString()).time.split(":").map(Number);
+  return <TodayView goalMl={goalMl} drinks={drinks} entries={entries} today={today} initialMinutes={h * 60 + m} />;
 }

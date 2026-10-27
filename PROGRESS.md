@@ -1348,6 +1348,56 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Getränketracker (27.10.2026)
+
+**Stand:** gebaut, lokal geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des
+Nutzers am LAN-Server, danach Commit und Push.
+
+**Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
+unter `drinks`). Per SQL geprüft (zurückgerollt, danach 0 Getränke, 0 Einträge, kein Ziel gesetzt): `drink_days` ordnet
+23:30 Uhr dem Tag selbst und 00:30 Uhr dem nächsten Tag zu (deutsche Zeit), doppelter Name abgelehnt, Ziel 100 ml
+abgelehnt, ein fremdes Konto sieht weder Getränke noch Einträge noch Tage, kann nichts ändern und keinen Eintrag mit
+fremdem Getränk anlegen (42501); nach dem Löschen eines Getränks bleiben seine Einträge (ohne Verweis). RLS auf beiden
+Tabellen, Security-Advisor ohne neue Hinweise.
+
+Wunsch des Nutzers mit Funktionsliste (Screenshots der früheren App lagen nicht bei). Fünf Tabs unter `/sport/getraenke`
+(`layout.tsx` + `drink-tabs.tsx`), Navigation „Getränke“ ist jetzt echt (vorher „Kommt bald“).
+
+- **Migration** `…20261027090000_drinks` (additiv): `drinks` (Name, Farbschlüssel, Koffein mg/100 ml, Zucker g/100 ml,
+  Wasseranteil %, `ingredients` jsonb bei Mischgetränken, Reihenfolge; eindeutig je Nutzer und Name), `drink_entries`
+  (Zeitpunkt, ml, dazu Name/Farbe/Koffein/Zucker/Wasser **als Stand beim Trinken**; Getränk `on delete set null`),
+  `user_settings.drink_goal_ml` (null = Tracker nie geöffnet → App legt 11 Start-Getränke an und setzt 2 l), Funktion
+  `drink_days(from, to)` (Summen je Tag in deutscher Zeit). RLS nur der Nutzer; Einträge nur mit eigenem Getränk.
+- **Heute:** Datum, Menge groß „0,50 l von 2,0 l · 25 %“, Balken mit Markierungen 10/13/16/19 Uhr und Strich fürs Soll
+  jetzt (Tempo 7–21 Uhr linear), Tempo-Satz mit Punkt (grün im Soll/±100 ml, gelb bis 400 ml dahinter, rot darüber).
+  Getränk als Chip (zuletzt gewähltes merkt sich das Gerät, `getraenke:zuletzt`), Schnellmengen 0,25/0,33/0,50/0,75/1,0
+  tragen sofort ein (Anzeige vorab, Toast mit „Rückgängig“). „Andere Menge / Zeit“: Sheet mit Getränk, ml, Datum,
+  Uhrzeit. Liste „Heute getrunken“ mit Anzahl und Koffein; antippen = bearbeiten/löschen.
+- **Statistik** (`?ansicht=woche|monat&datum=…&getraenk=…`): Woche/Monat, Pfeile, „KW 44 · 26.10.–1.11.“; Ø pro Tag (nur
+  Tage mit Einträgen), Ziel erreicht x/y (Tage bis heute), Gesamt mit bestem Tag, Serie (bis 1 Jahr zurück). Pro-Tag-
+  Diagramm (eigenes, `day-bars.tsx`): gestapelt nach Getränk (meistgetrunkenes unten), Ziel gestrichelt, Ø gepunktet,
+  Wert über dem Balken (Monat nur beim gewählten Tag), antippen wählt den Tag, Wischen wechselt den Zeitraum. Tagesdetail
+  mit Pfeilen (`day-detail.tsx`). Welche Getränke (antippen filtert Diagramme, Tageszeit, Koffein; Ziel/Serie bleiben
+  ungefiltert). Tageszeit (Morgens 5–11 … Abends 18–23, „Nachts“ nur wenn vorhanden), aufklappbar. Koffein-Diagramm
+  mit 400-mg-Linie, Tage darüber rot; Ø, Gesamt, höchster Tag, über 400, koffeinfrei; Koffeinquellen.
+- **Tipps:** persönliche Hinweise aus 14 Tagen (ab 3 Tagen mit Einträgen: Zielquote, wenig morgens, viel abends,
+  Koffein nach 15 Uhr, über 400 mg, Zucker > 25 g, Wasseranteil) und allgemeine Hinweise (Richtwerte, Sport, EFSA).
+- **Verlauf:** Tage nach Monat (3 Monate, „Ältere Tage anzeigen“), je Tag Menge, %, Balken, Anzahl, Koffein; Tagesseite
+  `/sport/getraenke/verlauf/<datum>` mit Pfeilen, Bearbeiten und Nachtragen.
+- **Getränke:** Tagesziel mit „Ändern“ (0,25–10 l), Liste mit Farbe und Werten pro 100 ml („koffeinfrei“/„zuckerfrei“,
+  „Wasser“ bzw. „40 % Wasser“), Sheet: Name, 14 Farben, „Zählt als Wasser“ oder **Mischgetränk** aus Zutaten (Name, ml,
+  Koffein, Zucker, ist Wasser; „Aus Getränk übernehmen“ kopiert Werte). Koffein, Zucker und Wasseranteil rechnet die App
+  (`mixValues`; Flexpresso 300 ml Milch + 200 ml Wasser → 40 %), der Server rechnet nach. Löschen lässt Einträge stehen.
+- **Entscheidungen von Claude** (beim Test ansprechen): Die Menge zählt voll zum Ziel; der Wasseranteil ist nur Angabe
+  (und fließt in den Tipp „Mehr Wasser“). Das Ziel gilt rückwirkend für alle Tage (kein Ziel je Tag gespeichert).
+  Geänderte Getränkewerte gelten nur für neue Einträge.
+- Logik `domain/drinks.ts` (19 Tests), Server `server/drinks.ts`, Aktionen `sport/getraenke/actions.ts`, Prüfung
+  `validation/drinks.ts`. Datenexport: `getraenke`, `getraenke_eintraege` (seitenweise). `DATENVERARBEITUNG.md` ergänzt.
+- Geprüft: 444 Tests, Typecheck, Lint, Build grün. Über eine temporäre Vorschauseite (gelöscht) bei 375 px hell/dunkel
+  und Desktop: Heute, Sheet, Statistik Woche/Monat, Balken antippen, Filter, Tageszeit, Wischen (Vormonat), Getränke-
+  Liste, Mischgetränk-Editor (40 %, Übernehmen), kein seitliches Scrollen, keine Felder unter 16 px. **Nicht geprüft:**
+  alles mit Login und echter Datenbank (Speichern, Startliste, Serie, Verlauf, Tipps-Seite).
+
 ### Nachtrag 26.10.2026: Trainings nachtragen und bearbeiten
 
 **Live** seit 26.10.2026: Push `6b0f512` → Deployment `dpl_DYN3ZGLA2SXFmVXqTZnBvzsmFZG2` („READY“; per Vercel-Connector

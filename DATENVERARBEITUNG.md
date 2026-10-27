@@ -55,6 +55,10 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `training_plans` (+ `training_plan_days`, `training_plan_exercises`) | Trainingspläne mit Tagen und Übungen (Sätze, Wiederholungen, Pause, Notiz), „ausgeblendet“; `forked_from_id` für spätere Übernahmen | S1 (26.10.2026) | nur Owner; öffentlich erst mit Phase S4 (Schalter, alle Eingeloggten mit Anzeigename) |
 | `workouts` (+ `workout_exercises`, `workout_sets`) | Trainings: Start/Ende, Plan und Tag, Übungen, Sätze (Gewicht, Wiederholungen, Zeit, Strecke), Notizen | S2 (26.10.2026) | nur Nutzer selbst |
 | Browser (`localStorage`, Schlüssel `training:<id>`) und Cache Storage des Service Workers (`rezeptbuch-training`, Seite `/training/<id>`) | laufendes Training, damit es ohne Netz weitergeht | S2 (26.10.2026) | nur das Gerät; gelöscht beim Beenden, Verwerfen und Abmelden |
+| `drinks` | eigene Getränke (Name, Farbe, Koffein und Zucker pro 100 ml, Wasseranteil, Zutaten bei Mischgetränken) | Getränketracker (27.10.2026) | nur Nutzer selbst |
+| `drink_entries` | was wann getrunken wurde: Zeitpunkt, Menge, Getränkename, Koffein, Zucker, Wasser | Getränketracker (27.10.2026) | nur Nutzer selbst |
+| `user_settings.drink_goal_ml` | Tagesziel für die Trinkmenge | Getränketracker (27.10.2026) | nur Nutzer selbst |
+| Browser (`localStorage`, Schlüssel `getraenke:zuletzt`) | zuletzt gewähltes Getränk auf „Heute“ | Getränketracker (27.10.2026) | nur das Gerät |
 | `exercises` (Spalte `created_by`) | selbst angelegte Übungen (Name, Muskelgruppe, Gerät) | S1 (26.10.2026) | Übungen sind wie Zutaten für alle lesbar; ändern nur, wer sie angelegt hat; `created_by` wird beim Löschen auf leer gesetzt |
 | Storage-Bucket `recipe-photos/<user-id>/<rezept-id>/…` (privat) | Rezeptfotos (groß + Vorschaubild), vor dem Upload im Browser verkleinert und neu kodiert, dadurch **ohne EXIF/GPS** | 7 | wie das Rezept (Owner; bei öffentlichen Rezepten alle Eingeloggten), ausgeliefert nur über die App-Route `/foto/…` |
 
@@ -129,6 +133,11 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **27.10.2026, Getränketracker:** Neue Tabellen `drinks` und `drink_entries` (RLS nur der Nutzer, Cascade am Profil),
+  Spalte `user_settings.drink_goal_ml`. Einträge halten Name, Koffein, Zucker und Wasser zum Zeitpunkt des Trinkens fest;
+  gelöschte Getränke lassen ihre Einträge stehen (`drink_id` wird leer). Im Datenexport als `getraenke` und
+  `getraenke_eintraege`. Trinkmenge und Koffein lassen Rückschlüsse auf Gesundheit und Gewohnheiten zu. Keine neuen
+  Dienstleister.
 - **26.10.2026, Sport & Gesundheit Phase S4:** Trainingspläne lassen sich veröffentlichen (`training_plans.is_public`,
   Schalter auf der Planseite). Öffentliche Pläne sehen alle eingeloggten Mitglieder unter „Entdecken“ mit dem
   Anzeigenamen des Besitzers (nie die E-Mail); Trainings, Sätze und Statistik bleiben privat. Andere können einen

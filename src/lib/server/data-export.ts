@@ -30,13 +30,30 @@ async function listOwnPhotos(supabase: Awaited<ReturnType<typeof createClient>>,
   return paths;
 }
 
+/** Alle Getränke-Einträge; seitenweise, weil Supabase höchstens 1000 Zeilen je Abfrage liefert (~3 Monate). */
+async function allDrinkEntries(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const rows: Record<string, unknown>[] = [];
+  for (let page = 0; ; page++) {
+    const { data, error } = await supabase
+      .from("drink_entries")
+      .select("*")
+      .eq("user_id", userId)
+      .order("drunk_at")
+      .order("id")
+      .range(page * 1000, page * 1000 + 999);
+    if (error) return { data: null, error };
+    rows.push(...data);
+    if (data.length < 1000) return { data: rows, error: null };
+  }
+}
+
 /** Vollständiger Export aller personenbezogenen Daten des Nutzers als ein JSON-Objekt. */
 export async function buildPersonalDataExport(user: CurrentUser) {
   const supabase = await createClient();
   const id = user.id;
   const [
     profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
-    trainingPlans, ownExercises, workouts,
+    trainingPlans, ownExercises, workouts, drinks, drinkEntries,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, created_at").eq("id", id).maybeSingle(),
     supabase
@@ -74,6 +91,9 @@ export async function buildPersonalDataExport(user: CurrentUser) {
       )
       .eq("user_id", id)
       .order("started_at"),
+    // Getränketracker
+    supabase.from("drinks").select("*").eq("user_id", id).order("position"),
+    allDrinkEntries(supabase, id),
   ]);
 
   return {
@@ -98,6 +118,8 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     trainingsplaene: must(trainingPlans, "Trainingspläne"),
     eigene_uebungen: must(ownExercises, "Übungen"),
     trainings: must(workouts, "Trainings"),
+    getraenke: must(drinks, "Getränke"),
+    getraenke_eintraege: must(drinkEntries, "Getränke-Einträge"),
   };
 }
 
