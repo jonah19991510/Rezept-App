@@ -1350,7 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Lexikon: Platzhalter neu ausgerichtet (27.10.2026)
 
-**Stand:** geändert, **nicht committet, nicht live.**
+**Live** seit 27.10.2026: Push `4eee3aa` → Deployment `dpl_3DKUbc4vP6kPrEqUfV5t5AafrhXb` (`production`, „READY“; per
+Vercel-Connector geprüft, keine Fehler im Log).
 
 Entscheidung des Nutzers: Das Lexikon wird **kein Übungslexikon**, sondern ein Nachschlagewerk zu Gesundheitsthemen
 (Blutwerte, Ernährung, Supplements, Training …). Die Übungsdatenbank bleibt im Profilmenü unter „Übungen“. Der
