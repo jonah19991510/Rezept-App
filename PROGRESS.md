@@ -1350,7 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Nachtrag 27.10.2026: Gym-Statistik mit Kalenderwoche
 
-**Stand:** gebaut und geprüft, **nicht committet, nicht live.** Keine Migration nötig.
+**Live** seit 27.10.2026: Push `85f487d` → Deployment `dpl_5eGAL6pCzTkXTzfNNvVMV5JTw2No` (`production`, „READY“; per
+Vercel-Connector geprüft, keine Fehler im Log). Keine Migration nötig.
 
 Wunsch des Nutzers: einzelne Woche ansehen, der Knopf zeigt die Kalenderwoche. Neuer Chip vorne in `/sport/statistik`
 („KW 44 · 4 Wochen · 3 Monate · 1 Jahr · Alles“), Start bleibt „3 Monate“. Gewählt: Zeile mit Pfeilen und „KW 44 ·
