@@ -1348,6 +1348,15 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Lexikon: Platzhalter neu ausgerichtet (27.10.2026)
+
+**Stand:** geändert, **nicht committet, nicht live.**
+
+Entscheidung des Nutzers: Das Lexikon wird **kein Übungslexikon**, sondern ein Nachschlagewerk zu Gesundheitsthemen
+(Blutwerte, Ernährung, Supplements, Training …). Die Übungsdatenbank bleibt im Profilmenü unter „Übungen“. Der
+Platzhalter `/sport/lexikon` beschreibt jetzt das (mit Hinweis „ersetzt keine ärztliche Beratung“); frühere Notizen hier
+(„Lexikon inkl. eigene Übungen bearbeiten“, „Ausführung, Fehler, Muskeln“) gelten nicht mehr.
+
 ### Training: Geschwindigkeit bei Ausdauer (27.10.2026)
 
 **Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“, mit Statistik); Push `6586bce` → Deployment

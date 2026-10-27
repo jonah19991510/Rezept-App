@@ -9,8 +9,13 @@ export default function LexiconPage() {
     <ComingSoon
       icon={BookOpenText}
       title="Lexikon"
-      intro="Das Nachschlagewerk zu allen Übungen kommt in einer späteren Phase. Die Übungen selbst findest du schon im Profilmenü unter „Übungen“."
-      features={["Ausführung Schritt für Schritt", "Typische Fehler und Varianten", "Welche Muskeln arbeiten"]}
+      intro="Hier entsteht ein Nachschlagewerk zu Gesundheitsthemen: kurz erklärt, mit Quellen und ohne Fachchinesisch. Es ersetzt keine ärztliche Beratung."
+      features={[
+        "Blutwerte: was sie bedeuten und welche Bereiche als normal gelten",
+        "Ernährung: Makro- und Mikronährstoffe, Kalorien, Trinken",
+        "Supplements: was belegt ist, wie viel sinnvoll ist, worauf man achten sollte",
+        "Training: Begriffe, Belastung, Erholung und Regeneration",
+      ]}
     />
   );
 }
