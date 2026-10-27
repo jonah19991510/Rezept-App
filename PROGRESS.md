@@ -1350,8 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Wochenplan: eigene Einträge ohne Rezept (27.10.2026)
 
-**Stand:** gebaut, geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des Nutzers
-am LAN-Server, danach Commit und Push.
+**Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `d68bbae` → Deployment
+`dpl_3YQHnavJWPpfXkjHN1vR4oqkXgRk` (`production`, „READY“; per Vercel-Connector geprüft, keine Fehler im Log).
 
 **Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
 unter `plan_free_entries`). Per SQL geprüft (zurückgerollt): eigener Eintrag und Rezept-Eintrag lassen sich anlegen;
