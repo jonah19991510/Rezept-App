@@ -26,6 +26,13 @@ export function useIsDesktop() {
 }
 
 /**
+ * Inhalt eines Sheets: scrollt selbst. `*:min-h-min`: Kinder schrumpfen nie unter ihre Inhaltshöhe. Sonst drückt das
+ * Grid Kinder mit `overflow-hidden` (z. B. runde Listen) auf die Resthöhe zusammen, schneidet sie ab, der Inhalt
+ * scrollt nicht mehr und das Sheet nimmt jede Wischbewegung als „Sheet ziehen“.
+ */
+const BODY_CLASS = "grid min-h-0 flex-1 grid-cols-1 content-start gap-6 overflow-y-auto overscroll-contain px-5 py-5 *:min-h-min";
+
+/**
  * Bearbeiten-Sheet: auf dem Handy ein Drawer von unten (Wischen nach unten schließt), am Desktop ein zentrierter
  * Dialog (max. 640 px). Kopf mit Titel, Unterzeile und X; Inhalt scrollt; Fuß mit den Knöpfen bleibt stehen.
  */
@@ -72,7 +79,7 @@ export function EditorSheet({
           className="flex max-h-[min(90dvh,56rem)] flex-col gap-0 overflow-hidden rounded-3xl p-0 sm:max-w-[640px]"
         >
           {header(DialogTitle as typeof DrawerTitle, DialogDescription as typeof DrawerDescription, DialogClose as typeof DrawerClose)}
-          <div className="grid min-h-0 flex-1 grid-cols-1 content-start gap-6 overflow-y-auto overscroll-contain px-5 py-5">{children}</div>
+          <div className={BODY_CLASS}>{children}</div>
           {footerBox}
         </DialogContent>
       </Dialog>
@@ -82,9 +89,7 @@ export function EditorSheet({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         {header(DrawerTitle, DrawerDescription, DrawerClose)}
-        <DrawerBody className="grid min-h-0 flex-1 grid-cols-1 content-start gap-6 overflow-y-auto overscroll-contain px-5 py-5">
-          {children}
-        </DrawerBody>
+        <DrawerBody className={BODY_CLASS}>{children}</DrawerBody>
         {footerBox}
       </DrawerContent>
     </Drawer>

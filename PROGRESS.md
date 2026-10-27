@@ -1348,6 +1348,20 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Bugfix 27.10.2026: Übungsauswahl scrollte nach Tipp auf eine Kategorie nicht
+
+**Stand:** behoben und geprüft, **nicht committet, nicht live.**
+
+Vom Nutzer gemeldet: In „Übungen hinzufügen“ ließ sich nach Tipp auf einen Muskelgruppen-Chip nicht mehr scrollen.
+Ursache: Der Inhalt aller Bearbeiten-Sheets (`EditorSheet`) ist ein Grid mit fester Höhe; die gefilterte Trefferliste hat
+`overflow-hidden` (runde Ecken) und durfte deshalb auf die Resthöhe schrumpfen (1.097 px Inhalt in 414 px abgeschnitten).
+Damit war der Inhalt nicht mehr scrollbar und das Sheet (Base UI) nahm jede Wischbewegung als „Sheet ziehen“
+(`preventDefault`). In der Gruppen-Ansicht steckt die Liste in einem weiteren Rahmen, dort ging es. Jetzt `*:min-h-min`
+im Sheet-Inhalt (gilt für alle Bearbeiten-Sheets: Kinder schrumpfen nie unter ihre Inhaltshöhe). Mit simulierten
+Touch-Gesten geprüft (temporäre Vorschauseite, gelöscht): vorher jede Wischbewegung blockiert, jetzt scrollt die Liste
+nach Brust/Rücken/Schultern; ganz oben nach unten wischen schließt das Sheet weiterhin. Regel für später: Kinder mit
+`overflow-hidden` in einem Grid/Flex mit fester Höhe bekommen eine Mindesthöhe.
+
 ### Nachtrag 27.10.2026: Körperfett nach der Navy-Methode
 
 **Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `2d2132a` → Deployment
