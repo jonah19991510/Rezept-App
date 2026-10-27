@@ -58,8 +58,8 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `drinks` | eigene Getränke (Name, Farbe, Koffein und Zucker pro 100 ml, Wasseranteil, Zutaten bei Mischgetränken) | Getränketracker (27.10.2026) | nur Nutzer selbst |
 | `drink_entries` | was wann getrunken wurde: Zeitpunkt, Menge, Getränkename, Koffein, Zucker, Wasser | Getränketracker (27.10.2026) | nur Nutzer selbst |
 | `user_settings.drink_goal_ml` | Tagesziel für die Trinkmenge | Getränketracker (27.10.2026) | nur Nutzer selbst |
-| `body_measurements` | Körpermaße: Datum, Gewicht, Umfänge (Schulter, Brust, Taille, Bauch, Hüfte, Oberarm, Oberschenkel, Wade), Notiz | Körpermaße (27.10.2026) | nur Nutzer selbst |
-| `user_settings.body_settings` | Körpergröße für den BMI, ausgeblendete Maße | Körpermaße (27.10.2026) | nur Nutzer selbst |
+| `body_measurements` | Körpermaße: Datum, Gewicht, Umfänge (Hals, Schulter, Brust, Taille, Bauch, Hüfte, Oberarm, Oberschenkel, Wade), Notiz | Körpermaße (27.10.2026) | nur Nutzer selbst |
+| `user_settings.body_settings` | Körpergröße für BMI und Körperfett, Geschlecht (Navy-Formel), ausgeblendete Maße | Körpermaße (27.10.2026) | nur Nutzer selbst |
 | `user_settings.energy_profile` | Eingaben des Energiebedarfsrechners: Geschlecht, Alter, Größe, Gewicht, Körperfett, Aktivität, Sport, Ziel, Wunschgewicht, Protein/Fett | Energiebedarfsrechner (27.10.2026) | nur Nutzer selbst |
 | Browser (`localStorage`, Schlüssel `getraenke:zuletzt`) | zuletzt gewähltes Getränk auf „Heute“ | Getränketracker (27.10.2026) | nur das Gerät |
 | `exercises` (Spalte `created_by`) | selbst angelegte Übungen (Name, Muskelgruppe, Gerät) | S1 (26.10.2026) | Übungen sind wie Zutaten für alle lesbar; ändern nur, wer sie angelegt hat; `created_by` wird beim Löschen auf leer gesetzt |

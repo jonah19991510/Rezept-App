@@ -17,5 +17,6 @@ export type MeasurementInput = z.infer<typeof measurementInputSchema>;
 
 export const bodySettingsSchema = z.object({
   heightCm: z.number().min(100, "Mindestens 100 cm.").max(250, "Höchstens 250 cm.").nullable(),
-  hidden: z.array(z.enum(MEASURES.filter((m) => m.key !== "weight").map((m) => m.key) as [MeasureKey, ...MeasureKey[]])).max(8),
+  sex: z.enum(["m", "w"]).nullable(),
+  hidden: z.array(z.enum(MEASURES.filter((m) => m.key !== "weight").map((m) => m.key) as [MeasureKey, ...MeasureKey[]])).max(9),
 });

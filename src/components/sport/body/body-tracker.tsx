@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   bmi,
   bmiCategory,
+  bodyFatCategory,
   changeStats,
   CIRCUMFERENCES,
   digitsOf,
@@ -21,6 +22,8 @@ import {
   measureOf,
   MEASURES,
   metricLabel,
+  navyBodyFat,
+  navyNeeds,
   seriesOf,
   shortDay,
   signed,
@@ -63,7 +66,7 @@ const withUnit = (text: string, unit: string) => (unit ? `${text} ${unit}` : tex
  * Körpermaße: Übersicht (Gewicht, BMI, Taille-Hüft-Verhältnis, Umfänge mit Verlauf), Diagramme je Größe mit Zeitraum
  * und Kennzahlen, Verlauf aller Messungen; „Neue Messung“, Messanleitung und Einstellungen.
  */
-export function BodyTracker({ measurements, settings, sex, today }: { measurements: Measurement[]; settings: BodySettings; sex: "m" | "w" | null; today: string }) {
+export function BodyTracker({ measurements, settings, today }: { measurements: Measurement[]; settings: BodySettings; today: string }) {
   const [view, setView] = useState<View>("uebersicht");
   const [metric, setMetric] = useState<MetricKey>("weight");
   const [range, setRange] = useState<ChartRange>("alle");
@@ -121,7 +124,7 @@ export function BodyTracker({ measurements, settings, sex, today }: { measuremen
               </button>
             ))}
           </div>
-          {view === "uebersicht" ? <Overview measurements={measurements} settings={settings} sex={sex} keys={keys} onOpenChart={openChart} onSettings={() => setSettingsOpen(true)} /> : null}
+          {view === "uebersicht" ? <Overview measurements={measurements} settings={settings} keys={keys} onOpenChart={openChart} onSettings={() => setSettingsOpen(true)} /> : null}
           {view === "diagramme" ? (
             <Charts
               measurements={measurements}
@@ -174,21 +177,21 @@ export function BodyTracker({ measurements, settings, sex, today }: { measuremen
 function Overview({
   measurements,
   settings,
-  sex,
   keys,
   onOpenChart,
   onSettings,
 }: {
   measurements: Measurement[];
   settings: BodySettings;
-  sex: "m" | "w" | null;
   keys: MeasureKey[];
   onOpenChart: (key: MetricKey) => void;
   onSettings: () => void;
 }) {
+  const sex = settings.sex;
   const weight = changeStats(seriesOf(measurements, "weight", settings.heightCm));
   const bmiStats = changeStats(seriesOf(measurements, "bmi", settings.heightCm));
   const whrStats = changeStats(seriesOf(measurements, "whr", settings.heightCm));
+  const kfaStats = changeStats(seriesOf(measurements, "kfa", settings.heightCm, sex));
   const limit = whrLimit(sex);
 
   return (
@@ -223,7 +226,7 @@ function Overview({
         )}
       </section>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {bmiStats ? (
           <button type="button" onClick={() => onOpenChart("bmi")} className="rounded-3xl border bg-card p-4 text-left transition hover:bg-muted/40">
             <span className="block text-xs font-semibold tracking-wide text-muted-foreground uppercase">BMI</span>
@@ -259,6 +262,30 @@ function Overview({
             <span className="block text-sm text-muted-foreground">Braucht Taille und Hüfte.</span>
           )}
         </button>
+        {kfaStats && sex ? (
+          <button type="button" onClick={() => onOpenChart("kfa")} className="col-span-2 rounded-3xl border bg-card p-4 text-left transition hover:bg-muted/40 md:col-span-1">
+            <span className="block text-xs font-semibold tracking-wide text-muted-foreground uppercase">Körperfett (Navy)</span>
+            <span className="block font-heading text-3xl font-semibold tabular-nums">
+              {fixed(kfaStats.last.value)}
+              <span className="ml-1 font-sans text-lg font-normal text-muted-foreground">%</span>
+            </span>
+            <span className="block text-sm text-muted-foreground">
+              {bodyFatCategory(kfaStats.last.value, sex)}
+              {kfaStats.count > 1 ? ` · ${signed(kfaStats.change)} Pkt. seit Start` : ""}
+            </span>
+          </button>
+        ) : (
+          <div className="col-span-2 rounded-3xl border bg-card p-4 md:col-span-1">
+            <span className="block text-xs font-semibold tracking-wide text-muted-foreground uppercase">Körperfett (Navy)</span>
+            {sex == null || settings.heightCm == null ? (
+              <button type="button" onClick={onSettings} className="mt-1 min-h-11 text-left text-sm font-medium text-primary underline-offset-4 hover:underline">
+                {sex == null ? "Geschlecht" : "Körpergröße"} in den Einstellungen eintragen
+              </button>
+            ) : (
+              <span className="mt-1 block text-sm text-muted-foreground">Braucht {navyNeeds(sex)} aus einer Messung.</span>
+            )}
+          </div>
+        )}
       </div>
 
       <section aria-labelledby="umfaenge" className="border-t pt-5">
@@ -345,14 +372,16 @@ function Charts({
   today: string;
   onGuide: (key: MeasureKey) => void;
 }) {
-  const metrics: MetricKey[] = ["weight", "bmi", "whr", ...keys.filter((k) => k !== "weight")];
-  const all = useMemo(() => seriesOf(measurements, metric, settings.heightCm), [measurements, metric, settings.heightCm]);
+  const metrics: MetricKey[] = ["weight", "bmi", "whr", "kfa", ...keys.filter((k) => k !== "weight")];
+  const all = useMemo(() => seriesOf(measurements, metric, settings.heightCm, settings.sex), [measurements, metric, settings.heightCm, settings.sex]);
   const points = inChartRange(all, range, today);
   const stats = changeStats(points);
   const unit = unitOf(metric);
+  // Körperfett: Veränderungen in Prozentpunkten, sonst verwechselt man sie mit relativen Prozent
+  const changeUnit = metric === "kfa" ? "Pkt." : unit;
   const digits = digitsOf(metric);
   const v = (n: number) => withUnit(fixed(n, digits), unit);
-  const guideKey: MeasureKey | null = metric === "bmi" ? "weight" : metric === "whr" ? "waist" : metric;
+  const guideKey: MeasureKey | null = metric === "bmi" ? "weight" : metric === "whr" ? "waist" : metric === "kfa" ? "neck" : metric;
 
   return (
     <div className="space-y-4">
@@ -385,6 +414,12 @@ function Charts({
 
       {metric === "bmi" && settings.heightCm == null ? (
         <p className="rounded-3xl border border-dashed p-6 text-center text-muted-foreground">Für den BMI fehlt deine Körpergröße (Einstellungen oben rechts).</p>
+      ) : metric === "kfa" && (settings.sex == null || settings.heightCm == null) ? (
+        <p className="rounded-3xl border border-dashed p-6 text-center text-muted-foreground">
+          Für den Körperfettanteil fehlen {settings.sex == null ? "dein Geschlecht" : "deine Körpergröße"} (Einstellungen oben rechts).
+        </p>
+      ) : metric === "kfa" && points.length === 0 ? (
+        <p className="rounded-3xl border border-dashed p-6 text-center text-muted-foreground">Die Navy-Methode braucht {navyNeeds(settings.sex)} aus derselben Messung.</p>
       ) : points.length === 0 ? (
         <p className="rounded-3xl border border-dashed p-6 text-center text-muted-foreground">Im Zeitraum gibt es dafür keine Messung.</p>
       ) : (
@@ -400,18 +435,18 @@ function Charts({
               <Stat label="Aktuell" value={v(stats.last.value)} sub={longDay(stats.last.date)} />
               <Stat
                 label="Veränderung"
-                value={stats.count > 1 ? `${arrow(stats.change)}${withUnit(signed(stats.change, digits), unit)}` : "–"}
-                sub={stats.count > 1 ? `${signed(stats.changePercent)} %` : undefined}
+                value={stats.count > 1 ? `${arrow(stats.change)}${withUnit(signed(stats.change, digits), changeUnit)}` : "–"}
+                sub={stats.count > 1 && metric !== "kfa" ? `${signed(stats.changePercent)} %` : undefined}
               />
               <Stat
                 label="Seit letzter Messung"
-                value={stats.sinceLast != null ? withUnit(signed(stats.sinceLast, digits), unit) : "–"}
+                value={stats.sinceLast != null ? withUnit(signed(stats.sinceLast, digits), changeUnit) : "–"}
                 sub={stats.previous ? `vorher ${shortDay(stats.previous.date)}` : undefined}
               />
-              <Stat label="Ø pro Woche" value={stats.perWeek != null ? withUnit(signed(stats.perWeek, digits === 2 ? 3 : 2), unit) : "–"} sub="linearer Trend" />
+              <Stat label="Ø pro Woche" value={stats.perWeek != null ? withUnit(signed(stats.perWeek, digits === 2 ? 3 : 2), changeUnit) : "–"} sub="linearer Trend" />
               <Stat
                 label="Ø pro Monat"
-                value={stats.perMonth != null ? withUnit(signed(stats.perMonth, digits), unit) : "–"}
+                value={stats.perMonth != null ? withUnit(signed(stats.perMonth, digits), changeUnit) : "–"}
                 sub={stats.count === 1 ? "1 Messung" : `${stats.count} Messungen`}
               />
             </dl>
@@ -419,6 +454,12 @@ function Charts({
         </>
       )}
 
+      {metric === "kfa" ? (
+        <p className="text-xs text-muted-foreground">
+          Navy-Methode der US-Marine: geschätzt aus Körpergröße und Umfängen (Männer Bauch auf Nabelhöhe und Hals, Frauen Taille, Hüfte und
+          Hals). Weicht oft 3–4 Prozentpunkte vom gemessenen Wert ab; für den Verlauf taugt sie gut, wenn du immer gleich misst.
+        </p>
+      ) : null}
       {guideKey ? (
         <button type="button" onClick={() => onGuide(guideKey)} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline">
           <BookOpen className="size-4" aria-hidden />
@@ -465,6 +506,7 @@ function History({ measurements, settings, keys, onEdit }: { measurements: Measu
           const b = bmi(m.weight, settings.heightCm);
           const shown = MEASURES.filter((x) => keys.includes(x.key) && m[x.key] != null);
           const w = whr(m.waist, m.hip);
+          const kfa = navyBodyFat(settings.sex, settings.heightCm, m);
           return (
             <li key={m.id} className="py-3">
               <div className="flex items-start gap-3">
@@ -472,9 +514,9 @@ function History({ measurements, settings, keys, onEdit }: { measurements: Measu
                   <p className="flex flex-wrap items-baseline justify-between gap-x-3 font-semibold">
                     {weekdayDay(m.date)}
                     <span className="text-sm font-normal text-muted-foreground tabular-nums">
-                      {b != null ? `BMI ${fixed(b)}` : ""}
-                      {b != null && w != null ? " · " : ""}
-                      {w != null ? `WHR ${fixed(w, 2)}` : ""}
+                      {[b != null ? `BMI ${fixed(b)}` : null, w != null ? `WHR ${fixed(w, 2)}` : null, kfa != null ? `KFA ${fixed(kfa)} %` : null]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   </p>
                   <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-sm text-muted-foreground">

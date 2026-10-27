@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { CIRCUMFERENCES, type BodySettings, type MeasureKey } from "@/lib/domain/body";
+import { CIRCUMFERENCES, type BodySettings, type MeasureKey, type Sex } from "@/lib/domain/body";
 import { formatDecimalInput, parseDecimal } from "@/lib/domain/decimal";
+import { cn } from "@/lib/utils";
 
 /** Einstellungen: Körpergröße für den BMI und welche Umfänge du misst (ausgeblendete verschwinden überall). */
 export function SettingsDialog({ settings, open, onOpenChange }: { settings: BodySettings; open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -23,6 +24,7 @@ export function SettingsDialog({ settings, open, onOpenChange }: { settings: Bod
 function SettingsForm({ settings, onDone }: { settings: BodySettings; onDone: () => void }) {
   const [height, setHeight] = useState(settings.heightCm != null ? formatDecimalInput(settings.heightCm, 1) : "");
   const [hidden, setHidden] = useState<MeasureKey[]>(settings.hidden);
+  const [sex, setSex] = useState<Sex | null>(settings.sex);
   const [pending, startTransition] = useTransition();
   const heightCm = height.trim() === "" ? null : parseDecimal(height);
   const invalid = height.trim() !== "" && (heightCm == null || heightCm < 100 || heightCm > 250);
@@ -30,7 +32,7 @@ function SettingsForm({ settings, onDone }: { settings: BodySettings; onDone: ()
   function save() {
     if (invalid) return;
     startTransition(async () => {
-      const result = await saveBodySettingsAction({ heightCm, hidden });
+      const result = await saveBodySettingsAction({ heightCm, sex, hidden });
       if (!result.ok) {
         toast.error(result.message ?? "Speichern ging nicht.");
         return;
@@ -44,8 +46,28 @@ function SettingsForm({ settings, onDone }: { settings: BodySettings; onDone: ()
     <>
       <DialogHeader>
         <DialogTitle>Einstellungen</DialogTitle>
-        <DialogDescription>Körpergröße für den BMI und welche Umfänge du misst.</DialogDescription>
+        <DialogDescription>Körpergröße für BMI und Körperfett, Geschlecht für die Navy-Formel und welche Umfänge du misst.</DialogDescription>
       </DialogHeader>
+      <div className="grid gap-1.5">
+        <p className="text-sm font-medium">Geschlecht</p>
+        <div className="grid grid-cols-2 rounded-full border bg-background p-0.5" role="group" aria-label="Geschlecht">
+          {(["m", "w"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={sex === s}
+              onClick={() => setSex(s)}
+              className={cn(
+                "h-11 rounded-full text-sm font-medium text-muted-foreground transition focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                sex === s && "bg-sport text-sport-foreground",
+              )}
+            >
+              {s === "m" ? "Männlich" : "Weiblich"}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">Die Navy-Formel rechnet für Männer und Frauen unterschiedlich. Vorgabe aus dem Energiebedarfsrechner.</p>
+      </div>
       <div className="grid gap-1.5">
         <Label htmlFor="body-height">Körpergröße</Label>
         <div className="relative">
@@ -69,7 +91,10 @@ function SettingsForm({ settings, onDone }: { settings: BodySettings; onDone: ()
             </li>
           ))}
         </ul>
-        <p className="mt-1 text-xs text-muted-foreground">Ausgeblendete Maße verschwinden aus Eingabe und Übersicht; gespeicherte Werte bleiben erhalten.</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Ausgeblendete Maße verschwinden aus Eingabe und Übersicht; gespeicherte Werte bleiben erhalten. Für den Körperfettanteil braucht es Hals
+          und Bauch (Männer) bzw. Hals, Taille und Hüfte (Frauen).
+        </p>
       </div>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>

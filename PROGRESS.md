@@ -1348,6 +1348,32 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Nachtrag 27.10.2026: Körperfett nach der Navy-Methode
+
+**Stand:** gebaut, geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des Nutzers
+am LAN-Server, danach Commit und Push.
+
+**Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
+unter `body_neck`). Per SQL geprüft (zurückgerollt): Messung nur mit Hals möglich, 95 cm Hals und leere Messung
+abgelehnt, Einstellungen mit Geschlecht speicherbar. Security-Advisor ohne neue Hinweise.
+
+**Beim Test „Seite lädt nicht mehr“:** Der LAN-Server hing auf einem kaputten Zwischenstand von `database.types.ts`
+(beim Einfügen von `neck_cm` kurz ein wörtliches „`n“; Turbopack meldete den Lesefehler weiter, obwohl die Datei längst
+korrigiert war), dazu `42703` aus der Zeit vor der Migration. Abhilfe wie bekannt: Server stoppen, `.next/dev` löschen,
+neu starten; Schema-Cache der Datenbank-Schnittstelle neu geladen (`notify pgrst`). Danach lädt `/sport/koerper` fehlerfrei.
+
+- **Migration** `…20261027220000_body_neck` (additiv): `body_measurements.neck_cm` (20–80 cm), Regel „mindestens ein
+  Wert“ zählt den Hals mit.
+- **Neues Maß Hals** (mit Messanleitung und Figur, ausblendbar), **Geschlecht** in den Körpermaße-Einstellungen (Vorgabe
+  aus dem Energiebedarfsrechner, gespeichert in `body_settings`).
+- **Formel** (`navyBodyFat`): Männer 495 / (1,0324 − 0,19077·log10(Bauch − Hals) + 0,15456·log10(Größe)) − 450 (Bauch auf
+  Nabelhöhe, sonst Taille); Frauen 495 / (1,29579 − 0,35004·log10(Taille + Hüfte − Hals) + 0,22100·log10(Größe)) − 450.
+  Einordnung nach ACE (essenziell, sportlich, fit, durchschnittlich, erhöht).
+- **Anzeige:** Karte „Körperfett (Navy)“ mit Einordnung und Pkt. seit Start bzw. Hinweis, was fehlt; Diagramm „KFA“
+  (Veränderungen in Prozentpunkten, Hinweis zur Genauigkeit, „So misst du Hals“); Verlauf mit KFA.
+- 4 neue Tests (Mann 187 cm/Hals 42/Bauch 102 → 24,0 %, Frau 168/32/72/98 → 26,6 %), Typcheck, Lint grün; am Handy über
+  eine temporäre Vorschauseite (gelöscht) geprüft. **Nicht geprüft:** mit Login.
+
 ### Körpermaße (27.10.2026)
 
 **Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `9e2fc5c` → Deployment

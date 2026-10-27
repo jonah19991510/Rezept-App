@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   bmi,
   bmiCategory,
+  bodyFatCategory,
+  navyBodyFat,
   changeStats,
   inChartRange,
   longDay,
@@ -14,7 +16,7 @@ import {
   type Measurement,
 } from "./body";
 
-const empty = { shoulder: null, chest: null, waist: null, belly: null, hip: null, upperArm: null, thigh: null, calf: null, note: null };
+const empty = { neck: null, shoulder: null, chest: null, waist: null, belly: null, hip: null, upperArm: null, thigh: null, calf: null, note: null };
 
 // Werte aus den Screenshots der früheren App (187 cm)
 const measurements: Measurement[] = [
@@ -82,8 +84,35 @@ describe("Anzeige und Einstellungen", () => {
     expect(sparklinePath([3], 100, 20)).toBe("");
   });
 
-  it("Einstellungen: Größe aus dem Energierechner als Vorgabe, Gewicht nie ausblendbar", () => {
-    expect(normalizeBodySettings(null, 187)).toEqual({ heightCm: 187, hidden: [] });
-    expect(normalizeBodySettings({ heightCm: 180, hidden: ["calf", "weight", "x"] }, 187)).toEqual({ heightCm: 180, hidden: ["calf"] });
+  it("Einstellungen: Größe und Geschlecht aus dem Energierechner als Vorgabe, Gewicht nie ausblendbar", () => {
+    expect(normalizeBodySettings(null, 187, "m")).toEqual({ heightCm: 187, sex: "m", hidden: [] });
+    expect(normalizeBodySettings({ heightCm: 180, sex: "w", hidden: ["calf", "weight", "x"] }, 187, "m")).toEqual({ heightCm: 180, sex: "w", hidden: ["calf"] });
+  });
+});
+
+describe("Körperfett nach der Navy-Methode", () => {
+  it("Männer: Bauch (Nabelhöhe) und Hals", () => {
+    expect(navyBodyFat("m", 187, { neck: 42, belly: 102, waist: 103, hip: null })!.toFixed(1)).toBe("24.0");
+    // ohne Bauch die Taille
+    expect(navyBodyFat("m", 187, { neck: 42, belly: null, waist: 102, hip: null })!.toFixed(1)).toBe("24.0");
+  });
+
+  it("Frauen: Taille, Hüfte und Hals", () => {
+    expect(navyBodyFat("w", 168, { neck: 32, waist: 72, hip: 98, belly: null })!.toFixed(1)).toBe("26.6");
+    expect(navyBodyFat("w", 168, { neck: 32, waist: 72, hip: null, belly: null })).toBeNull();
+  });
+
+  it("ohne Hals, Größe oder Geschlecht kein Wert; Einordnung", () => {
+    expect(navyBodyFat("m", 187, { neck: null, belly: 102, waist: null, hip: null })).toBeNull();
+    expect(navyBodyFat(null, 187, { neck: 42, belly: 102, waist: null, hip: null })).toBeNull();
+    expect(navyBodyFat("m", null, { neck: 42, belly: 102, waist: null, hip: null })).toBeNull();
+    expect(bodyFatCategory(24, "m")).toBe("durchschnittlich");
+    expect(bodyFatCategory(26.6, "w")).toBe("durchschnittlich");
+    expect(bodyFatCategory(12, "m")).toBe("sportlich");
+  });
+
+  it("als Verlauf", () => {
+    const withNeck = measurements.map((m) => ({ ...m, neck: 42 }));
+    expect(seriesOf(withNeck, "kfa", 187, "m").map((p) => p.value.toFixed(1))).toEqual(["26.4", "25.8", "24.0"]);
   });
 });

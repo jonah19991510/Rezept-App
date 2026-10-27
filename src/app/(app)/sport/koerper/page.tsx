@@ -9,6 +9,6 @@ export const metadata: Metadata = { title: "Körpermaße" };
 /** Körpermaße: Gewicht und Umfänge mit Übersicht, Diagrammen und Verlauf. */
 export default async function BodyPage() {
   const user = await requireUser();
-  const [measurements, { settings, sex }] = await Promise.all([getMeasurements(user.id), getBodySettings(user.id)]);
-  return <BodyTracker measurements={measurements} settings={settings} sex={sex} today={todayInBerlin()} />;
+  const [measurements, settings] = await Promise.all([getMeasurements(user.id), getBodySettings(user.id)]);
+  return <BodyTracker measurements={measurements} settings={settings} today={todayInBerlin()} />;
 }

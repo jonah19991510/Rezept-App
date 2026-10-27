@@ -4,9 +4,10 @@
 import { formatNumber } from "@/lib/format";
 import { addDays, daysBetween } from "./week";
 
-export type MeasureKey = "weight" | "shoulder" | "chest" | "waist" | "belly" | "hip" | "upperArm" | "thigh" | "calf";
-/** Diagramm-Größen: alle Maße plus BMI und Taille-Hüft-Verhältnis */
-export type MetricKey = MeasureKey | "bmi" | "whr";
+export type MeasureKey = "weight" | "neck" | "shoulder" | "chest" | "waist" | "belly" | "hip" | "upperArm" | "thigh" | "calf";
+/** Diagramm-Größen: alle Maße plus BMI, Taille-Hüft-Verhältnis und Körperfett (Navy) */
+export type MetricKey = MeasureKey | "bmi" | "whr" | "kfa";
+export type Sex = "m" | "w";
 
 export type Measurement = { id: string; date: string; note: string | null } & Record<MeasureKey, number | null>;
 
@@ -37,6 +38,23 @@ export const MEASURES: Measure[] = [
         "Ruhig stehen, Gewicht auf beide Füße verteilen, ablesen.",
       ],
       mark: { kind: "scale" },
+    },
+  },
+  {
+    key: "neck",
+    label: "Hals",
+    unit: "cm",
+    column: "neck_cm",
+    min: 20,
+    max: 80,
+    guide: {
+      where: "Knapp unterhalb des Kehlkopfs. Wird für den Körperfettanteil (Navy-Methode) gebraucht.",
+      steps: [
+        "Aufrecht stehen, geradeaus schauen, Schultern locker.",
+        "Maßband knapp unter dem Kehlkopf um den Hals legen, vorne leicht nach unten geneigt.",
+        "Band anliegend, aber nicht drückend, dann ablesen.",
+      ],
+      mark: { kind: "band", cx: 60, cy: 40, rx: 7, ry: 2.5 },
     },
   },
   {
@@ -217,8 +235,49 @@ export function whr(waistCm: number | null, hipCm: number | null): number | null
 }
 
 /** Ab welchem WHR die WHO ein erhöhtes Risiko sieht. */
-export function whrLimit(sex: "m" | "w" | null): number | null {
+export function whrLimit(sex: Sex | null): number | null {
   return sex === "m" ? 0.9 : sex === "w" ? 0.85 : null;
+}
+
+/**
+ * Körperfettanteil in % nach der Navy-Methode (Hodgdon & Beckett, US Navy), alles in cm:
+ * Männer 495 / (1,0324 − 0,19077 · log10(Bauch − Hals) + 0,15456 · log10(Größe)) − 450, Bauch auf Nabelhöhe
+ * (fehlt er, die Taille);
+ * Frauen 495 / (1,29579 − 0,35004 · log10(Taille + Hüfte − Hals) + 0,22100 · log10(Größe)) − 450, Taille an der
+ * schmalsten Stelle.
+ * Ohne nötige Werte oder bei unmöglichen Kombinationen null.
+ */
+export function navyBodyFat(
+  sex: Sex | null,
+  heightCm: number | null,
+  m: Pick<Measurement, "neck" | "waist" | "belly" | "hip">,
+): number | null {
+  if (!sex || !heightCm || m.neck == null) return null;
+  let value: number;
+  if (sex === "m") {
+    const abdomen = m.belly ?? m.waist;
+    if (abdomen == null || abdomen - m.neck <= 0) return null;
+    value = 495 / (1.0324 - 0.19077 * Math.log10(abdomen - m.neck) + 0.15456 * Math.log10(heightCm)) - 450;
+  } else {
+    if (m.waist == null || m.hip == null || m.waist + m.hip - m.neck <= 0) return null;
+    value = 495 / (1.29579 - 0.35004 * Math.log10(m.waist + m.hip - m.neck) + 0.221 * Math.log10(heightCm)) - 450;
+  }
+  return value > 0 && value < 75 ? value : null;
+}
+
+/** Einordnung des Körperfetts (übliche Bereiche nach dem American Council on Exercise). */
+export function bodyFatCategory(value: number, sex: Sex): string {
+  const limits = sex === "m" ? [6, 14, 18, 25] : [14, 21, 25, 32];
+  if (value < limits[0]) return "essenziell";
+  if (value < limits[1]) return "sportlich";
+  if (value < limits[2]) return "fit";
+  if (value < limits[3]) return "durchschnittlich";
+  return "erhöht";
+}
+
+/** Welche Maße die Navy-Formel braucht. */
+export function navyNeeds(sex: Sex | null): string {
+  return sex === "w" ? "Hals, Taille, Hüfte und Körpergröße" : "Hals, Bauch (oder Taille) und Körpergröße";
 }
 
 // ---------------------------------------------------------------------------
@@ -228,10 +287,11 @@ export function whrLimit(sex: "m" | "w" | null): number | null {
 export type Point = { date: string; value: number };
 
 /** Werte einer Größe über die Zeit (älteste zuerst); Messungen ohne Wert fallen weg. */
-export function seriesOf(measurements: Measurement[], key: MetricKey, heightCm: number | null): Point[] {
+export function seriesOf(measurements: Measurement[], key: MetricKey, heightCm: number | null, sex: Sex | null = null): Point[] {
   const sorted = [...measurements].sort((a, b) => a.date.localeCompare(b.date));
   return sorted.flatMap((m) => {
-    const value = key === "bmi" ? bmi(m.weight, heightCm) : key === "whr" ? whr(m.waist, m.hip) : m[key];
+    const value =
+      key === "bmi" ? bmi(m.weight, heightCm) : key === "whr" ? whr(m.waist, m.hip) : key === "kfa" ? navyBodyFat(sex, heightCm, m) : m[key];
     return value == null ? [] : [{ date: m.date, value }];
   });
 }
@@ -317,11 +377,11 @@ export function digitsOf(key: MetricKey): number {
 }
 
 export function unitOf(key: MetricKey): string {
-  return key === "bmi" || key === "whr" ? "" : measureOf(key).unit;
+  return key === "bmi" || key === "whr" ? "" : key === "kfa" ? "%" : measureOf(key).unit;
 }
 
 export function metricLabel(key: MetricKey): string {
-  return key === "bmi" ? "BMI" : key === "whr" ? "WHR" : measureOf(key).label;
+  return key === "bmi" ? "BMI" : key === "whr" ? "WHR" : key === "kfa" ? "KFA" : measureOf(key).label;
 }
 
 const MONTHS = ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.", "Dez."];
@@ -364,15 +424,17 @@ export function sparklinePath(values: number[], w: number, h: number, pad = 2): 
 // Einstellungen
 // ---------------------------------------------------------------------------
 
-export type BodySettings = { heightCm: number | null; hidden: MeasureKey[] };
+/** Körpergröße für den BMI, Geschlecht für Körperfett (Navy) und WHR-Grenze, ausgeblendete Maße. */
+export type BodySettings = { heightCm: number | null; sex: Sex | null; hidden: MeasureKey[] };
 
-export function normalizeBodySettings(raw: unknown, fallbackHeight: number | null = null): BodySettings {
+export function normalizeBodySettings(raw: unknown, fallbackHeight: number | null = null, fallbackSex: Sex | null = null): BodySettings {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const h = r.heightCm;
   const heightCm = typeof h === "number" && h >= 100 && h <= 250 ? h : fallbackHeight;
+  const sex = r.sex === "m" || r.sex === "w" ? r.sex : fallbackSex;
   const keys = MEASURES.map((m) => m.key);
   const hidden = Array.isArray(r.hidden) ? (r.hidden.filter((k) => keys.includes(k as MeasureKey) && k !== "weight") as MeasureKey[]) : [];
-  return { heightCm, hidden };
+  return { heightCm, sex, hidden };
 }
 
 /** Zahl für Kennzahlen: „1,6“ */

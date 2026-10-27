@@ -26,12 +26,12 @@ export async function getMeasurements(userId: string): Promise<Measurement[]> {
   return (data as unknown as Row[]).map(toMeasurement);
 }
 
-/** Einstellungen (Körpergröße, ausgeblendete Maße) und Geschlecht; Größe und Geschlecht notfalls aus dem Energierechner. */
-export async function getBodySettings(userId: string): Promise<{ settings: BodySettings; sex: "m" | "w" | null }> {
+/** Einstellungen (Körpergröße, Geschlecht, ausgeblendete Maße); Größe und Geschlecht notfalls aus dem Energierechner. */
+export async function getBodySettings(userId: string): Promise<BodySettings> {
   const supabase = await createClient();
   const { data } = await supabase.from("user_settings").select("body_settings, energy_profile").eq("user_id", userId).maybeSingle();
   const energy = (data?.energy_profile ?? null) as { heightCm?: unknown; sex?: unknown } | null;
   const energyHeight = typeof energy?.heightCm === "number" ? energy.heightCm : null;
-  const sex = energy?.sex === "m" || energy?.sex === "w" ? energy.sex : null;
-  return { settings: normalizeBodySettings(data?.body_settings, energyHeight), sex };
+  const energySex = energy?.sex === "m" || energy?.sex === "w" ? energy.sex : null;
+  return normalizeBodySettings(data?.body_settings, energyHeight, energySex);
 }
