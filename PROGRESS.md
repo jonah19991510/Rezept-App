@@ -1348,6 +1348,39 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Energiebedarfsrechner (27.10.2026)
+
+**Stand:** gebaut, geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des Nutzers
+am LAN-Server, danach Commit und Push.
+
+**Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
+unter `energy_profile`). Per SQL geprüft (zurückgerollt): eigenes Profil speichern und lesen geht, Liste statt Objekt
+und zu große Inhalte werden abgelehnt, ein fremdes Konto sieht kein Profil und kann keins ändern. Security-Advisor ohne
+neue Hinweise.
+
+Vorlage: Screenshot des Rechners aus der früheren App; dessen Zahlen kommen exakt heraus (Test mit Mann, 26 J., 187 cm,
+113 kg, PAL 1,5, Ziel 2.400 kcal, Wunschgewicht 95 kg: Grundumsatz 2.174, Henry 2.319, Mittelwert 2.246, Gesamtumsatz
+3.261, −861 kcal, −0,78 kg/Woche, 171 g Protein, 80 g Fett, 249 g Kohlenhydrate).
+
+- **Seite** `/sport/energie` (vorher „Kommt bald“; Profilmenü im Sport-Bereich und Kachel „Energie“ auf der Startseite):
+  am Desktop links die Eingaben, rechts Ergebnis, Formeln, Makros; am Handy das Ergebnis oben.
+- **Eingaben:** Geschlecht, Alter (18–100), Größe, Gewicht, Körperfett (optional), Alltags-PAL als Schieber 1,2–2,4 mit
+  Beschreibung nach DGE, Sport-Zuschlag (+0,1 bis +0,5; +0,3 = DGE für 4–5 Einheiten), Ziel (halten, −300/−500/−750,
+  +250/+500 oder eigenes Kalorienziel mit Defizit/Überschuss in kcal und %), Wunschgewicht (für Protein; leer = Gewicht),
+  Protein g/kg, Fett-Anteil % (neu gegenüber der Vorlage, dort fest 30 %), Formel (Automatisch, Mifflin, Henry, Katch,
+  Mittelwert). Automatisch = Mifflin-St Jeor, mit Körperfett Katch-McArdle.
+- **Ergebnis:** Grundumsatz, Gesamtumsatz (× PAL), Tagesziel mit kcal-Abstand und kg/Woche (7.700 kcal/kg); Formeln im
+  Vergleich mit ±10-%-Spanne und „aktiv“; Makros als Balken mit g, kcal, %, g/kg; Hinweise (unter Grundumsatz, mehr als
+  25 % Defizit, unter 1.500/1.200 kcal, nichts mehr für Kohlenhydrate); „Formeln und Quellen“ aufklappbar.
+- **Als Tagesziel übernehmen:** Dialog mit „bisher/neu“ für alle Tage oder Trainingstage, speichert über die bestehende
+  `saveGoalsAction` in `user_goals` (Wochenplan).
+- **Migration** `…20261027120000_energy_profile` (additiv): `user_settings.energy_profile` jsonb; Eingaben werden 0,8 s
+  nach der letzten gültigen Änderung gespeichert (`saveEnergyProfileAction`, Zod), beim Laden `normalizeProfile`.
+- Logik `domain/energy.ts` (10 Tests). 455 Tests, Typcheck, Lint, Build grün. Über eine temporäre Vorschauseite
+  (gelöscht) bei 375 px und Desktop geprüft: Werte wie im Screenshot, Körperfett 25 % → Katch-McArdle aktiv (2.201),
+  Sport +0,3 → PAL 1,80 / 3.961 kcal, Dialog, keine Felder unter 16 px, kein seitliches Scrollen. **Nicht geprüft:**
+  Speichern der Eingaben und Übernehmen der Ziele mit Login.
+
 ### Nachtrag 27.10.2026: Gym-Statistik mit Kalenderwoche
 
 **Live** seit 27.10.2026: Push `85f487d` → Deployment `dpl_5eGAL6pCzTkXTzfNNvVMV5JTw2No` (`production`, „READY“; per

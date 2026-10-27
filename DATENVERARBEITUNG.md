@@ -58,6 +58,7 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `drinks` | eigene Getränke (Name, Farbe, Koffein und Zucker pro 100 ml, Wasseranteil, Zutaten bei Mischgetränken) | Getränketracker (27.10.2026) | nur Nutzer selbst |
 | `drink_entries` | was wann getrunken wurde: Zeitpunkt, Menge, Getränkename, Koffein, Zucker, Wasser | Getränketracker (27.10.2026) | nur Nutzer selbst |
 | `user_settings.drink_goal_ml` | Tagesziel für die Trinkmenge | Getränketracker (27.10.2026) | nur Nutzer selbst |
+| `user_settings.energy_profile` | Eingaben des Energiebedarfsrechners: Geschlecht, Alter, Größe, Gewicht, Körperfett, Aktivität, Sport, Ziel, Wunschgewicht, Protein/Fett | Energiebedarfsrechner (27.10.2026) | nur Nutzer selbst |
 | Browser (`localStorage`, Schlüssel `getraenke:zuletzt`) | zuletzt gewähltes Getränk auf „Heute“ | Getränketracker (27.10.2026) | nur das Gerät |
 | `exercises` (Spalte `created_by`) | selbst angelegte Übungen (Name, Muskelgruppe, Gerät) | S1 (26.10.2026) | Übungen sind wie Zutaten für alle lesbar; ändern nur, wer sie angelegt hat; `created_by` wird beim Löschen auf leer gesetzt |
 | Storage-Bucket `recipe-photos/<user-id>/<rezept-id>/…` (privat) | Rezeptfotos (groß + Vorschaubild), vor dem Upload im Browser verkleinert und neu kodiert, dadurch **ohne EXIF/GPS** | 7 | wie das Rezept (Owner; bei öffentlichen Rezepten alle Eingeloggten), ausgeliefert nur über die App-Route `/foto/…` |
@@ -133,6 +134,10 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **27.10.2026, Energiebedarfsrechner:** Spalte `user_settings.energy_profile` (jsonb) mit den Eingaben des Rechners,
+  damit PC und Handy dasselbe zeigen; im Datenexport unter `einstellungen`, beim Löschen per Cascade weg. Gerechnet wird
+  nur im Browser. „Als Tagesziel übernehmen“ schreibt in die bestehenden `user_goals`. Körperdaten wie Gewicht und
+  Körperfett sind Gesundheitsdaten (Hinweis für die Datenschutzerklärung). Keine neuen Dienstleister.
 - **27.10.2026, Getränketracker:** Neue Tabellen `drinks` und `drink_entries` (RLS nur der Nutzer, Cascade am Profil),
   Spalte `user_settings.drink_goal_ml`. Einträge halten Name, Koffein, Zucker und Wasser zum Zeitpunkt des Trinkens fest;
   gelöschte Getränke lassen ihre Einträge stehen (`drink_id` wird leer). Im Datenexport als `getraenke` und
