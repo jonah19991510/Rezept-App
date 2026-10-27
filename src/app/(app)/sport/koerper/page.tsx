@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
-import { Ruler } from "lucide-react";
-import { ComingSoon } from "@/components/sport/coming-soon";
+import { BodyTracker } from "@/components/sport/body/body-tracker";
+import { requireUser } from "@/lib/auth";
+import { todayInBerlin } from "@/lib/domain/week";
+import { getBodySettings, getMeasurements } from "@/lib/server/body";
 
 export const metadata: Metadata = { title: "Körpermaße" };
 
-export default function BodyPage() {
-  return (
-    <ComingSoon
-      icon={Ruler}
-      title="Körpermaße"
-      intro="Gewicht und Umfänge festhalten und den Verlauf sehen."
-      features={["Körpergewicht, Körperfett und Umfänge eintragen", "Verlauf als Diagramm", "Fortschritt neben deinen Trainings"]}
-    />
-  );
+/** Körpermaße: Gewicht und Umfänge mit Übersicht, Diagrammen und Verlauf. */
+export default async function BodyPage() {
+  const user = await requireUser();
+  const [measurements, { settings, sex }] = await Promise.all([getMeasurements(user.id), getBodySettings(user.id)]);
+  return <BodyTracker measurements={measurements} settings={settings} sex={sex} today={todayInBerlin()} />;
 }

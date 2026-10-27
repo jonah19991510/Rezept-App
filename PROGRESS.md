@@ -1348,6 +1348,40 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Körpermaße (27.10.2026)
+
+**Stand:** gebaut, geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des Nutzers
+am LAN-Server, danach Commit und Push.
+
+**Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
+unter `body_measurements`). Per SQL geprüft (zurückgerollt): Messung anlegen, gleicher Tag überschreibt (eine Messung,
+111,9 kg), leere Messung und 1000 kg abgelehnt, Einstellungen speicherbar, ein fremdes Konto sieht und ändert nichts und
+kann nicht für andere schreiben (42501). Security-Advisor ohne neue Hinweise.
+
+Vorlage: Screenshots des Trackers aus der früheren App; deren Zahlen kommen exakt heraus (Test: 113,7 → 112,5 → 112,1 kg,
+−1,6 kg · −1,4 %, −0,71 kg/Woche, −3,1 kg/Monat, Brust −2,04 cm/Woche, BMI 32,1 bei 187 cm, WHR 0,92).
+- **Migration** `…20261027200000_body_measurements` (additiv): `body_measurements` (eine Messung je Tag, Gewicht und acht
+  Umfänge optional, mindestens ein Wert, Notiz; RLS nur der Nutzer) und `user_settings.body_settings` (Größe, ausgeblendete
+  Maße).
+- **Seite** `/sport/koerper` (vorher „Kommt bald“): Kopf „3 Messungen · zuletzt 24. Okt. 2026“, Messanleitung,
+  Einstellungen; Ansichten Übersicht · Diagramme · Verlauf; „Neue Messung“ unten rechts.
+  - **Übersicht:** Gewicht groß mit „seit Start“, „seit letzter“, „Trend kg/Woche“; BMI (WHO-Einteilung, seit Start) und
+    Taille-Hüft-Verhältnis (seit Start, über/unter 0,90 bzw. 0,85 je nach Geschlecht aus dem Energierechner); Umfänge
+    mit Wert, Sparkline, Veränderung, letzte, cm/Woche bzw. „Erste Messung“. Antippen öffnet das Diagramm.
+  - **Diagramme:** Chips Gewicht, BMI, WHR und Umfänge; letzte Messung; Zeitraum 1 M/3 M/1 J/Alle; Fläche mit Punkten
+    (glatte Achse); Start, Aktuell, Veränderung, Seit letzter Messung, Ø pro Woche (lineare Regression), Ø pro Monat;
+    „So misst du …“.
+  - **Verlauf:** neueste zuerst, BMI und WHR, alle Werte, Bearbeiten, Löschen (zweiter Tipp bestätigt).
+  - **Neue Messung:** Datum, Gewicht und Umfänge (je Maß der zuletzt gemessene Wert hell), „?“ öffnet die Anleitung, Notiz.
+    Tag mit vorhandener Messung → diese wird geladen und geändert.
+  - **Messanleitung:** je Maß Figur mit Maßband (bzw. Waage), wo und drei Schritte; Tipps für alle Umfänge.
+  - **Einstellungen:** Körpergröße (Vorgabe aus dem Energiebedarfsrechner), Umfänge ein-/ausblenden (Gewicht bleibt).
+- Logik `domain/body.ts` (8 Tests), Server `server/body.ts`, Aktionen `sport/koerper/actions.ts`, `validation/body.ts`.
+  Datenexport `koerpermasse`. Gym-Statistik verweist auf die Seite.
+- Geprüft über eine temporäre Vorschauseite (gelöscht) bei 375 px mit den Screenshot-Werten: Übersicht, Diagramme
+  (Kennzahlen wie in der Vorlage), Messanleitung, Verlauf, Eingabe; kein seitliches Scrollen, Felder 16 px.
+  **Nicht geprüft:** Speichern/Löschen/Einstellungen mit Login.
+
 ### Lexikon: Platzhalter neu ausgerichtet (27.10.2026)
 
 **Live** seit 27.10.2026: Push `4eee3aa` → Deployment `dpl_3DKUbc4vP6kPrEqUfV5t5AafrhXb` (`production`, „READY“; per

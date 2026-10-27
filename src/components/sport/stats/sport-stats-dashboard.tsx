@@ -353,7 +353,11 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
       )}
 
       <p className="rounded-3xl border border-dashed p-4 text-sm text-muted-foreground">
-        Später kommen hier Körpergewicht und Körpermaße dazu. Die Getränke-Statistik findest du unter{" "}
+        Gewicht und Umfänge mit Verlauf findest du unter{" "}
+        <Link href="/sport/koerper" className="font-medium text-primary underline-offset-4 hover:underline">
+          Körpermaße
+        </Link>
+        , die Getränke-Statistik unter{" "}
         <Link href="/sport/getraenke/statistik" className="font-medium text-primary underline-offset-4 hover:underline">
           Getränke → Statistik
         </Link>

@@ -53,7 +53,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
   const id = user.id;
   const [
     profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
-    trainingPlans, ownExercises, workouts, drinks, drinkEntries,
+    trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, created_at").eq("id", id).maybeSingle(),
     supabase
@@ -94,6 +94,8 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     // Getränketracker
     supabase.from("drinks").select("*").eq("user_id", id).order("position"),
     allDrinkEntries(supabase, id),
+    // Körpermaße
+    supabase.from("body_measurements").select("*").eq("user_id", id).order("measured_on"),
   ]);
 
   return {
@@ -120,6 +122,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     trainings: must(workouts, "Trainings"),
     getraenke: must(drinks, "Getränke"),
     getraenke_eintraege: must(drinkEntries, "Getränke-Einträge"),
+    koerpermasse: must(bodyMeasurements, "Körpermaße"),
   };
 }
 

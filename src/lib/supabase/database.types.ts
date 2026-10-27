@@ -17,6 +17,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      body_measurements: {
+        Row: {
+          belly_cm: number | null
+          calf_cm: number | null
+          chest_cm: number | null
+          created_at: string
+          hip_cm: number | null
+          id: string
+          measured_on: string
+          note: string | null
+          shoulder_cm: number | null
+          thigh_cm: number | null
+          updated_at: string
+          upper_arm_cm: number | null
+          user_id: string
+          waist_cm: number | null
+          weight_kg: number | null
+        }
+        Insert: {
+          belly_cm?: number | null
+          calf_cm?: number | null
+          chest_cm?: number | null
+          created_at?: string
+          hip_cm?: number | null
+          id?: string
+          measured_on: string
+          note?: string | null
+          shoulder_cm?: number | null
+          thigh_cm?: number | null
+          updated_at?: string
+          upper_arm_cm?: number | null
+          user_id?: string
+          waist_cm?: number | null
+          weight_kg?: number | null
+        }
+        Update: {
+          belly_cm?: number | null
+          calf_cm?: number | null
+          chest_cm?: number | null
+          created_at?: string
+          hip_cm?: number | null
+          id?: string
+          measured_on?: string
+          note?: string | null
+          shoulder_cm?: number | null
+          thigh_cm?: number | null
+          updated_at?: string
+          upper_arm_cm?: number | null
+          user_id?: string
+          waist_cm?: number | null
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "body_measurements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       drinks: {
         Row: {
           caffeine_mg_per_100ml: number
@@ -1393,6 +1455,7 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          body_settings: Json | null
           cocktail_sort: string
           drink_goal_ml: number | null
           energy_profile: Json | null
@@ -1407,6 +1470,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          body_settings?: Json | null
           cocktail_sort?: string
           drink_goal_ml?: number | null
           energy_profile?: Json | null
@@ -1421,6 +1485,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          body_settings?: Json | null
           cocktail_sort?: string
           drink_goal_ml?: number | null
           energy_profile?: Json | null
