@@ -1350,7 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Bugfix 27.10.2026: Übungsauswahl rutschte bei langen Namen nach rechts
 
-**Stand:** behoben und geprüft, **nicht committet, nicht live.**
+**Live** seit 27.10.2026: Push `747e926` → Deployment `dpl_GntBCKDK3nWc9pwt1bLTXmyTL8e9` (`production`, „READY“; per
+Vercel-Connector geprüft, keine Fehler im Log).
 
 Vom Nutzer am iPhone gemeldet (Screenshot): In „Übungen hinzufügen“ ragte die Liste rechts über den Rand, sobald eine
 aufgeklappte Muskelgruppe einen langen Namen enthielt. Ursache: Die Gruppen-Liste war ein CSS-Grid ohne Spaltenvorgabe;
