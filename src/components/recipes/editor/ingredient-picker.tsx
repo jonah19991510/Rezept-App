@@ -135,7 +135,8 @@ export function IngredientPicker({
         {mode.kind === "form" ? (
           <IngredientForm initial={mode.initial} onSaved={choose} onCancel={() => setMode({ kind: "search" })} />
         ) : (
-          <div className="grid gap-4">
+          // grid-cols-1 (minmax(0, 1fr)): lange Produktnamen kürzen statt die Liste über den Rand zu schieben
+          <div className="grid grid-cols-1 gap-4">
             <div className="relative">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
               <Input
@@ -198,7 +199,7 @@ export function IngredientPicker({
             {offMessage ? <p className="text-sm text-muted-foreground">{offMessage}</p> : null}
 
             {offResults && offResults.length > 0 ? (
-              <section className="grid gap-2">
+              <section className="grid grid-cols-1 gap-2">
                 <h3 className="text-sm font-medium">Open Food Facts</h3>
                 <ul className="divide-y rounded-2xl border">
                   {offResults.map((c) => (

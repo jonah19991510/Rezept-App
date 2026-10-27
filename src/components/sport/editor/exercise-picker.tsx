@@ -267,7 +267,8 @@ export function ExercisePicker({
         </>
       }
     >
-      <div className="grid gap-3">
+      {/* grid-cols-1 = eine Spalte mit minmax(0, 1fr): sonst wächst sie mit dem längsten Übungsnamen über den Rand */}
+      <div className="grid grid-cols-1 gap-3">
         <SearchField value={query} onChange={setQuery} placeholder="Übung suchen …" label="Übung suchen" />
         <ChipRow label="Muskelgruppe">
           <CountChip active={muscle === null} count={searchExercises(exercises, query).length} onClick={() => setMuscle(null)}>
@@ -293,7 +294,7 @@ export function ExercisePicker({
           </div>
         )
       ) : (
-        <div className="grid gap-2">
+        <div className="grid grid-cols-1 gap-2">
           {groups.map(({ muscle: m, items }) => {
             const expanded = openGroups.has(m);
             const listId = `uebungen-${m}`;

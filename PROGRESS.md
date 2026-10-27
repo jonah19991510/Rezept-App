@@ -1348,6 +1348,18 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Bugfix 27.10.2026: Übungsauswahl rutschte bei langen Namen nach rechts
+
+**Stand:** behoben und geprüft, **nicht committet, nicht live.**
+
+Vom Nutzer am iPhone gemeldet (Screenshot): In „Übungen hinzufügen“ ragte die Liste rechts über den Rand, sobald eine
+aufgeklappte Muskelgruppe einen langen Namen enthielt. Ursache: Die Gruppen-Liste war ein CSS-Grid ohne Spaltenvorgabe;
+die automatische Spalte wächst mit dem längsten nicht umbrechenden (abgekürzten) Namen. Jetzt `grid-cols-1`
+(= `minmax(0, 1fr)`), dasselbe vorsorglich in der Zutatenauswahl des Rezept-Editors (lange Open-Food-Facts-Namen).
+Geprüft über eine temporäre Vorschauseite (gelöscht) bei 375 px: Liste endet bündig mit dem Suchfeld (355 px); mit der
+alten Einstellung ragte sie bis 667 px. Mit dem Filter-Chip (gefilterte Liste) trat es nie auf. Regel für später:
+Listen mit `truncate` in einem `grid` immer mit `grid-cols-1` bzw. `minmax(0, …)`.
+
 ### Energiebedarfsrechner (27.10.2026)
 
 **Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `18b75b5` → Deployment
