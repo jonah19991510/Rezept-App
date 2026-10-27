@@ -1350,8 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Training: Geschwindigkeit bei Ausdauer (27.10.2026)
 
-**Stand:** gebaut, geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des Nutzers
-am LAN-Server, danach Commit und Push.
+**Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“, mit Statistik); Push `6586bce` → Deployment
+`dpl_AoNgrdAu1ZvAjtN7y5ba38z7vnFp` (`production`, „READY“; per Vercel-Connector geprüft, keine Fehler im Log).
 
 **Rückmeldung beim Test:** „Beim Laufband kann ich nichts eintragen“. Ursache: „Laufband“ ist im Grundbestand als
 „Zeit“ angelegt (nur ein Zeitfeld), nicht als „Strecke und Zeit“. Migration `…20261027180000_treadmill_distance_time`
