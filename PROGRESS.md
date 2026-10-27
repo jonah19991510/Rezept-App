@@ -1350,7 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Bugfix 27.10.2026: Übungsauswahl scrollte nach Tipp auf eine Kategorie nicht
 
-**Stand:** behoben und geprüft, **nicht committet, nicht live.**
+**Live** seit 27.10.2026: Push `ffed7f0` → Deployment `dpl_HCAYoaMM5qn1T7gY9T2ZpCPq3GSF` (`production`, „READY“; per
+Vercel-Connector geprüft, keine Fehler im Log).
 
 Vom Nutzer gemeldet: In „Übungen hinzufügen“ ließ sich nach Tipp auf einen Muskelgruppen-Chip nicht mehr scrollen.
 Ursache: Der Inhalt aller Bearbeiten-Sheets (`EditorSheet`) ist ein Grid mit fester Höhe; die gefilterte Trefferliste hat
