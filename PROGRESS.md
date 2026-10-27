@@ -1348,6 +1348,40 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Training: Geschwindigkeit bei Ausdauer (27.10.2026)
+
+**Stand:** gebaut, geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des Nutzers
+am LAN-Server, danach Commit und Push.
+
+**Rückmeldung beim Test:** „Beim Laufband kann ich nichts eintragen“. Ursache: „Laufband“ ist im Grundbestand als
+„Zeit“ angelegt (nur ein Zeitfeld), nicht als „Strecke und Zeit“. Migration `…20261027180000_treadmill_distance_time`
+stellt es um (Plan „12-3-30“ behält 1 × 30 Min.); am 27.10.2026 mit Freigabe des Nutzers eingespielt (in Supabase unter
+`treadmill_distance_time`), per SQL geprüft: Laufband = `distance_time`, Plan unverändert, kein laufendes Training mit
+Laufband. Crosstrainer, Stepper, Seilspringen bleiben „Zeit“. Hinweis: Ein schon laufendes Training merkt sich die
+Erfassung seiner Übungen; dort Laufband entfernen und neu hinzufügen.
+
+**Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
+unter `workout_set_speed`). Per SQL geprüft (zurückgerollt): `sync_workout` speichert 11 km/h, 3.667 m, 1.200 s;
+`last_exercise_sets` liefert alle drei; ein Stand ohne `speed_kmh` (laufende App) wird weiter gespeichert; 120 km/h
+abgelehnt; ein fremdes Konto bekommt keine letzten Sätze. Security-Advisor ohne neue Hinweise.
+
+Wunsch: beim Laufband Geschwindigkeit, Zeit und Strecke eintragen.
+- **Migration** `…20261027170000_workout_set_speed` (additiv): `workout_sets.speed_kmh` (0–99,9); `sync_workout` speichert
+  sie, `last_exercise_sets` liefert sie (neu angelegt, zusätzliche Spalte). Die laufende Version bleibt lauffähig.
+- **Training** (Erfassung „Strecke und Zeit“): Felder **km/h · km · Zeit** statt „Zuletzt · km · Zeit“ (die Werte vom
+  letzten Mal stehen hell in den Feldern). Zwei eingetragene Werte ergeben den dritten (Strecke = km/h × Zeit),
+  `completeCardio`; ist nur einer eingetragen, kommen die anderen vom letzten Mal. Anzeige „10 km/h · 5 km · 30:00“
+  (auch im Verlauf; alte Trainings mit Strecke und Zeit zeigen die errechnete Geschwindigkeit).
+- Handy-Stände ohne `speed` (vor diesem Stand gespeichert) laufen weiter (`speed` optional). Sport-Sicherung und
+  Datenexport mit `speed_kmh` (ältere Sicherungen ohne das Feld werden weiter angenommen).
+- 458 Tests (3 neue), Typcheck, Lint, Build grün. Über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft: drei Felder
+  passen, 11 km/h + 20:00 → 3,67 km beim Abhaken. **Nicht geprüft:** Speichern mit Login.
+- **Statistik** (Wunsch des Nutzers beim Test): „Übung im Verlauf“ zeigt bei Strecke und Zeit drei Bestwerte (Längste
+  Strecke, Längste Zeit, Schnellstes Tempo; je Training über alle Sätze zusammen) in einer Reihe, im Diagramm einen
+  Umschalter Strecke · Zeit · Tempo (eigene Einheiten, daher nicht gemeinsam), Tooltip mit allen drei Werten, Tabelle
+  Datum · Strecke · Zeit · Ø Tempo. Ø Tempo = Strecke ÷ Zeit der Sätze mit beidem, sonst die eingetragene Geschwindigkeit
+  (`averageSpeed`, Test). 459 Tests grün; mit 5 Beispiel-Laufbandtrainings bei 375 px geprüft.
+
 ### Wochenplan: eigene Einträge ohne Rezept (27.10.2026)
 
 **Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `d68bbae` → Deployment

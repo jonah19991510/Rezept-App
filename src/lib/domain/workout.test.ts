@@ -58,6 +58,46 @@ describe("Anzeige und Eingabe", () => {
     expect(formatSet({ weightKg: 10, reps: 8, seconds: null, distanceM: null }, "bodyweight_reps")).toBe("+10 kg × 8");
     expect(formatSet({ weightKg: null, reps: null, seconds: 45, distanceM: null }, "time")).toBe("0:45");
     expect(formatSet({ weightKg: null, reps: null, seconds: 1800, distanceM: 5000 }, "distance_time")).toBe("5 km · 30:00");
+    expect(formatSet({ weightKg: null, reps: null, seconds: 1800, distanceM: 5000, speedKmh: 10 }, "distance_time")).toBe("10 km/h · 5 km · 30:00");
+  });
+
+  it("Laufband: aus zwei von km/h, km und Zeit ergibt sich der dritte", () => {
+    const run = (speed: string, distance: string, seconds: string) => resolveSet({ ...emptySet(), speed, distance, seconds }, null, "distance_time");
+    expect(run("10", "", "30:00")).toMatchObject({ speedKmh: 10, distanceM: 5000, seconds: 1800 });
+    expect(run("", "5", "30:00")).toMatchObject({ speedKmh: 10 });
+    expect(run("12", "3", "")).toMatchObject({ seconds: 900 });
+    // alle drei eingetragen: nichts wird überschrieben
+    expect(run("11", "5", "30:00")).toMatchObject({ speedKmh: 11, distanceM: 5000, seconds: 1800 });
+    // zwei eingetragen: der dritte kommt aus der Rechnung, nicht vom letzten Mal
+    const last = { weightKg: null, reps: null, seconds: 1800, distanceM: 5000, speedKmh: 10 };
+    expect(resolveSet({ ...emptySet(), speed: "11", seconds: "20:00" }, last, "distance_time")).toMatchObject({ distanceM: 3667 });
+    // nur einer eingetragen: der Rest vom letzten Mal
+    expect(resolveSet({ ...emptySet(), speed: "11" }, last, "distance_time")).toMatchObject({ speedKmh: 11, distanceM: 5000, seconds: 1800 });
+    // ohne Erfassung „Strecke und Zeit“ wird nichts ergänzt
+    expect(resolveSet({ ...emptySet(), speed: "10", seconds: "30:00" }, null)).toMatchObject({ distanceM: null });
+  });
+
+  it("Stände vom Handy ohne Geschwindigkeit (vor dem 27.10.2026) gehen weiter", () => {
+    const old = { ...emptySet(), distance: "5", seconds: "30:00" };
+    delete old.speed;
+    expect(resolveSet(old, null, "distance_time")).toMatchObject({ speedKmh: 10, distanceM: 5000 });
+  });
+
+  it("speichert die Geschwindigkeit mit", () => {
+    const session: Session = {
+      id: "w",
+      planId: null,
+      planDayId: null,
+      title: "Laufband",
+      startedAt: "2026-10-27T10:00:00Z",
+      endedAt: null,
+      note: "",
+      version: 1,
+      exercises: [
+        { id: "e", exercise: { ...plank, tracking: "distance_time" }, repsMin: null, repsMax: null, targetSeconds: null, restSeconds: null, warmup: false, note: "", sets: [{ ...emptySet(), speed: "10,5", distance: "3,5", seconds: "20:00" }] },
+      ],
+    };
+    expect(toSyncPayload(session).exercises[0].sets[0]).toMatchObject({ speed_kmh: 10.5, distance_m: 3500, seconds: 1200 });
   });
 
   it("liest Zeiten als Sekunden oder Min:Sek", () => {

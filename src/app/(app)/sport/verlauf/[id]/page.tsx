@@ -133,7 +133,7 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
                   return (
                     <li key={s.id} className={cn("flex items-center gap-3 px-4 py-2 md:px-5", !s.done && "opacity-50")}>
                       <span className={cn("w-6 text-center text-sm font-semibold tabular-nums", s.kind === "warmup" ? "text-primary" : "text-muted-foreground")}>{label}</span>
-                      <span className="font-medium tabular-nums">{formatSet(resolveSet(s, null), e.exercise.tracking)}</span>
+                      <span className="font-medium tabular-nums">{formatSet(resolveSet(s, null, e.exercise.tracking), e.exercise.tracking)}</span>
                       {s.kind === "warmup" ? <span className="text-xs text-muted-foreground">Aufwärmen</span> : null}
                     </li>
                   );

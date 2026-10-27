@@ -35,10 +35,17 @@ import {
 } from "@/lib/domain/workout-stats";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ExerciseProgressChart } from "./exercise-progress-chart";
+import { ExerciseProgressChart, type CardioMetric } from "./exercise-progress-chart";
 
 const RANGES: StatsRange[] = ["woche", "4w", "3m", "1j", "alle"];
+const CARDIO_METRICS: { value: CardioMetric; label: string }[] = [
+  { value: "distance", label: "Strecke" },
+  { value: "time", label: "Zeit" },
+  { value: "speed", label: "Tempo" },
+];
 const kg = (v: number) => `${formatNumber(Math.round(v), 0)} kg`;
+const km = (meters: number) => `${formatNumber(meters / 1000, 2)} km`;
+const kmh = (v: number) => `${formatNumber(v, 1)} km/h`;
 /** Große Mengen kompakt: „64,1 t“ statt „64.099 kg“ */
 const tons = (v: number) => (v >= 10000 ? `${formatNumber(v / 1000, 1)} t` : kg(v));
 /** Gesamtzeit kompakt: „45 Min.“, „28 Std.“ */
@@ -82,6 +89,7 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
   const streak = useMemo(() => streakWeeks(workouts, today), [workouts, today]);
   const options = useMemo(() => exerciseOptions(visible), [visible]);
   const [exerciseId, setExerciseId] = useState<string | null>(null);
+  const [cardioMetric, setCardioMetric] = useState<CardioMetric>("distance");
   const exercise = options.find((o) => o.id === exerciseId) ?? options[0] ?? null;
   const sessions = useMemo(() => (exercise ? exerciseProgress(visible, exercise.id) : []), [visible, exercise]);
   const records = useMemo(() => exerciseRecords(sessions), [sessions]);
@@ -179,9 +187,17 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
             table={
               exercise ? (
                 <DataTable
-                  head={isTimed(exercise.tracking) ? ["Datum", "Bestwert", "Sätze"] : ["Datum", "Schwerster Satz", "Geschätztes 1RM", "Volumen"]}
+                  head={
+                    exercise.tracking === "distance_time"
+                      ? ["Datum", "Strecke", "Zeit", "Ø Tempo"]
+                      : isTimed(exercise.tracking)
+                        ? ["Datum", "Bestwert", "Sätze"]
+                        : ["Datum", "Schwerster Satz", "Geschätztes 1RM", "Volumen"]
+                  }
                   rows={sessions.map((s) =>
-                    isTimed(exercise.tracking)
+                    exercise.tracking === "distance_time"
+                      ? [date(s.date), s.totalDistanceM != null ? km(s.totalDistanceM) : "–", s.totalSeconds != null ? mmss(s.totalSeconds) : "–", s.speedKmh != null ? kmh(s.speedKmh) : "–"]
+                      : isTimed(exercise.tracking)
                       ? [date(s.date), exercise.tracking === "time" ? (s.maxSeconds != null ? mmss(s.maxSeconds) : "–") : s.maxDistanceM != null ? `${formatNumber(s.maxDistanceM / 1000, 2)} km` : "–", s.sets]
                       : [
                           date(s.date),
@@ -203,12 +219,16 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
                     </option>
                   ))}
                 </NativeSelect>
-                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <dl className={cn("grid gap-2", exercise.tracking === "distance_time" ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4")}>
                   {isTimed(exercise.tracking) ? (
                     exercise.tracking === "time" ? (
                       <RecordTile label="Längster Satz" value={records.seconds ? mmss(records.seconds.value) : "–"} date={records.seconds?.date} />
                     ) : (
-                      <RecordTile label="Längste Strecke" value={records.distance ? `${formatNumber(records.distance.value / 1000, 2)} km` : "–"} date={records.distance?.date} />
+                      <>
+                        <RecordTile compact label="Längste Strecke" value={records.totalDistance ? km(records.totalDistance.value) : "–"} date={records.totalDistance?.date} />
+                        <RecordTile compact label="Längste Zeit" value={records.totalSeconds ? mmss(records.totalSeconds.value) : "–"} date={records.totalSeconds?.date} />
+                        <RecordTile compact label="Schnellstes Tempo" value={records.speed ? kmh(records.speed.value) : "–"} date={records.speed?.date} />
+                      </>
                     )
                   ) : (
                     <>
@@ -219,8 +239,17 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
                     </>
                   )}
                 </dl>
+                {sessions.length > 1 && exercise.tracking === "distance_time" ? (
+                  <ChipRow label="Im Diagramm">
+                    {CARDIO_METRICS.map((m) => (
+                      <button key={m.value} type="button" aria-pressed={cardioMetric === m.value} onClick={() => setCardioMetric(m.value)} className={chipClass(cardioMetric === m.value)}>
+                        {m.label}
+                      </button>
+                    ))}
+                  </ChipRow>
+                ) : null}
                 {sessions.length > 1 ? (
-                  <ExerciseProgressChart sessions={sessions} tracking={exercise.tracking} />
+                  <ExerciseProgressChart sessions={sessions} tracking={exercise.tracking} metric={cardioMetric} />
                 ) : (
                   <p className="text-sm text-muted-foreground">Ab zwei Trainings mit dieser Übung siehst du hier den Verlauf.</p>
                 )}
@@ -382,11 +411,11 @@ function Kpi({ label, value, sub }: { label: string; value: string; sub?: string
   );
 }
 
-function RecordTile({ label, value, detail, date: day }: { label: string; value: string; detail?: string; date?: string }) {
+function RecordTile({ label, value, detail, date: day, compact }: { label: string; value: string; detail?: string; date?: string; /** drei Kacheln nebeneinander am Handy */ compact?: boolean }) {
   return (
-    <div className="rounded-2xl bg-muted p-3">
+    <div className={cn("min-w-0 rounded-2xl bg-muted", compact ? "p-2.5" : "p-3")}>
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="font-heading text-lg leading-tight font-semibold tabular-nums">
+      <dd className={cn("font-heading leading-tight font-semibold tabular-nums", compact ? "text-base whitespace-nowrap sm:text-lg" : "text-lg")}>
         {value}
         {detail ? <span className="ml-1 font-sans text-sm font-normal text-muted-foreground">{detail}</span> : null}
       </dd>

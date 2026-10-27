@@ -59,6 +59,28 @@ describe("Zeitraum und Wochen", () => {
     expect(inRange(workouts, "2026-10-10").map((w) => w.id)).toEqual(["w2", "w3"]);
   });
 
+  it("Ausdauer: Strecke und Zeit je Training zusammen, Ø Tempo aus Strecke ÷ Zeit", () => {
+    const run = (distanceM: number | null, seconds: number | null, speedKmh: number | null = null) => ({ kind: "normal" as const, weightKg: null, reps: null, seconds, distanceM, speedKmh });
+    const treadmill = (id: string, date: string, sets: ReturnType<typeof run>[]): StatsWorkout => ({
+      id,
+      title: "Laufband",
+      date,
+      durationSeconds: 1800,
+      exercises: [{ exerciseId: "band", name: "Laufband", muscleGroup: "cardio", secondaryMuscles: [], tracking: "distance_time", sets }],
+    });
+    const sessions = exerciseProgress(
+      [treadmill("a", "2026-10-20", [run(2000, 720), run(3000, 1080)]), treadmill("b", "2026-10-27", [run(null, 1800, 4.8)])],
+      "band",
+    );
+    expect(sessions[0]).toMatchObject({ totalDistanceM: 5000, totalSeconds: 1800, speedKmh: 10 });
+    // ohne Strecke: die eingetragene Geschwindigkeit
+    expect(sessions[1]).toMatchObject({ totalDistanceM: null, totalSeconds: 1800, speedKmh: 4.8 });
+    const records = exerciseRecords(sessions);
+    expect(records.totalDistance?.value).toBe(5000);
+    expect(records.speed).toMatchObject({ value: 10, workoutId: "a" });
+    expect(records.totalSeconds?.value).toBe(1800);
+  });
+
   it("Woche: Montag bis Sonntag der gewählten Kalenderwoche", () => {
     expect(rangeStart("woche", "2026-10-28")).toBe("2026-10-26");
     expect(rangeStart("woche", "2026-10-28", "2026-10-12")).toBe("2026-10-12");

@@ -232,7 +232,7 @@ export async function buildSportBackup(userId: string): Promise<SportBackupFile>
     supabase
       .from("workouts")
       .select(
-        "title, started_at, ended_at, note, training_plans!workouts_plan_id_fkey(title), training_plan_days!workouts_plan_day_id_fkey(name), workout_exercises!workout_exercises_workout_id_fkey(position, note, exercises!workout_exercises_exercise_id_fkey(name, muscle_group, secondary_muscles, equipment, tracking), workout_sets!workout_sets_workout_exercise_id_fkey(position, kind, done, weight_kg, reps, seconds, distance_m))",
+        "title, started_at, ended_at, note, training_plans!workouts_plan_id_fkey(title), training_plan_days!workouts_plan_day_id_fkey(name), workout_exercises!workout_exercises_workout_id_fkey(position, note, exercises!workout_exercises_exercise_id_fkey(name, muscle_group, secondary_muscles, equipment, tracking), workout_sets!workout_sets_workout_exercise_id_fkey(position, kind, done, weight_kg, reps, seconds, distance_m, speed_kmh))",
       )
       .eq("user_id", userId)
       .order("started_at"),

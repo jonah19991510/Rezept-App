@@ -24,7 +24,7 @@ export async function getWorkoutSession(workoutId: string, userId: string): Prom
   const { data, error } = await supabase
     .from("workouts")
     .select(
-      `id, plan_id, plan_day_id, title, started_at, ended_at, note, version, workout_exercises!workout_exercises_workout_id_fkey(id, position, reps_min, reps_max, target_seconds, rest_seconds, warmup, note, exercises!workout_exercises_exercise_id_fkey(${EXERCISE_COLUMNS}), workout_sets!workout_sets_workout_exercise_id_fkey(id, position, kind, weight_kg, reps, seconds, distance_m, done, done_at))`,
+      `id, plan_id, plan_day_id, title, started_at, ended_at, note, version, workout_exercises!workout_exercises_workout_id_fkey(id, position, reps_min, reps_max, target_seconds, rest_seconds, warmup, note, exercises!workout_exercises_exercise_id_fkey(${EXERCISE_COLUMNS}), workout_sets!workout_sets_workout_exercise_id_fkey(id, position, kind, weight_kg, reps, seconds, distance_m, speed_kmh, done, done_at))`,
     )
     .eq("id", workoutId)
     .eq("user_id", userId)
@@ -67,7 +67,7 @@ export async function getWorkoutSession(workoutId: string, userId: string): Prom
             .map((s) => ({
               id: s.id,
               kind: s.kind,
-              ...setInputs({ weightKg: s.weight_kg, reps: s.reps, seconds: s.seconds, distanceM: s.distance_m }),
+              ...setInputs({ weightKg: s.weight_kg, reps: s.reps, seconds: s.seconds, distanceM: s.distance_m, speedKmh: s.speed_kmh }),
               done: s.done,
               doneAt: s.done_at,
             })),
@@ -92,6 +92,8 @@ export async function getLastSets(exerciseIds: string[], excludeWorkoutId: strin
       reps: row.reps,
       seconds: row.seconds,
       distanceM: row.distance_m,
+      // fehlt, solange die Migration workout_set_speed nicht eingespielt ist
+      speedKmh: row.speed_kmh ?? null,
     };
   }
   return result;
@@ -156,7 +158,7 @@ export async function getWorkoutStatsData(userId: string): Promise<StatsWorkout[
   const { data, error } = await supabase
     .from("workouts")
     .select(
-      "id, title, started_at, ended_at, workout_exercises!workout_exercises_workout_id_fkey(position, exercises!workout_exercises_exercise_id_fkey(id, name, muscle_group, secondary_muscles, tracking), workout_sets!workout_sets_workout_exercise_id_fkey(position, kind, done, weight_kg, reps, seconds, distance_m))",
+      "id, title, started_at, ended_at, workout_exercises!workout_exercises_workout_id_fkey(position, exercises!workout_exercises_exercise_id_fkey(id, name, muscle_group, secondary_muscles, tracking), workout_sets!workout_sets_workout_exercise_id_fkey(position, kind, done, weight_kg, reps, seconds, distance_m, speed_kmh))",
     )
     .eq("user_id", userId)
     .not("ended_at", "is", null)
@@ -178,7 +180,7 @@ export async function getWorkoutStatsData(userId: string): Promise<StatsWorkout[
         sets: [...e.workout_sets]
           .filter((s) => s.done)
           .sort((a, b) => a.position - b.position)
-          .map((s) => ({ kind: s.kind, weightKg: s.weight_kg, reps: s.reps, seconds: s.seconds, distanceM: s.distance_m })),
+          .map((s) => ({ kind: s.kind, weightKg: s.weight_kg, reps: s.reps, seconds: s.seconds, distanceM: s.distance_m, speedKmh: s.speed_kmh })),
       })),
   }));
 }

@@ -74,6 +74,8 @@ export const sportBackupWorkoutSchema = z.object({
               reps: optionalInt(0, 1000),
               seconds: optionalInt(0, 86400),
               distance_m: z.number().min(0).max(1_000_000).nullable(),
+              // ab 27.10.2026; ältere Sicherungen haben das Feld nicht
+              speed_kmh: z.number().min(0).max(99.9).nullable().optional(),
             }),
           )
           .max(50),
@@ -145,6 +147,7 @@ export type WorkoutRowForBackup = {
       reps: number | null;
       seconds: number | null;
       distance_m: number | null;
+      speed_kmh?: number | null;
     }[];
   }[];
 };
@@ -210,7 +213,14 @@ export function toSportBackupFile(
                   sets: [...e.workout_sets]
                     .filter((s) => s.done)
                     .sort((a, b) => a.position - b.position)
-                    .map((s) => ({ kind: s.kind, weight_kg: s.weight_kg, reps: s.reps, seconds: s.seconds, distance_m: s.distance_m })),
+                    .map((s) => ({
+                      kind: s.kind,
+                      weight_kg: s.weight_kg,
+                      reps: s.reps,
+                      seconds: s.seconds,
+                      distance_m: s.distance_m,
+                      ...(s.speed_kmh != null ? { speed_kmh: s.speed_kmh } : {}),
+                    })),
                 })),
             },
           ]

@@ -34,6 +34,7 @@ export const workoutPayloadSchema = z.object({
               reps: optionalInt(0, 1000),
               seconds: optionalInt(0, 86400),
               distance_m: z.number().min(0).max(1_000_000).nullable(),
+              speed_kmh: z.number().min(0).max(99.9).nullable().optional(),
               done: z.boolean(),
               done_at: timestamp.nullable(),
             }),

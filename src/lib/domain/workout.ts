@@ -16,6 +16,8 @@ export type SessionSet = {
   seconds: string;
   /** Strecke in km */
   distance: string;
+  /** Geschwindigkeit in km/h (Strecke und Zeit). Fehlt in Ständen vom Handy vor dem 27.10.2026. */
+  speed?: string;
   done: boolean;
   doneAt: string | null;
 };
@@ -46,7 +48,7 @@ export type Session = {
 };
 
 /** Ein Satz vom letzten Mal (für die hellen Vorgaben). */
-export type LastSet = { weightKg: number | null; reps: number | null; seconds: number | null; distanceM: number | null };
+export type LastSet = { weightKg: number | null; reps: number | null; seconds: number | null; distanceM: number | null; speedKmh?: number | null };
 
 /** UUID v4, auch ohne sichere Verbindung (crypto.randomUUID gibt es im Heimnetz über http nicht). */
 export function uuid(): string {
@@ -66,7 +68,7 @@ export function uuid(): string {
 }
 
 export function emptySet(kind: SetKind = "normal", id = uuid()): SessionSet {
-  return { id, kind, weight: "", reps: "", seconds: "", distance: "", done: false, doneAt: null };
+  return { id, kind, weight: "", reps: "", seconds: "", distance: "", speed: "", done: false, doneAt: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -123,11 +125,15 @@ export function warmupSets(workingKg: number, equipment: Equipment): { weightKg:
 
 const kg = (n: number) => `${formatNumber(n, 2)} kg`;
 
-/** „60 kg × 8“, „× 12“ (Körpergewicht), „+10 kg × 8“, „45 s“, „5 km · 30:00“ */
+/** „60 kg × 8“, „× 12“ (Körpergewicht), „+10 kg × 8“, „45 s“, „10 km/h · 5 km · 30:00“ */
 export function formatSet(set: LastSet, tracking: Tracking): string {
   if (tracking === "time") return set.seconds != null ? mmss(set.seconds) : "–";
   if (tracking === "distance_time") {
-    const parts = [set.distanceM != null ? `${formatNumber(set.distanceM / 1000, 2)} km` : null, set.seconds != null ? mmss(set.seconds) : null];
+    const parts = [
+      set.speedKmh != null ? `${formatNumber(set.speedKmh, 1)} km/h` : null,
+      set.distanceM != null ? `${formatNumber(set.distanceM / 1000, 2)} km` : null,
+      set.seconds != null ? mmss(set.seconds) : null,
+    ];
     return parts.filter(Boolean).join(" · ") || "–";
   }
   const reps = set.reps != null ? `× ${set.reps}` : "";
@@ -164,27 +170,51 @@ export function parseClock(input: string): number | null {
   return parts.reduce((total, p) => total * 60 + Number(p), 0);
 }
 
-/** Werte eines Satzes als Zahlen; leere Felder nehmen die Vorgabe vom letzten Mal (antippen = übernehmen). */
-export function resolveSet(set: SessionSet, last: LastSet | null): LastSet {
+/**
+ * Ausdauer (Strecke und Zeit): Sind zwei von Geschwindigkeit, Strecke und Zeit bekannt, ergibt sich der dritte Wert
+ * (Strecke = km/h × Stunden). Sind alle drei eingetragen, bleibt alles, wie es ist.
+ */
+export function completeCardio(values: LastSet): LastSet {
+  const { speedKmh = null, distanceM, seconds } = values;
+  if (speedKmh == null && distanceM != null && seconds) return { ...values, speedKmh: Math.round((distanceM / 1000 / (seconds / 3600)) * 10) / 10 };
+  if (distanceM == null && speedKmh && seconds) return { ...values, distanceM: Math.round(speedKmh * (seconds / 3600) * 1000) };
+  if (seconds == null && speedKmh && distanceM != null) return { ...values, seconds: Math.round((distanceM / 1000 / speedKmh) * 3600) };
+  return values;
+}
+
+/**
+ * Werte eines Satzes als Zahlen; leere Felder nehmen die Vorgabe vom letzten Mal (antippen = übernehmen). Bei
+ * „Strecke und Zeit“ ergänzt sich der dritte Wert aus den anderen beiden; sind schon zwei eingetragen, wird der dritte
+ * daraus gerechnet statt vom letzten Mal übernommen (sonst passen die drei nicht zusammen).
+ */
+export function resolveSet(set: SessionSet, last: LastSet | null, tracking?: Tracking): LastSet {
   const weight = parseDecimal(set.weight);
   const reps = parseDecimal(set.reps);
   const seconds = parseClock(set.seconds);
   const distance = parseDecimal(set.distance);
-  return {
+  const speedText = set.speed ?? "";
+  const speed = parseDecimal(speedText);
+  const cardio = tracking === "distance_time";
+  const typed = [speedText, set.distance, set.seconds].filter((v) => v.trim() !== "").length;
+  const cardioLast = cardio && typed >= 2 ? null : last;
+  const values: LastSet = {
     weightKg: weight ?? (set.weight.trim() === "" ? (last?.weightKg ?? null) : null),
     reps: reps != null ? Math.round(reps) : set.reps.trim() === "" ? (last?.reps ?? null) : null,
-    seconds: seconds ?? (set.seconds.trim() === "" ? (last?.seconds ?? null) : null),
-    distanceM: distance != null ? distance * 1000 : set.distance.trim() === "" ? (last?.distanceM ?? null) : null,
+    seconds: seconds ?? (set.seconds.trim() === "" ? (cardioLast?.seconds ?? null) : null),
+    distanceM: distance != null ? distance * 1000 : set.distance.trim() === "" ? (cardioLast?.distanceM ?? null) : null,
+    speedKmh: speed ?? (speedText.trim() === "" ? (cardioLast?.speedKmh ?? null) : null),
   };
+  return cardio ? completeCardio(values) : values;
 }
 
 /** Werte als Eingabetext (für das Ausfüllen beim Abhaken). */
-export function setInputs(values: LastSet): Pick<SessionSet, "weight" | "reps" | "seconds" | "distance"> {
+export function setInputs(values: LastSet): Pick<SessionSet, "weight" | "reps" | "seconds" | "distance" | "speed"> {
   return {
     weight: values.weightKg != null ? formatNumber(values.weightKg, 2).replace(/\./g, "") : "",
     reps: values.reps != null ? String(values.reps) : "",
     seconds: values.seconds != null ? (values.seconds >= 60 ? mmss(values.seconds) : String(values.seconds)) : "",
     distance: values.distanceM != null ? formatNumber(values.distanceM / 1000, 2).replace(/\./g, "") : "",
+    speed: values.speedKmh != null ? formatNumber(values.speedKmh, 1).replace(/\./g, "") : "",
   };
 }
 
@@ -222,7 +252,7 @@ export function finalizeSession(session: Session, endedAt: string, last: Record<
           const lastSet = s.kind === "normal" ? (last[e.exercise.id]?.[normalIndex] ?? null) : null;
           if (s.kind === "normal") normalIndex++;
           if (!s.done) return [];
-          return [{ ...s, ...setInputs(resolveSet(s, lastSet)) }];
+          return [{ ...s, ...setInputs(resolveSet(s, lastSet, e.exercise.tracking)) }];
         });
         return { ...e, sets };
       })
@@ -276,6 +306,7 @@ export function toSyncPayload(session: Session) {
         const weight = parseDecimal(s.weight);
         const reps = parseDecimal(s.reps);
         const distance = parseDecimal(s.distance);
+        const speed = parseDecimal(s.speed ?? "");
         return {
           id: s.id,
           kind: s.kind,
@@ -286,6 +317,7 @@ export function toSyncPayload(session: Session) {
             return v != null && v <= 86400 ? v : null;
           })(),
           distance_m: distance != null && distance >= 0 && distance <= 1000 ? Math.round(distance * 10000) / 10 : null,
+          speed_kmh: speed != null && speed >= 0 && speed < 100 ? Math.round(speed * 10) / 10 : null,
           done: s.done,
           done_at: s.doneAt,
         };
@@ -371,7 +403,7 @@ export function berlinToIso(date: string, time: string): string | null {
  * letzten Mal. Übungen ohne Satz fallen weg.
  */
 export function finalizeEditedSession(session: Session, last: Record<string, LastSet[]>): Session {
-  const entered = (s: SessionSet) => [s.weight, s.reps, s.seconds, s.distance].some((v) => v.trim() !== "");
+  const entered = (s: SessionSet) => [s.weight, s.reps, s.seconds, s.distance, s.speed ?? ""].some((v) => v.trim() !== "");
   return {
     ...session,
     exercises: session.exercises
@@ -381,7 +413,7 @@ export function finalizeEditedSession(session: Session, last: Record<string, Las
           const lastSet = s.kind === "normal" ? (last[e.exercise.id]?.[normalIndex] ?? last[e.exercise.id]?.at(-1) ?? null) : null;
           if (s.kind === "normal") normalIndex++;
           if (!s.done && !entered(s)) return [];
-          const values = resolveSet(s, s.done ? lastSet : null);
+          const values = resolveSet(s, s.done ? lastSet : null, e.exercise.tracking);
           if (!setHasValues(values, e.exercise.tracking)) return [];
           return [{ ...s, ...setInputs(values), done: true, doneAt: s.doneAt ?? session.endedAt }];
         });

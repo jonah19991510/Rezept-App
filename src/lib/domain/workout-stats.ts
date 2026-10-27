@@ -3,7 +3,7 @@ import { addDays, daysBetween, mondayOf } from "./week";
 
 // Sport & Gesundheit, Phase S3: Statistik aus den beendeten Trainings.
 
-export type StatsSet = { kind: "warmup" | "normal"; weightKg: number | null; reps: number | null; seconds: number | null; distanceM: number | null };
+export type StatsSet = { kind: "warmup" | "normal"; weightKg: number | null; reps: number | null; seconds: number | null; distanceM: number | null; speedKmh?: number | null };
 
 export type StatsWorkout = {
   id: string;
@@ -117,8 +117,28 @@ export type ExerciseSession = {
   maxReps: number | null;
   maxSeconds: number | null;
   maxDistanceM: number | null;
+  /** Ausdauer: Strecke und Zeit aller Sätze zusammen */
+  totalDistanceM: number | null;
+  totalSeconds: number | null;
+  /** Ausdauer: Ø Tempo (Strecke ÷ Zeit der Sätze mit beidem, sonst die eingetragene Geschwindigkeit) */
+  speedKmh: number | null;
   sets: number;
 };
+
+/**
+ * Ø Tempo in km/h: Strecke ÷ Zeit über alle Sätze, die beides haben; ohne solche Sätze der Mittelwert der eingetragenen
+ * Geschwindigkeiten.
+ */
+export function averageSpeed(sets: StatsSet[]): number | null {
+  const both = sets.filter((s) => s.distanceM != null && s.seconds);
+  if (both.length) {
+    const meters = both.reduce((sum, s) => sum + s.distanceM!, 0);
+    const seconds = both.reduce((sum, s) => sum + s.seconds!, 0);
+    return Math.round((meters / 1000 / (seconds / 3600)) * 10) / 10;
+  }
+  const speeds = sets.map((s) => s.speedKmh).filter((v): v is number => v != null && v > 0);
+  return speeds.length ? Math.round((speeds.reduce((a, b) => a + b, 0) / speeds.length) * 10) / 10 : null;
+}
 
 /** Verlauf einer Übung: je Training die besten Werte, älteste zuerst. */
 export function exerciseProgress(workouts: StatsWorkout[], exerciseId: string): ExerciseSession[] {
@@ -136,6 +156,10 @@ export function exerciseProgress(workouts: StatsWorkout[], exerciseId: string): 
       const list = values.filter((v): v is number => v != null);
       return list.length ? Math.max(...list) : null;
     };
+    const sum = (values: (number | null)[]) => {
+      const list = values.filter((v): v is number => v != null);
+      return list.length ? list.reduce((a, b) => a + b, 0) : null;
+    };
     sessions.push({
       workoutId: w.id,
       date: w.date,
@@ -146,6 +170,9 @@ export function exerciseProgress(workouts: StatsWorkout[], exerciseId: string): 
       maxReps: max(sets.map((s) => s.reps)),
       maxSeconds: max(sets.map((s) => s.seconds)),
       maxDistanceM: max(sets.map((s) => s.distanceM)),
+      totalDistanceM: sum(sets.map((s) => s.distanceM)),
+      totalSeconds: sum(sets.map((s) => s.seconds)),
+      speedKmh: averageSpeed(sets),
       sets: sets.length,
     });
   }
@@ -174,6 +201,10 @@ export function exerciseRecords(sessions: ExerciseSession[]) {
     reps: best((s) => s.maxReps),
     seconds: best((s) => s.maxSeconds),
     distance: best((s) => s.maxDistanceM),
+    // Ausdauer: je Training zusammengezählt bzw. Ø Tempo
+    totalDistance: best((s) => s.totalDistanceM),
+    totalSeconds: best((s) => s.totalSeconds),
+    speed: best((s) => s.speedKmh),
   };
 }
 

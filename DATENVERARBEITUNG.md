@@ -53,7 +53,7 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `favorites` | Lieblingsrezepte | 2 | nur Nutzer selbst |
 | `ingredients` (Spalte `created_by`) | selbst angelegte Zutaten | 2 | Zutaten sind global für alle lesbar; `created_by` wird beim Löschen auf leer gesetzt |
 | `training_plans` (+ `training_plan_days`, `training_plan_exercises`) | Trainingspläne mit Tagen und Übungen (Sätze, Wiederholungen, Pause, Notiz), „ausgeblendet“; `forked_from_id` für spätere Übernahmen | S1 (26.10.2026) | nur Owner; öffentlich erst mit Phase S4 (Schalter, alle Eingeloggten mit Anzeigename) |
-| `workouts` (+ `workout_exercises`, `workout_sets`) | Trainings: Start/Ende, Plan und Tag, Übungen, Sätze (Gewicht, Wiederholungen, Zeit, Strecke), Notizen | S2 (26.10.2026) | nur Nutzer selbst |
+| `workouts` (+ `workout_exercises`, `workout_sets`) | Trainings: Start/Ende, Plan und Tag, Übungen, Sätze (Gewicht, Wiederholungen, Zeit, Strecke, ab 27.10.2026 Geschwindigkeit), Notizen | S2 (26.10.2026) | nur Nutzer selbst |
 | Browser (`localStorage`, Schlüssel `training:<id>`) und Cache Storage des Service Workers (`rezeptbuch-training`, Seite `/training/<id>`) | laufendes Training, damit es ohne Netz weitergeht | S2 (26.10.2026) | nur das Gerät; gelöscht beim Beenden, Verwerfen und Abmelden |
 | `drinks` | eigene Getränke (Name, Farbe, Koffein und Zucker pro 100 ml, Wasseranteil, Zutaten bei Mischgetränken) | Getränketracker (27.10.2026) | nur Nutzer selbst |
 | `drink_entries` | was wann getrunken wurde: Zeitpunkt, Menge, Getränkename, Koffein, Zucker, Wasser | Getränketracker (27.10.2026) | nur Nutzer selbst |

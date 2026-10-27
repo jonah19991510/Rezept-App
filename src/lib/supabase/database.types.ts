@@ -188,6 +188,7 @@ export type Database = {
           position: number
           reps: number | null
           seconds: number | null
+          speed_kmh: number | null
           weight_kg: number | null
           workout_exercise_id: string
         }
@@ -200,6 +201,7 @@ export type Database = {
           position: number
           reps?: number | null
           seconds?: number | null
+          speed_kmh?: number | null
           weight_kg?: number | null
           workout_exercise_id: string
         }
@@ -212,6 +214,7 @@ export type Database = {
           position?: number
           reps?: number | null
           seconds?: number | null
+          speed_kmh?: number | null
           weight_kg?: number | null
           workout_exercise_id?: string
         }
@@ -1513,6 +1516,7 @@ export type Database = {
           reps: number
           seconds: number
           set_index: number
+          speed_kmh: number
           started_at: string
           weight_kg: number
         }[]

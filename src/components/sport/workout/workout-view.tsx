@@ -160,9 +160,15 @@ export function WorkoutView({
       updateSet(e.id, set.id, { done: false, doneAt: null });
       return;
     }
-    const values = resolveSet(set, set.kind === "normal" ? lastFor(last, e.exercise.id, normalIndex) : null);
+    const values = resolveSet(set, set.kind === "normal" ? lastFor(last, e.exercise.id, normalIndex) : null, e.exercise.tracking);
     if (!setHasValues(values, e.exercise.tracking)) {
-      toast(isTimed(e.exercise.tracking) ? "Trag zuerst die Zeit ein." : "Trag zuerst die Wiederholungen ein.");
+      toast(
+        e.exercise.tracking === "distance_time"
+          ? "Trag zuerst Zeit oder Strecke ein."
+          : isTimed(e.exercise.tracking)
+            ? "Trag zuerst die Zeit ein."
+            : "Trag zuerst die Wiederholungen ein.",
+      );
       return;
     }
     updateSet(e.id, set.id, { ...setInputs(values), done: true, doneAt: new Date().toISOString() });
@@ -634,11 +640,12 @@ function ExerciseCard({
   const hasWarmups = entry.sets.some((s) => s.kind === "warmup");
   const lastDate = last[exercise.id]?.length ? true : false;
 
-  // Spalten je nach Erfassung
-  const columns =
-    tracking === "distance_time"
-      ? "grid-cols-[2.25rem_minmax(0,1fr)_4.25rem_4.75rem_2.75rem]"
-      : tracking === "time"
+  // Spalten je nach Erfassung. Strecke und Zeit: drei Felder (km/h, km, Zeit) ohne „Zuletzt“-Spalte, sonst passt es
+  // am Handy nicht; die Werte vom letzten Mal stehen ohnehin hell in den Feldern.
+  const cardio = tracking === "distance_time";
+  const columns = cardio
+    ? "grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_2.75rem]"
+    : tracking === "time"
         ? "grid-cols-[2.25rem_minmax(0,1fr)_5.5rem_2.75rem]"
         : "grid-cols-[2.25rem_minmax(0,1fr)_4.5rem_3.75rem_2.75rem]";
 
@@ -723,9 +730,10 @@ function ExerciseCard({
       <div className="px-3 pb-2">
         <div className={cn("grid items-center gap-1.5 px-1 pb-1 text-xs font-medium text-muted-foreground", columns)} aria-hidden>
           <span className="text-center">Satz</span>
-          <span>{lastDate ? "Zuletzt" : ""}</span>
-          {tracking === "distance_time" ? (
+          {cardio ? null : <span>{lastDate ? "Zuletzt" : ""}</span>}
+          {cardio ? (
             <>
+              <span className="text-center">km/h</span>
               <span className="text-center">km</span>
               <span className="text-center">Zeit</span>
             </>
@@ -745,10 +753,10 @@ function ExerciseCard({
             const prev = set.kind === "normal" ? lastFor(last, exercise.id, index) : null;
             const label = set.kind === "warmup" ? "A" : String(index + 1);
             const ph = prev ? setInputs(prev) : null;
-            const field = (key: "weight" | "reps" | "seconds" | "distance", aria: string, mode: "decimal" | "numeric" | "text") => (
+            const field = (key: "weight" | "reps" | "seconds" | "distance" | "speed", aria: string, mode: "decimal" | "numeric" | "text") => (
               <input
                 inputMode={mode}
-                value={set[key]}
+                value={set[key] ?? ""}
                 placeholder={ph?.[key] || (key === "seconds" ? "0:00" : "")}
                 onChange={(ev) => onChangeSet(set.id, { [key]: ev.target.value })}
                 aria-label={`${aria}, ${set.kind === "warmup" ? "Aufwärmsatz" : `Satz ${index + 1}`}`}
@@ -766,9 +774,10 @@ function ExerciseCard({
                 >
                   {label}
                 </span>
-                <span className="truncate text-sm text-muted-foreground/80 tabular-nums">{prev ? formatSet(prev, tracking) : ""}</span>
-                {tracking === "distance_time" ? (
+                {cardio ? null : <span className="truncate text-sm text-muted-foreground/80 tabular-nums">{prev ? formatSet(prev, tracking) : ""}</span>}
+                {cardio ? (
                   <>
+                    {field("speed", "Geschwindigkeit in km/h", "decimal")}
                     {field("distance", "Strecke in km", "decimal")}
                     {field("seconds", "Zeit", "text")}
                   </>
