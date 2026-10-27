@@ -42,11 +42,22 @@ export const trainingWeekdaysSchema = z.object({
   weekdays: z.array(z.number().int().min(1).max(7)).max(7),
 });
 
+/** Titel eines eigenen Eintrags ohne Rezept, z. B. „Restaurant“, „Essen bei den Eltern“. */
+const freeTitle = z.string().trim().min(1, "Bitte eintragen, was es gibt.").max(80, "Höchstens 80 Zeichen.");
+
+export const addFreePlanEntrySchema = z.object({
+  date: isoDate,
+  slot: z.enum(Constants.public.Enums.meal_slot),
+  title: freeTitle,
+});
+
 export const updatePlanEntrySchema = z.object({
   id: z.uuid(),
   servings,
   date: isoDate,
   slot: z.enum(Constants.public.Enums.meal_slot),
+  /** nur bei eigenen Einträgen: neuer Titel */
+  title: freeTitle.optional(),
 });
 
 export const deletePlanEntrySchema = z.object({ id: z.uuid() });

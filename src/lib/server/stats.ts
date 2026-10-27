@@ -92,18 +92,22 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   });
 
   const recipeTitles: Record<string, string> = {};
-  const planEntries: StatsPlanEntry[] = plan.data.map((e) => {
+  // Eigene Einträge ohne Rezept (Restaurant …) zählen in den Rezept-Statistiken nicht
+  const planEntries: StatsPlanEntry[] = plan.data.flatMap((e) => {
+    if (!e.recipe_id) return [];
     recipeTitles[e.recipe_id] = e.recipes?.title ?? UNAVAILABLE_TITLE;
     const n = nutritionById.get(e.recipe_id);
-    return {
-      date: e.date,
-      recipeId: e.recipe_id,
-      servings: e.servings,
-      perServing:
-        n && (n.ingredient_count ?? 0) > 0
-          ? { kcal: n.kcal_per_serving ?? 0, protein: n.protein_per_serving ?? 0, carbs: n.carbs_per_serving ?? 0, fat: n.fat_per_serving ?? 0 }
-          : null,
-    };
+    return [
+      {
+        date: e.date,
+        recipeId: e.recipe_id,
+        servings: e.servings,
+        perServing:
+          n && (n.ingredient_count ?? 0) > 0
+            ? { kcal: n.kcal_per_serving ?? 0, protein: n.protein_per_serving ?? 0, carbs: n.carbs_per_serving ?? 0, fat: n.fat_per_serving ?? 0 }
+            : null,
+      },
+    ];
   });
 
   // Titel auch für gekochte Rezepte, die nicht (mehr) im Wochenplan stehen

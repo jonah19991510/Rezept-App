@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { BookOpen, Boxes, Check, Compass, Heart, Search } from "lucide-react";
+import { BookOpen, Boxes, Check, Compass, Heart, PenLine, Search } from "lucide-react";
 import { toast } from "sonner";
-import { addPlanEntryAction } from "@/app/(app)/wochenplan/actions";
+import { addFreePlanEntryAction, addPlanEntryAction } from "@/app/(app)/wochenplan/actions";
+import { chipClass } from "@/components/recipes/chip-select";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,13 +19,20 @@ import { cn } from "@/lib/utils";
 import { ServingsStepper } from "./servings-stepper";
 import type { PlanRecipeChoices, SlotTarget } from "./types";
 
-type Source = "own" | "community";
+/** „free“ = eigener Eintrag ohne Rezept (Restaurant, Essen bei den Eltern …) */
+type Source = "own" | "community" | "free";
+
+/** Vorschläge für eigene Einträge (ein Tipp füllt das Feld). */
+const FREE_SUGGESTIONS = ["Restaurant", "Essen bei den Eltern", "Essen bei Freunden", "Lieferdienst", "Kantine", "Unterwegs"];
 
 function normalize(s: string) {
   return s.toLocaleLowerCase("de-DE").normalize("NFKD").replace(/\p{Diacritic}/gu, "");
 }
 
-/** Rezept suchen und in einen Slot einplanen. Tag und Slot sind vorbelegt, aber änderbar. */
+/**
+ * Rezept suchen und in einen Slot einplanen, oder einen eigenen Eintrag ohne Rezept eintragen. Tag und Slot sind
+ * vorbelegt, aber änderbar.
+ */
 export function AddEntryDialog({
   target,
   days,
@@ -79,9 +87,11 @@ function AddEntryForm({
   const [prepTouched, setPrepTouched] = useState(false);
   const [prepDates, setPrepDates] = useState<string[]>([]);
   const [cooked, setCooked] = useState<number | null>(null);
+  const [freeTitle, setFreeTitle] = useState("");
   const [pending, startTransition] = useTransition();
+  const isFree = source === "free";
 
-  const options = recipes[source];
+  const options = useMemo(() => (source === "free" ? [] : recipes[source]), [source, recipes]);
   const filtered = useMemo(() => {
     const words = normalize(query).split(/\s+/).filter(Boolean);
     return options
@@ -124,6 +134,17 @@ function AddEntryForm({
   }
 
   function submit() {
+    if (isFree) {
+      if (!freeTitle.trim()) return;
+      startTransition(async () => {
+        const result = await addFreePlanEntryAction({ date, slot, title: freeTitle.trim() });
+        if (result.ok) {
+          toast.success("Eingetragen.");
+          onDone();
+        } else toast.error(result.message);
+      });
+      return;
+    }
     if (!selected) return;
     startTransition(async () => {
       const result = await addPlanEntryAction({
@@ -143,18 +164,19 @@ function AddEntryForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Rezept einplanen</DialogTitle>
+        <DialogTitle>{isFree ? "Eintragen" : "Rezept einplanen"}</DialogTitle>
         <DialogDescription>
           {weekdayLong(date)}, {dayMonth(date)} · {SLOT_LABELS[slot]}
         </DialogDescription>
       </DialogHeader>
 
-      <div className="grid gap-4">
-        <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1" role="group" aria-label="Rezepte aus">
+      <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-3 gap-1 rounded-2xl bg-muted p-1" role="group" aria-label="Was einplanen">
           {(
             [
               { value: "own", label: "Mein Buch", icon: BookOpen, count: recipes.own.length },
               { value: "community", label: "Entdecken", icon: Compass, count: recipes.community.length },
+              { value: "free", label: "Eigenes", icon: PenLine, count: null },
             ] as const
           ).map(({ value, label, icon: Icon, count }) => (
             <button
@@ -163,18 +185,41 @@ function AddEntryForm({
               aria-pressed={source === value}
               onClick={() => switchSource(value)}
               className={cn(
-                "flex min-h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                "flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-medium whitespace-nowrap text-muted-foreground transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
                 source === value && "bg-card text-foreground shadow-sm",
               )}
             >
-              <Icon className="size-4" aria-hidden />
+              {/* Am Handy nur Text, sonst passen drei Knöpfe nicht nebeneinander */}
+              <Icon className="hidden size-4 sm:block" aria-hidden />
               {label}
-              <span className="text-xs tabular-nums">({count})</span>
+              {count != null ? <span className="hidden text-xs tabular-nums sm:inline">({count})</span> : null}
             </button>
           ))}
         </div>
 
-        {options.length === 0 ? (
+        {isFree ? (
+          <div className="grid gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="add-free">Was steht an?</Label>
+              <Input
+                id="add-free"
+                value={freeTitle}
+                maxLength={80}
+                onChange={(e) => setFreeTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && submit()}
+                placeholder="z. B. Restaurant, Essen bei den Eltern"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Vorschläge">
+              {FREE_SUGGESTIONS.map((s) => (
+                <button key={s} type="button" aria-pressed={freeTitle === s} onClick={() => setFreeTitle(s)} className={chipClass(freeTitle === s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground">Eigene Einträge haben keine Nährwerte und kommen nicht auf die Einkaufsliste.</p>
+          </div>
+        ) : options.length === 0 ? (
           source === "own" ? (
             <p className="text-sm text-muted-foreground">
               Du hast noch keine Rezepte.{" "}
@@ -262,63 +307,69 @@ function AddEntryForm({
           </div>
         </div>
 
-        <div className="grid gap-3 rounded-2xl border p-3">
-          <label className="flex min-h-11 cursor-pointer items-center gap-3">
-            <input
-              type="checkbox"
-              checked={prep}
-              onChange={(e) => enablePrep(e.target.checked)}
-              className="size-5 shrink-0 accent-[var(--primary)]"
-            />
-            <span className="flex items-center gap-2 text-sm font-medium">
-              <Boxes className="size-4 text-sage" aria-hidden />
-              Für mehrere Tage kochen (Meal Prep)
-            </span>
-          </label>
-          {prep ? (
-            <>
-              <div>
-                <p className="mb-2 text-sm text-muted-foreground">Reste als {SLOT_LABELS[slot]} an:</p>
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tage mit Resten">
-                  {nextDays.map((d) => {
-                    const on = chosenPrepDates.includes(d);
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => togglePrepDate(d)}
-                        className={cn(
-                          "flex min-h-11 min-w-14 flex-col items-center justify-center rounded-xl border px-2 text-xs transition-colors",
-                          on ? "border-primary bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        <span className="font-medium">{weekdayShort(d)}</span>
-                        <span>{dayMonth(d).slice(0, 6)}</span>
-                      </button>
-                    );
-                  })}
+        {isFree ? null : (
+          <div className="grid gap-3 rounded-2xl border p-3">
+            <label className="flex min-h-11 cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={prep}
+                onChange={(e) => enablePrep(e.target.checked)}
+                className="size-5 shrink-0 accent-[var(--primary)]"
+              />
+              <span className="flex items-center gap-2 text-sm font-medium">
+                <Boxes className="size-4 text-sage" aria-hidden />
+                Für mehrere Tage kochen (Meal Prep)
+              </span>
+            </label>
+            {prep ? (
+              <>
+                <div>
+                  <p className="mb-2 text-sm text-muted-foreground">Reste als {SLOT_LABELS[slot]} an:</p>
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Tage mit Resten">
+                    {nextDays.map((d) => {
+                      const on = chosenPrepDates.includes(d);
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => togglePrepDate(d)}
+                          className={cn(
+                            "flex min-h-11 min-w-14 flex-col items-center justify-center rounded-xl border px-2 text-xs transition-colors",
+                            on ? "border-primary bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <span className="font-medium">{weekdayShort(d)}</span>
+                          <span>{dayMonth(d).slice(0, 6)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm">Insgesamt kochen</span>
-                <ServingsStepper value={cookedPortions} onChange={(v) => setCooked(Math.max(v, plannedPortions))} />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Eingeplant sind {formatNumber(plannedPortions, 2)} {plannedPortions === 1 ? "Portion" : "Portionen"}. Die
-                Einkaufsliste zählt das Meal Prep einmal am Kochtag; was übrig bleibt, schlägt der Plan an den Folgetagen vor.
-              </p>
-            </>
-          ) : null}
-        </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm">Insgesamt kochen</span>
+                  <ServingsStepper value={cookedPortions} onChange={(v) => setCooked(Math.max(v, plannedPortions))} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Eingeplant sind {formatNumber(plannedPortions, 2)} {plannedPortions === 1 ? "Portion" : "Portionen"}. Die
+                  Einkaufsliste zählt das Meal Prep einmal am Kochtag; was übrig bleibt, schlägt der Plan an den Folgetagen vor.
+                </p>
+              </>
+            ) : null}
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="grid gap-1">
-            {prep ? <span className="text-xs text-muted-foreground">Portionen pro Tag</span> : null}
-            <ServingsStepper value={servings} onChange={setServings} />
-          </div>
-          <Button type="button" onClick={submit} disabled={!selected || pending}>
-            {pending ? "Wird eingeplant …" : "Einplanen"}
+          {isFree ? (
+            <span />
+          ) : (
+            <div className="grid gap-1">
+              {prep ? <span className="text-xs text-muted-foreground">Portionen pro Tag</span> : null}
+              <ServingsStepper value={servings} onChange={setServings} />
+            </div>
+          )}
+          <Button type="button" onClick={submit} disabled={(isFree ? !freeTitle.trim() : !selected) || pending}>
+            {pending ? "Wird eingeplant …" : isFree ? "Eintragen" : "Einplanen"}
           </Button>
         </div>
       </div>

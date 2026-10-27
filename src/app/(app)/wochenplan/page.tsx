@@ -40,14 +40,14 @@ export default async function MealPlanPage({ searchParams }: PageProps<"/wochenp
 
   // Reste-Vorschläge (Phase 11): Basen der geplanten Rezepte und eigene Rezepte mit derselben Basis
   const plannedByDate: Record<string, string[]> = {};
-  for (const e of [...before, ...entries]) (plannedByDate[e.date] ??= []).push(e.recipeId);
+  for (const e of [...before, ...entries]) if (e.recipeId) (plannedByDate[e.date] ??= []).push(e.recipeId);
   const bases = await getRecipeBases([...new Set([...ownRecipes.map((r) => r.id), ...Object.values(plannedByDate).flat()])]);
   const ideas: Record<string, LeftoverIdea[]> = Object.fromEntries(
     days.map((d) => [d, leftoverIdeas(d, plannedByDate, bases, ownRecipes)]),
   );
 
   // Phase 12: Kosten pro Portion (eigene Preise) und „Lange nicht gekocht“ (nur eigene Rezepte)
-  const costs = await getRecipeCosts([...new Set(entries.map((e) => e.recipeId))]);
+  const costs = await getRecipeCosts([...new Set(entries.flatMap((e) => (e.recipeId ? [e.recipeId] : [])))]);
   const costPerServing = Object.fromEntries([...costs].map(([id, c]) => [id, { perServing: c.perServing, complete: c.priced === c.count }]));
   const titles = new Map(ownRecipes.map((r) => [r.id, r.title]));
   const longAgo = longNotCooked(logs, today, weeks)

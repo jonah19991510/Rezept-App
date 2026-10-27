@@ -39,9 +39,12 @@ export async function generateFromPlanAction(input: { from: string; to: string }
   ]);
   if (error || batchError) return { ok: false, message: "Der Wochenplan konnte nicht gelesen werden." };
   if (entries.length === 0) return { ok: false, message: "In diesem Zeitraum ist nichts geplant." };
+  // Eigene Einträge ohne Rezept (Restaurant, Essen bei den Eltern …) brauchen keinen Einkauf
+  const withRecipe = entries.flatMap((e) => (e.recipe_id ? [{ recipeId: e.recipe_id, servings: e.servings, batchId: e.batch_id }] : []));
+  if (withRecipe.length === 0) return { ok: false, message: "In diesem Zeitraum stehen nur eigene Einträge ohne Rezept." };
 
   const portions = portionsToBuy(
-    entries.map((e) => ({ recipeId: e.recipe_id, servings: e.servings, batchId: e.batch_id })),
+    withRecipe,
     batches
       .filter((b) => b.meal_plan_entries.some((e) => !e.is_leftover))
       .map((b) => ({ id: b.id, recipeId: b.recipe_id, cookDate: b.cook_date, servingsCooked: b.servings_cooked })),

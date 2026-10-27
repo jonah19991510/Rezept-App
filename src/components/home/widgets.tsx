@@ -161,7 +161,7 @@ function AreaCard({ areaKey, subtitle, tiles, tileClass }: { areaKey: "food" | "
 export function FoodAreaWidget({ plan, hour, shoppingCount }: { plan: TodayPlan | null; hour: number; shoppingCount: number | null }) {
   const next = plan ? upcomingEntry(plan.entries, hour) : null;
   const subtitle = next
-    ? `${SLOT_TODAY[next.slot]}: ${next.recipeTitle} · ${portions(next.servings)}`
+    ? `${SLOT_TODAY[next.slot]}: ${next.recipeTitle}${next.recipeId ? ` · ${portions(next.servings)}` : ""}`
     : plan && plan.entries.length > 0
       ? "Für heute ist alles gegessen"
       : "Rezepte, Wochenplan, Einkauf und Bar";
@@ -218,14 +218,17 @@ export function MealsWidget({ plan }: { plan: TodayPlan }) {
           {plan.entries.map((e) => (
             <li key={e.id} className="flex min-h-12 items-center gap-3 py-1.5">
               <span className="w-20 shrink-0 text-xs font-medium tracking-wide text-muted-foreground uppercase">{SLOT_LABELS[e.slot]}</span>
-              {e.available ? (
+              {e.recipeId == null ? (
+                // Eigener Eintrag ohne Rezept (Restaurant …)
+                <span className="min-w-0 flex-1 truncate font-medium">{e.recipeTitle}</span>
+              ) : e.available ? (
                 <Link href={`/rezepte/${e.recipeId}`} className="min-w-0 flex-1 truncate font-medium hover:underline">
                   {e.recipeTitle}
                 </Link>
               ) : (
                 <span className="min-w-0 flex-1 truncate text-muted-foreground">{e.recipeTitle}</span>
               )}
-              <span className="shrink-0 text-sm text-muted-foreground tabular-nums">{formatNumber(e.servings, 1)} P.</span>
+              {e.recipeId ? <span className="shrink-0 text-sm text-muted-foreground tabular-nums">{formatNumber(e.servings, 1)} P.</span> : null}
             </li>
           ))}
         </ul>

@@ -8,6 +8,7 @@ import { isTrainingDay } from "@/lib/domain/training";
 import { createClient } from "@/lib/supabase/server";
 import { flattenIssues } from "@/lib/validation/recipe";
 import {
+  addFreePlanEntrySchema,
   addLeftoverSchema,
   addPlanEntrySchema,
   copyWeekSchema,
@@ -98,6 +99,22 @@ export async function addPlanEntryAction(input: z.input<typeof addPlanEntrySchem
   return { ok: true, message: `Meal Prep eingeplant: Reste an ${prepDates.length} ${prepDates.length === 1 ? "Tag" : "Tagen"}.` };
 }
 
+/** Eigenen Eintrag ohne Rezept eintragen (Restaurant, Essen bei den Eltern …): keine Nährwerte, kein Einkauf. */
+export async function addFreePlanEntryAction(input: z.input<typeof addFreePlanEntrySchema>): Promise<PlanActionResult> {
+  const user = await requireUser();
+  const parsed = addFreePlanEntrySchema.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const { date, slot, title } = parsed.data;
+
+  const supabase = await createClient();
+  const positions = await nextPositions(supabase, user.id, [date], slot);
+  const { error } = await supabase.from("meal_plan_entries").insert({ user_id: user.id, date, slot, title, position: positions[date] });
+  if (error) return { ok: false, message: "Der Eintrag konnte nicht gespeichert werden." };
+  revalidatePath("/wochenplan");
+  revalidatePath("/");
+  return { ok: true };
+}
+
 /** Übrige Portionen eines Meal-Prep-Batches als Reste einplanen. */
 export async function addLeftoverAction(input: z.input<typeof addLeftoverSchema>): Promise<PlanActionResult> {
   const user = await requireUser();
@@ -137,15 +154,12 @@ export async function updatePlanEntryAction(input: z.input<typeof updatePlanEntr
   const user = await requireUser();
   const parsed = updatePlanEntrySchema.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
-  const { id, servings, date, slot } = parsed.data;
+  const { id, servings, date, slot, title } = parsed.data;
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("meal_plan_entries")
-    .update({ servings, date, slot })
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select("batch_id, is_leftover");
+  // Titel nur bei eigenen Einträgen (ohne Rezept); bei Rezepten verhindert der Check in der Datenbank beides zugleich
+  const query = supabase.from("meal_plan_entries").update(title ? { date, slot, title } : { servings, date, slot }).eq("id", id).eq("user_id", user.id);
+  const { data, error } = await (title ? query.is("recipe_id", null) : query).select("batch_id, is_leftover");
   if (error || !data?.length) return { ok: false, message: "Der Eintrag konnte nicht geändert werden." };
 
   const { batch_id, is_leftover } = data[0];

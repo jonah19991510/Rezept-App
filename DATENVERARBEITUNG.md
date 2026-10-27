@@ -42,7 +42,7 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 |---|---|---|---|
 | `recipes` (+ `recipe_ingredients`, `recipe_steps`, `cocktail_details`) | Rezepte und Cocktails (ab Phase 15: `recipe_type`, Glas, Methode, Eis, Garnitur), optional Quell-URL; `forked_from_id` = Verweis auf das Original bei übernommenen Rezepten | 2 / 6 | nur Owner; bei `is_public` (Schalter, ab Phase 6) alle eingeloggten Nutzer mit Anzeigename des Owners |
 | `recipe_versions` | frühere Fassungen eines Rezepts | 12 | nur Owner |
-| `meal_plan_entries`, `meal_prep_batches`, `plan_days` | Wochenplan, Meal Prep, Trainingstage | 3 / 11 | nur Nutzer selbst |
+| `meal_plan_entries`, `meal_prep_batches`, `plan_days` | Wochenplan, Meal Prep, Trainingstage; ab 27.10.2026 auch eigene Einträge ohne Rezept mit freiem Titel (z. B. „Essen bei den Eltern“) | 3 / 11 | nur Nutzer selbst |
 | `user_goals` | Tagesziele kcal/Protein/KH/Fett | 3 / 11 | nur Nutzer selbst |
 | `recipe_categories` | Eigene Kategorien für Rezepte (Name, Reihenfolge), ab 24.10.2026; am Rezept steht der Name in `recipes.category_name` | Einstellungen → Kategorien | nur Nutzer selbst |
 | `user_settings` | Standard-Trainingstage, Einkaufs-Sortierung, Präferenzen | 1 (leer angelegt) | nur Nutzer selbst |

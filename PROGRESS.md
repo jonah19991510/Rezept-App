@@ -1348,6 +1348,35 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Wochenplan: eigene Einträge ohne Rezept (27.10.2026)
+
+**Stand:** gebaut, geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des Nutzers
+am LAN-Server, danach Commit und Push.
+
+**Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
+unter `plan_free_entries`). Per SQL geprüft (zurückgerollt): eigener Eintrag und Rezept-Eintrag lassen sich anlegen;
+weder Rezept noch Titel, beides zugleich und eigener Eintrag als Rest werden abgelehnt; `copy_plan_week` kopiert beide
+(2, der eigene steht in der Zielwoche); ein fremdes Konto sieht nichts und kann nicht für andere schreiben (42501).
+Security-Advisor ohne neue Hinweise.
+
+Wunsch: im Wochenplan „Restaurant“, „Essen bei den Eltern“ usw. eintragen, ohne Rezept und ohne Kalorien.
+- **Migration** `…20261027150000_plan_free_entries` (additiv): `meal_plan_entries.recipe_id` darf leer sein, neue
+  Spalte `title`; Check „genau eins von Rezept oder Titel“, eigene Einträge ohne Meal Prep/Reste. Policy
+  `meal_plan_entries_own` prüft die Lesbarkeit nur, wenn ein Rezept dran hängt. `copy_plan_week` kopiert eigene
+  Einträge mit (gleiche Signatur).
+- **Einplanen-Dialog:** dritter Reiter „Eigenes“ (neben Mein Buch / Entdecken; am Handy ohne Symbole und Zahlen, damit
+  drei nebeneinander passen): Feld „Was steht an?“, Vorschläge Restaurant, Essen bei den Eltern, Essen bei Freunden,
+  Lieferdienst, Kantine, Unterwegs; ohne Portionen und Meal Prep. `addFreePlanEntryAction`.
+- **Anzeige:** Laden-Symbol statt Topf, „Eigener Eintrag · ohne Nährwerte“; Desktop-Woche „ohne Nährwerte“; die
+  kcal-Summe einer Mahlzeit steht nur da, wenn etwas mit Nährwerten drin ist. Antippen: Titel, Tag, Mahlzeit ändern
+  oder entfernen (`updatePlanEntryAction` mit `title`, nur bei Einträgen ohne Rezept).
+- **Ausgeschlossen:** Einkaufsliste (Meldung, wenn im Zeitraum nur eigene Einträge stehen), Kosten, Statistik
+  (Meistgeplant, Plan-kcal), Reste-Vorschläge. Startseite: „Heute geplant“ ohne Link und Portionen, nächste Mahlzeit
+  ohne Portionen. Tageswerte gegen das Ziel zählen eigene Einträge nicht mit (der Tag wirkt dann „zu niedrig“).
+- 455 Tests, Typcheck, Lint grün. Über eine temporäre Vorschauseite (gelöscht) bei 375 px und 1280 px geprüft: Zeile,
+  Mahlzeit ohne „0 kcal“, Dialog „Eigenes“ mit Vorschlag, Bearbeiten-Dialog. **Nicht geprüft:** Speichern mit Login,
+  Woche kopieren, Einkaufsliste mit echten Daten.
+
 ### Bugfix 27.10.2026: Übungsauswahl rutschte bei langen Namen nach rechts
 
 **Live** seit 27.10.2026: Push `747e926` → Deployment `dpl_GntBCKDK3nWc9pwt1bLTXmyTL8e9` (`production`, „READY“; per

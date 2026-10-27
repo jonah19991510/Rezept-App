@@ -12,7 +12,9 @@ export type PlanEntry = {
   slot: MealSlot;
   servings: number;
   position: number;
-  recipeId: string;
+  /** null bei eigenen Einträgen ohne Rezept (z. B. „Restaurant“): keine Nährwerte, kein Einkauf */
+  recipeId: string | null;
+  /** Name des Rezepts bzw. Titel des eigenen Eintrags */
   recipeTitle: string;
   /** Speicherpfad des Rezeptfotos (Vorschaubild im Plan), sonst null */
   imagePath: string | null;
@@ -33,7 +35,7 @@ export async function getWeekEntries(userId: string, monday: string): Promise<Pl
   const { data, error } = await supabase
     .from("meal_plan_entries")
     .select(
-      "id, date, slot, servings, position, recipe_id, batch_id, is_leftover, recipes!meal_plan_entries_recipe_id_fkey(title, image_url, owner_id, profiles!recipes_owner_id_fkey(display_name))",
+      "id, date, slot, servings, position, recipe_id, title, batch_id, is_leftover, recipes!meal_plan_entries_recipe_id_fkey(title, image_url, owner_id, profiles!recipes_owner_id_fkey(display_name))",
     )
     .eq("user_id", userId)
     .gte("date", monday)
@@ -43,7 +45,7 @@ export async function getWeekEntries(userId: string, monday: string): Promise<Pl
     .order("created_at");
   if (error) throw new Error(`Wochenplan konnte nicht geladen werden (${error.code})`);
 
-  const recipeIds = [...new Set(data.map((e) => e.recipe_id))];
+  const recipeIds = [...new Set(data.flatMap((e) => (e.recipe_id ? [e.recipe_id] : [])))];
   const { data: nutrition, error: nError } = recipeIds.length
     ? await supabase
         .from("recipe_nutrition")
@@ -54,7 +56,7 @@ export async function getWeekEntries(userId: string, monday: string): Promise<Pl
   const byRecipe = new Map(nutrition.map((n) => [n.recipe_id, n]));
 
   return data.map((e) => {
-    const n = byRecipe.get(e.recipe_id);
+    const n = e.recipe_id ? byRecipe.get(e.recipe_id) : undefined;
     return {
       id: e.id,
       date: e.date,
@@ -62,9 +64,9 @@ export async function getWeekEntries(userId: string, monday: string): Promise<Pl
       servings: e.servings,
       position: e.position,
       recipeId: e.recipe_id,
-      recipeTitle: e.recipes?.title ?? UNAVAILABLE_TITLE,
+      recipeTitle: e.recipe_id ? (e.recipes?.title ?? UNAVAILABLE_TITLE) : (e.title ?? ""),
       imagePath: e.recipes?.image_url ?? null,
-      available: e.recipes != null,
+      available: e.recipe_id == null || e.recipes != null,
       authorName: e.recipes && e.recipes.owner_id !== userId ? authorName(e.recipes.profiles?.display_name) : null,
       perServing:
         n && (n.ingredient_count ?? 0) > 0
@@ -158,7 +160,7 @@ export async function getPlannedBefore(userId: string, monday: string): Promise<
     .eq("user_id", userId)
     .gte("date", addDays(monday, -2))
     .lt("date", monday);
-  return (data ?? []).map((e) => ({ date: e.date, recipeId: e.recipe_id }));
+  return (data ?? []).flatMap((e) => (e.recipe_id ? [{ date: e.date, recipeId: e.recipe_id }] : []));
 }
 
 /** Basis-Zutaten (Reis, Nudeln, Kartoffeln) je Rezept, aus den Zutatennamen. Nur lesbare Rezepte. */

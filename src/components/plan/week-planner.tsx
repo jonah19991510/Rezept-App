@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useRef, useState, type TouchEvent } from "react";
-import { Boxes, ChevronLeft, ChevronRight, CookingPot, Dumbbell, Plus, Repeat } from "lucide-react";
+import { Boxes, ChevronLeft, ChevronRight, CookingPot, Dumbbell, Plus, Repeat, Store } from "lucide-react";
 import { GroupHeading, ListCard, TagLabel } from "@/components/layout/list-blocks";
 import { GenerateDialog } from "@/components/shopping/generate-dialog";
 import {
@@ -79,6 +79,8 @@ export function WeekPlanner({
     let total = 0;
     let complete = list.length > 0;
     for (const e of list) {
+      // Eigene Einträge (Restaurant …) haben keine Kosten im Rezeptbuch
+      if (!e.recipeId) continue;
       const c = costs[e.recipeId];
       if (!c) complete = false;
       else {
@@ -403,7 +405,8 @@ function SlotSection({
   const kcal = entries.reduce((sum, e) => sum + (e.perServing ? entryMacros(e).kcal : 0), 0);
   return (
     <section aria-label={SLOT_LABELS[slot]}>
-      <GroupHeading aside={entries.length > 0 ? `${formatNumber(Math.round(kcal), 0)} kcal` : undefined}>{SLOT_LABELS[slot]}</GroupHeading>
+      {/* kcal nur, wenn etwas mit Nährwerten drinsteht (nicht „0 kcal“ bei „Restaurant“) */}
+      <GroupHeading aside={entries.some((e) => e.perServing) ? `${formatNumber(Math.round(kcal), 0)} kcal` : undefined}>{SLOT_LABELS[slot]}</GroupHeading>
       {entries.length > 0 ? (
         <ListCard className="mt-1">
           {entries.map((entry) => (
@@ -427,11 +430,11 @@ function SlotSection({
         <button
           type="button"
           onClick={onAdd}
-          aria-label={`Rezept einplanen (${SLOT_LABELS[slot]})`}
+          aria-label={`Einplanen (${SLOT_LABELS[slot]})`}
           className="mt-1 flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-dashed text-sm font-medium text-muted-foreground transition hover:border-primary/60 hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
         >
           <Plus className="size-4" aria-hidden />
-          Rezept einplanen
+          Einplanen
         </button>
       )}
     </section>
@@ -465,6 +468,8 @@ function PlanEntryRow({ entry, onClick }: { entry: PlanEntry; onClick: () => voi
       <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-muted">
         {entry.imagePath ? (
           <Image src={photoUrl(entry.imagePath, "klein")} alt="" fill unoptimized sizes="48px" className="object-cover" />
+        ) : entry.recipeId == null ? (
+          <Store className="size-6 text-muted-foreground/60" strokeWidth={1.5} aria-hidden />
         ) : (
           <CookingPot className="size-6 text-muted-foreground/60" strokeWidth={1.5} aria-hidden />
         )}
@@ -475,8 +480,9 @@ function PlanEntryRow({ entry, onClick }: { entry: PlanEntry; onClick: () => voi
           <EntryLabels entry={entry} />
         </span>
         <span className="block truncate text-xs text-muted-foreground tabular-nums">
-          {servings}
-          {entry.perServing ? ` · ${formatNumber(Math.round(m.protein), 0)} g Protein` : " · keine Nährwerte"}
+          {entry.recipeId == null
+            ? "Eigener Eintrag · ohne Nährwerte"
+            : `${servings}${entry.perServing ? ` · ${formatNumber(Math.round(m.protein), 0)} g Protein` : " · keine Nährwerte"}`}
         </span>
       </span>
       {entry.perServing ? (
@@ -542,8 +548,17 @@ function CompactEntry({ entry, onClick }: { entry: PlanEntry; onClick: () => voi
         </span>
       ) : null}
       <span className="mt-1 block text-[0.7rem] text-muted-foreground tabular-nums">
-        {entry.servings !== 1 ? `${formatNumber(entry.servings, 2)} × · ` : ""}
-        {entry.perServing ? `${formatNumber(Math.round(m.kcal), 0)} kcal · ${formatNumber(Math.round(m.protein), 0)} g P` : "–"}
+        {entry.recipeId == null ? (
+          <span className="inline-flex items-center gap-1">
+            <Store className="size-3" aria-hidden />
+            ohne Nährwerte
+          </span>
+        ) : (
+          <>
+            {entry.servings !== 1 ? `${formatNumber(entry.servings, 2)} × · ` : ""}
+            {entry.perServing ? `${formatNumber(Math.round(m.kcal), 0)} kcal · ${formatNumber(Math.round(m.protein), 0)} g P` : "–"}
+          </>
+        )}
       </span>
     </button>
   );

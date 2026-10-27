@@ -773,9 +773,10 @@ export type Database = {
           id: string
           is_leftover: boolean
           position: number
-          recipe_id: string
+          recipe_id: string | null
           servings: number
           slot: Database["public"]["Enums"]["meal_slot"]
+          title: string | null
           user_id: string
         }
         Insert: {
@@ -785,9 +786,10 @@ export type Database = {
           id?: string
           is_leftover?: boolean
           position?: number
-          recipe_id: string
+          recipe_id?: string | null
           servings?: number
           slot: Database["public"]["Enums"]["meal_slot"]
+          title?: string | null
           user_id?: string
         }
         Update: {
@@ -797,9 +799,10 @@ export type Database = {
           id?: string
           is_leftover?: boolean
           position?: number
-          recipe_id?: string
+          recipe_id?: string | null
           servings?: number
           slot?: Database["public"]["Enums"]["meal_slot"]
+          title?: string | null
           user_id?: string
         }
         Relationships: [
