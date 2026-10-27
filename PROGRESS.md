@@ -1350,8 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Nachtrag 27.10.2026: Körperfett nach der Navy-Methode
 
-**Stand:** gebaut, geprüft, Migration eingespielt; **nicht committet, nicht live.** Nächster Schritt: Test des Nutzers
-am LAN-Server, danach Commit und Push.
+**Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `2d2132a` → Deployment
+`dpl_9obk1WZSDN6YWs4Bf3Kqgi2bdviX` (`production`, „READY“; per Vercel-Connector geprüft, keine Fehler im Log).
 
 **Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
 unter `body_neck`). Per SQL geprüft (zurückgerollt): Messung nur mit Hals möglich, 95 cm Hals und leere Messung
