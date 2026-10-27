@@ -1348,6 +1348,18 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Nachtrag 27.10.2026: Gym-Statistik mit Kalenderwoche
+
+**Stand:** gebaut und geprüft, **nicht committet, nicht live.** Keine Migration nötig.
+
+Wunsch des Nutzers: einzelne Woche ansehen, der Knopf zeigt die Kalenderwoche. Neuer Chip vorne in `/sport/statistik`
+(„KW 44 · 4 Wochen · 3 Monate · 1 Jahr · Alles“), Start bleibt „3 Monate“. Gewählt: Zeile mit Pfeilen und „KW 44 ·
+26.10.–01.11.2026 · Diese Woche“ (vor nur bis zur aktuellen Woche); der Chip zeigt die gewählte KW. Kennzahlen,
+Übung im Verlauf, Sätze pro Muskelgruppe und Bestwerte gelten für die Woche; statt der Wochen-Diagramme (nur ein
+Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, Link zum Training). Kalender und Serie
+bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
+über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
+
 ### Getränketracker (27.10.2026)
 
 **Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `cccd866` (mit `ede5f0e`) → Deployment

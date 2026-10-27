@@ -22,18 +22,25 @@ export type StatsWorkout = {
   }[];
 };
 
-export type StatsRange = "4w" | "3m" | "1j" | "alle";
+/** „woche“ = eine Kalenderwoche (Mo–So), die man durchblättern kann; die anderen enden heute. */
+export type StatsRange = "woche" | "4w" | "3m" | "1j" | "alle";
 
-export const RANGE_LABELS: Record<StatsRange, string> = { "4w": "4 Wochen", "3m": "3 Monate", "1j": "1 Jahr", alle: "Alles" };
+export const RANGE_LABELS: Record<StatsRange, string> = { woche: "Woche", "4w": "4 Wochen", "3m": "3 Monate", "1j": "1 Jahr", alle: "Alles" };
 
-/** Erster Tag des Zeitraums (inklusive); bei „Alles“ null. */
-export function rangeStart(range: StatsRange, today: string): string | null {
+/** Erster Tag des Zeitraums (inklusive); bei „Alles“ null. Bei „Woche“ der Montag der gewählten Woche. */
+export function rangeStart(range: StatsRange, today: string, weekMonday: string = mondayOf(today)): string | null {
   if (range === "alle") return null;
+  if (range === "woche") return weekMonday;
   return addDays(today, range === "4w" ? -27 : range === "3m" ? -90 : -364);
 }
 
-export function inRange(workouts: StatsWorkout[], from: string | null): StatsWorkout[] {
-  return from ? workouts.filter((w) => w.date >= from) : workouts;
+/** Letzter Tag des Zeitraums (inklusive); nur bei „Woche“ (Sonntag), sonst null (bis heute). */
+export function rangeEnd(range: StatsRange, weekMonday: string): string | null {
+  return range === "woche" ? addDays(weekMonday, 6) : null;
+}
+
+export function inRange(workouts: StatsWorkout[], from: string | null, to: string | null = null): StatsWorkout[] {
+  return workouts.filter((w) => (!from || w.date >= from) && (!to || w.date <= to));
 }
 
 /**

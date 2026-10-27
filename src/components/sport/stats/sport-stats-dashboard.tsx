@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Trophy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import { ChipRow } from "@/components/layout/list-blocks";
 import { chipClass } from "@/components/recipes/chip-select";
 import { ChartCard, CHART_COLORS, DataTable } from "@/components/stats/chart-card";
 import { WeekSeries } from "@/components/stats/week-series";
+import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { isTimed, MUSCLE_LABELS } from "@/lib/domain/exercises";
-import { dayMonth, mondayOf, weekdayShort } from "@/lib/domain/week";
+import { addDays, dayMonth, isoWeekNumber, mondayOf, relativeWeekLabel, weekDays, weekdayShort, weekLabel } from "@/lib/domain/week";
 import { mmss } from "@/lib/domain/workout";
 import {
   exerciseOptions,
@@ -18,6 +19,7 @@ import {
   inRange,
   mondaysBetween,
   RANGE_LABELS,
+  rangeEnd,
   rangeStart,
   recentRecords,
   setsPerMuscle,
@@ -25,6 +27,8 @@ import {
   streakWeeks,
   trainingCalendar,
   weeklyStats,
+  workoutSets,
+  workoutVolume,
   type RecentRecord,
   type StatsRange,
   type StatsWorkout,
@@ -33,7 +37,7 @@ import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ExerciseProgressChart } from "./exercise-progress-chart";
 
-const RANGES: StatsRange[] = ["4w", "3m", "1j", "alle"];
+const RANGES: StatsRange[] = ["woche", "4w", "3m", "1j", "alle"];
 const kg = (v: number) => `${formatNumber(Math.round(v), 0)} kg`;
 /** Große Mengen kompakt: „64,1 t“ statt „64.099 kg“ */
 const tons = (v: number) => (v >= 10000 ? `${formatNumber(v / 1000, 1)} t` : kg(v));
@@ -62,11 +66,16 @@ const RECORD_LABEL: Record<RecentRecord["kind"], string> = {
  */
 export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkout[]; today: string }) {
   const [range, setRange] = useState<StatsRange>("3m");
-  const from = rangeStart(range, today);
-  const visible = useMemo(() => inRange(workouts, from), [workouts, from]);
+  // Gewählte Kalenderwoche für „Woche“ (anfangs die aktuelle; Pfeile blättern)
+  const currentMonday = mondayOf(today);
+  const [weekMonday, setWeekMonday] = useState(currentMonday);
+  const isWeek = range === "woche";
+  const from = rangeStart(range, today, weekMonday);
+  const to = rangeEnd(range, weekMonday);
+  const visible = useMemo(() => inRange(workouts, from, to), [workouts, from, to]);
   const mondays = useMemo(
-    () => mondaysBetween(from ?? workouts[0]?.date ?? today, today),
-    [from, workouts, today],
+    () => (isWeek ? [weekMonday] : mondaysBetween(from ?? workouts[0]?.date ?? today, today)),
+    [isWeek, weekMonday, from, workouts, today],
   );
   const weeks = useMemo(() => weeklyStats(visible, mondays), [visible, mondays]);
   const totals = useMemo(() => statsTotals(visible, mondays.length), [visible, mondays.length]);
@@ -85,44 +94,84 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
     <div className="space-y-6">
       <ChipRow label="Zeitraum">
         {RANGES.map((r) => (
-          <button key={r} type="button" aria-pressed={range === r} onClick={() => setRange(r)} className={chipClass(range === r)}>
-            {RANGE_LABELS[r]}
+          <button
+            key={r}
+            type="button"
+            aria-pressed={range === r}
+            aria-label={r === "woche" ? `Kalenderwoche ${isoWeekNumber(weekMonday)}` : undefined}
+            onClick={() => setRange(r)}
+            className={chipClass(range === r)}
+          >
+            {/* Der Wochen-Chip zeigt immer die Kalenderwoche, die gerade gilt bzw. gewählt ist */}
+            {r === "woche" ? `KW ${isoWeekNumber(weekMonday)}` : RANGE_LABELS[r]}
           </button>
         ))}
       </ChipRow>
 
+      {isWeek ? (
+        <div className="flex items-center justify-between gap-2 rounded-3xl border bg-card p-1.5">
+          <Button type="button" variant="ghost" size="icon" onClick={() => setWeekMonday((m) => addDays(m, -7))} aria-label="Woche davor">
+            <ChevronLeft aria-hidden />
+          </Button>
+          <p className="min-w-0 text-center">
+            <span className="block font-semibold tabular-nums">{weekLabel(weekMonday)}</span>
+            <span className="block text-sm text-muted-foreground">{relativeWeekLabel(weekMonday, today)}</span>
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setWeekMonday((m) => addDays(m, 7))}
+            disabled={weekMonday >= currentMonday}
+            aria-label="Woche danach"
+          >
+            <ChevronRight aria-hidden />
+          </Button>
+        </div>
+      ) : null}
+
       <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi label="Trainings" value={formatNumber(totals.workouts, 0)} sub={totals.perWeek != null ? `${formatNumber(totals.perWeek, 1)} pro Woche` : undefined} />
+        <Kpi
+          label="Trainings"
+          value={formatNumber(totals.workouts, 0)}
+          sub={isWeek ? "in der Woche" : totals.perWeek != null ? `${formatNumber(totals.perWeek, 1)} pro Woche` : undefined}
+        />
         <Kpi label="Ø Dauer" value={totals.avgMinutes != null ? `${totals.avgMinutes} Min.` : "–"} sub={totals.minutes ? `insgesamt ${hours(totals.minutes)}` : undefined} />
         <Kpi label="Volumen" value={tons(totals.volumeKg)} sub={`${formatNumber(totals.sets, 0)} Arbeitssätze`} />
         <Kpi label="Serie" value={String(streak)} sub={streak === 1 ? "Woche am Stück" : "Wochen am Stück"} />
       </dl>
 
       {visible.length === 0 ? (
-        <p className="rounded-3xl border border-dashed p-6 text-center text-muted-foreground">In diesem Zeitraum gibt es kein Training.</p>
+        <p className="rounded-3xl border border-dashed p-6 text-center text-muted-foreground">
+          {isWeek ? "In dieser Woche gibt es kein Training." : "In diesem Zeitraum gibt es kein Training."}
+        </p>
       ) : (
         <>
-          <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard
-              title="Trainings pro Woche"
-              table={<DataTable head={["Woche ab", "Trainings", "Minuten"]} rows={weeks.map((w) => [dayMonth(w.monday), w.workouts, w.minutes])} />}
-            >
-              <WeekSeries points={weeks.map((w) => ({ monday: w.monday, value: w.workouts }))} kind="bar" color={CHART_COLORS[0]} label="Trainings" format={(v) => formatNumber(v, 0)} />
-            </ChartCard>
-            <ChartCard
-              title="Volumen pro Woche"
-              description="Gewicht × Wiederholungen aller Arbeitssätze."
-              table={<DataTable head={["Woche ab", "Volumen", "Sätze"]} rows={weeks.map((w) => [dayMonth(w.monday), kg(w.volumeKg), w.sets])} />}
-            >
-              <WeekSeries
-                points={weeks.map((w) => ({ monday: w.monday, value: w.volumeKg || null }))}
-                kind="bar"
-                color={CHART_COLORS[0]}
-                label="Volumen"
-                format={(v) => (v >= 10000 ? `${formatNumber(v / 1000, 0)} t` : formatNumber(Math.round(v), 0))}
-              />
-            </ChartCard>
-          </div>
+          {isWeek ? (
+            <WeekDays monday={weekMonday} today={today} workouts={visible} />
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <ChartCard
+                title="Trainings pro Woche"
+                table={<DataTable head={["Woche ab", "Trainings", "Minuten"]} rows={weeks.map((w) => [dayMonth(w.monday), w.workouts, w.minutes])} />}
+              >
+                <WeekSeries points={weeks.map((w) => ({ monday: w.monday, value: w.workouts }))} kind="bar" color={CHART_COLORS[0]} label="Trainings" format={(v) => formatNumber(v, 0)} />
+              </ChartCard>
+              <ChartCard
+                title="Volumen pro Woche"
+                description="Gewicht × Wiederholungen aller Arbeitssätze."
+                table={<DataTable head={["Woche ab", "Volumen", "Sätze"]} rows={weeks.map((w) => [dayMonth(w.monday), kg(w.volumeKg), w.sets])} />}
+              >
+                <WeekSeries
+                  points={weeks.map((w) => ({ monday: w.monday, value: w.volumeKg || null }))}
+                  kind="bar"
+                  color={CHART_COLORS[0]}
+                  label="Volumen"
+                  format={(v) => (v >= 10000 ? `${formatNumber(v / 1000, 0)} t` : formatNumber(Math.round(v), 0))}
+                />
+              </ChartCard>
+            </div>
+          )}
 
           <ChartCard
             title="Übung im Verlauf"
@@ -234,12 +283,14 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
             </ChartCard>
           </div>
 
-          <ChartCard
-            title="Dauer pro Woche"
-            description="Trainingszeit in Minuten."
-          >
-            <WeekSeries points={weeks.map((w) => ({ monday: w.monday, value: w.minutes || null }))} kind="line" color={CHART_COLORS[0]} label="Minuten" format={(v) => formatNumber(Math.round(v), 0)} />
-          </ChartCard>
+          {isWeek ? null : (
+            <ChartCard
+              title="Dauer pro Woche"
+              description="Trainingszeit in Minuten."
+            >
+              <WeekSeries points={weeks.map((w) => ({ monday: w.monday, value: w.minutes || null }))} kind="line" color={CHART_COLORS[0]} label="Minuten" format={(v) => formatNumber(Math.round(v), 0)} />
+            </ChartCard>
+          )}
 
           <section className="rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="neue-bestwerte">
             <h2 id="neue-bestwerte" className="mb-3 flex items-center gap-2 text-lg font-semibold">
@@ -280,6 +331,44 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
         .
       </p>
     </div>
+  );
+}
+
+/** Die sieben Tage der gewählten Woche mit ihren Trainings (Dauer, Sätze, Volumen); antippen öffnet das Training. */
+function WeekDays({ monday, today, workouts }: { monday: string; today: string; workouts: StatsWorkout[] }) {
+  return (
+    <section className="rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="woche-tage">
+      <h2 id="woche-tage" className="mb-3 text-lg font-semibold">
+        Trainings der Woche
+      </h2>
+      <ul className="divide-y">
+        {weekDays(monday).map((day) => {
+          const items = workouts.filter((w) => w.date === day);
+          return (
+            <li key={day} className="flex min-h-12 items-center gap-3 py-1.5">
+              <span className={cn("w-20 shrink-0 text-sm whitespace-nowrap text-muted-foreground tabular-nums", day === today && "font-semibold text-foreground")}>{date(day)}</span>
+              {items.length === 0 ? (
+                <span className="text-sm text-muted-foreground">{day > today ? "–" : "Ruhetag"}</span>
+              ) : (
+                <ul className="min-w-0 flex-1 space-y-1">
+                  {items.map((w) => (
+                    <li key={w.id}>
+                      <Link href={`/sport/verlauf/${w.id}`} className="block rounded-lg hover:underline">
+                        <span className="block truncate font-medium">{w.title}</span>
+                        <span className="block text-sm text-muted-foreground tabular-nums">
+                          {Math.round(w.durationSeconds / 60)} Min. · {workoutSets(w)} Sätze
+                          {workoutVolume(w) > 0 ? ` · ${kg(workoutVolume(w))}` : ""}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

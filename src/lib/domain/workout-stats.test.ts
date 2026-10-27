@@ -6,6 +6,7 @@ import {
   exerciseRecords,
   inRange,
   mondaysBetween,
+  rangeEnd,
   rangeStart,
   recentRecords,
   setsPerMuscle,
@@ -56,6 +57,14 @@ describe("Zeitraum und Wochen", () => {
     expect(rangeStart("4w", "2026-10-26")).toBe("2026-09-29");
     expect(rangeStart("alle", "2026-10-26")).toBeNull();
     expect(inRange(workouts, "2026-10-10").map((w) => w.id)).toEqual(["w2", "w3"]);
+  });
+
+  it("Woche: Montag bis Sonntag der gewählten Kalenderwoche", () => {
+    expect(rangeStart("woche", "2026-10-28")).toBe("2026-10-26");
+    expect(rangeStart("woche", "2026-10-28", "2026-10-12")).toBe("2026-10-12");
+    expect(rangeEnd("woche", "2026-10-12")).toBe("2026-10-18");
+    expect(rangeEnd("3m", "2026-10-12")).toBeNull();
+    expect(inRange(workouts, "2026-10-12", "2026-10-18").map((w) => w.id)).toEqual(["w2"]);
   });
 
   it("zählt je Woche Trainings, Minuten, Volumen und Arbeitssätze", () => {
