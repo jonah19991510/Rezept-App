@@ -14,6 +14,7 @@ import {
   streakWeeks,
   trainingCalendar,
   weeklyStats,
+  workoutKind,
   type StatsWorkout,
 } from "./workout-stats";
 
@@ -138,8 +139,27 @@ describe("Muskelgruppen, Serie, Kalender, Kennzahlen", () => {
   it("baut den Kalender ohne Tage in der Zukunft", () => {
     const calendar = trainingCalendar(workouts, "2026-10-21", 3);
     expect(calendar.map((w) => w.monday)).toEqual(["2026-10-05", "2026-10-12", "2026-10-19"]);
-    expect(calendar[0].days[0]).toEqual({ date: "2026-10-05", count: 1 });
-    expect(calendar[2].days[3]).toEqual({ date: "2026-10-22", count: null });
+    expect(calendar[0].days[0]).toEqual({ date: "2026-10-05", count: 1, kind: "strength" });
+    expect(calendar[0].days[1]).toEqual({ date: "2026-10-06", count: 0, kind: null });
+    expect(calendar[2].days[3]).toEqual({ date: "2026-10-22", count: null, kind: null });
+  });
+
+  it("unterscheidet im Kalender Kraft, Ausdauer und beides", () => {
+    const run = { kind: "normal" as const, weightKg: null, reps: null, seconds: 1200, distanceM: 3000 };
+    const treadmill = { exerciseId: "band", name: "Laufband", muscleGroup: "cardio" as const, secondaryMuscles: [], tracking: "distance_time" as const, sets: [run] };
+    const cardioOnly: StatsWorkout = { id: "c1", title: "Laufen", date: "2026-10-06", durationSeconds: 1200, exercises: [treadmill] };
+    const mixed: StatsWorkout = { id: "c2", title: "A + Laufen", date: "2026-10-13", durationSeconds: 4000, exercises: [bench([set(60, 8)]), treadmill] };
+    // Kraft und Ausdauer als zwei Trainings am selben Tag
+    const sameDay: StatsWorkout = { ...cardioOnly, id: "c3", date: "2026-10-05" };
+    expect(workoutKind(cardioOnly)).toBe("cardio");
+    expect(workoutKind(mixed)).toBe("both");
+    expect(workoutKind(workouts[0])).toBe("strength");
+    // Ausdauer-Übung ohne erledigten Satz zählt nicht
+    expect(workoutKind({ ...mixed, exercises: [bench([set(60, 8)]), { ...treadmill, sets: [] }] })).toBe("strength");
+    const calendar = trainingCalendar([...workouts, cardioOnly, mixed, sameDay], "2026-10-21", 3);
+    expect(calendar[0].days[0]).toMatchObject({ count: 2, kind: "both" });
+    expect(calendar[0].days[1]).toMatchObject({ count: 1, kind: "cardio" });
+    expect(calendar[1].days[1]).toMatchObject({ count: 1, kind: "both" });
   });
 
   it("fasst den Zeitraum zusammen", () => {

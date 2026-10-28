@@ -53,6 +53,7 @@
   --color-sport: var(--sport);
   --color-sport-foreground: var(--sport-foreground);
   --color-sport-soft: var(--sport-soft);
+  --color-cardio: var(--cardio);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -90,6 +91,8 @@
   --sport: oklch(0.5 0.07 195);
   --sport-foreground: oklch(0.985 0.01 80);
   --sport-soft: oklch(0.935 0.022 190);
+  /* Ausdauer (Laufband & Co.) in der Sport-Statistik, neben Kraft in Petrol */
+  --cardio: oklch(0.7 0.14 70);
 
   --macro-kcal: oklch(0.6 0.14 38);
   --macro-protein: oklch(0.52 0.14 258);
@@ -143,6 +146,7 @@
   --sport: oklch(0.64 0.08 192);
   --sport-foreground: oklch(0.18 0.015 50);
   --sport-soft: oklch(0.29 0.03 195);
+  --cardio: oklch(0.76 0.13 75);
 
   --macro-kcal: oklch(0.68 0.14 40);
   --macro-protein: oklch(0.62 0.15 258);

@@ -29,9 +29,11 @@ import {
   weeklyStats,
   workoutSets,
   workoutVolume,
+  type CalendarDay,
   type RecentRecord,
   type StatsRange,
   type StatsWorkout,
+  type TrainingKind,
 } from "@/lib/domain/workout-stats";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -290,11 +292,15 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
 
             <ChartCard
               title="Trainingstage"
-              description="Die letzten 12 Wochen, eine Zeile pro Woche (Mo–So)."
+              description="Die letzten 12 Wochen, eine Zeile pro Woche (Mo–So). Kraft und Ausdauer in eigenen Farben."
               table={
                 <DataTable
-                  head={["Woche ab", "Trainings"]}
-                  rows={calendar.map((w) => [dayMonth(w.monday), w.days.reduce((n, d) => n + (d.count ?? 0), 0)])}
+                  head={["Woche ab", "Trainings", "Tage mit Ausdauer"]}
+                  rows={calendar.map((w) => [
+                    dayMonth(w.monday),
+                    w.days.reduce((n, d) => n + (d.count ?? 0), 0),
+                    w.days.filter((d) => d.kind === "cardio" || d.kind === "both").length,
+                  ])}
                 />
               }
             >
@@ -309,6 +315,7 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
                   <Week key={w.monday} monday={w.monday} days={w.days} current={w.monday === mondayOf(today)} />
                 ))}
               </div>
+              <KindLegend />
             </ChartCard>
           </div>
 
@@ -428,24 +435,46 @@ function RecordTile({ label, value, detail, date: day, compact }: { label: strin
   );
 }
 
-function Week({ monday, days, current }: { monday: string; days: { date: string; count: number | null }[]; current: boolean }) {
+const KIND_LABELS: Record<TrainingKind, string> = { strength: "Kraft", cardio: "Ausdauer", both: "Kraft und Ausdauer" };
+
+/** Farbe eines Tages: Kraft Petrol, Ausdauer Bernstein, beides diagonal geteilt; ein Training heller als mehrere. */
+function dayClass(d: CalendarDay): string {
+  if (d.count == null) return "bg-transparent";
+  if (d.kind == null) return "bg-muted";
+  if (d.kind === "both") return "bg-[linear-gradient(135deg,var(--sport)_50%,var(--cardio)_50%)]";
+  if (d.kind === "cardio") return d.count === 1 ? "bg-cardio/75" : "bg-cardio";
+  return d.count === 1 ? "bg-sport/70" : "bg-sport";
+}
+
+function dayText(d: CalendarDay): string {
+  if (d.count == null) return "";
+  if (d.count === 0 || d.kind == null) return `${date(d.date)}: kein Training`;
+  return `${date(d.date)}: ${d.count === 1 ? "1 Training" : `${d.count} Trainings`} (${KIND_LABELS[d.kind]})`;
+}
+
+function Week({ monday, days, current }: { monday: string; days: CalendarDay[]; current: boolean }) {
   return (
     <>
       <span className={cn("self-center tabular-nums", current && "font-semibold text-foreground")}>{dayMonth(monday)}</span>
       {days.map((d) => (
-        <span
-          key={d.date}
-          title={d.count == null ? undefined : `${date(d.date)}: ${d.count === 0 ? "kein Training" : d.count === 1 ? "1 Training" : `${d.count} Trainings`}`}
-          className={cn(
-            "aspect-square rounded-md",
-            d.count == null ? "bg-transparent" : d.count === 0 ? "bg-muted" : d.count === 1 ? "bg-sport/70" : "bg-sport",
-          )}
-        >
-          <span className="sr-only">
-            {d.count == null ? "" : `${date(d.date)}: ${d.count === 0 ? "kein Training" : `${d.count} Training${d.count > 1 ? "s" : ""}`}`}
-          </span>
+        <span key={d.date} title={dayText(d) || undefined} className={cn("aspect-square rounded-md", dayClass(d))}>
+          <span className="sr-only">{dayText(d)}</span>
         </span>
       ))}
     </>
+  );
+}
+
+/** Legende unter dem Kalender. */
+function KindLegend() {
+  return (
+    <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground" aria-label="Legende">
+      {(["strength", "cardio", "both"] as const).map((k) => (
+        <li key={k} className="flex items-center gap-1.5">
+          <span className={cn("size-3 rounded-sm", dayClass({ date: "", count: 2, kind: k }))} aria-hidden />
+          {KIND_LABELS[k]}
+        </li>
+      ))}
+    </ul>
   );
 }

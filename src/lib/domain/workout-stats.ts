@@ -22,6 +22,25 @@ export type StatsWorkout = {
   }[];
 };
 
+/** Kraft, Ausdauer oder beides (Kalender der Trainingstage). */
+export type TrainingKind = "strength" | "cardio" | "both";
+
+/** Tag im Kalender: count null = Zukunft; kind null = kein Training. */
+export type CalendarDay = { date: string; count: number | null; kind: TrainingKind | null };
+
+/** Ausdauer: Muskelgruppe „Ausdauer“ oder mit Strecke und Zeit erfasst (Laufband & Co.). */
+export function isCardioExercise(e: { muscleGroup: MuscleGroup; tracking: Tracking }): boolean {
+  return e.muscleGroup === "cardio" || e.tracking === "distance_time";
+}
+
+/** Art eines Trainings nach seinen Übungen mit erledigten Sätzen; ohne solche zählt es als Kraft. */
+export function workoutKind(w: StatsWorkout): TrainingKind {
+  const done = w.exercises.filter((e) => e.sets.length > 0);
+  const cardio = done.some(isCardioExercise);
+  const strength = done.length === 0 || done.some((e) => !isCardioExercise(e));
+  return cardio && strength ? "both" : cardio ? "cardio" : "strength";
+}
+
 /** „woche“ = eine Kalenderwoche (Mo–So), die man durchblättern kann; die anderen enden heute. */
 export type StatsRange = "woche" | "4w" | "3m" | "1j" | "alle";
 
@@ -285,9 +304,13 @@ export function streakWeeks(workouts: StatsWorkout[], today: string): number {
 }
 
 /** Kalender der letzten Wochen (Montag bis Sonntag je Zeile): je Tag die Zahl der Trainings; Tage nach heute = null. */
-export function trainingCalendar(workouts: StatsWorkout[], today: string, weeks = 12): { monday: string; days: { date: string; count: number | null }[] }[] {
-  const counts = new Map<string, number>();
-  for (const w of workouts) counts.set(w.date, (counts.get(w.date) ?? 0) + 1);
+export function trainingCalendar(workouts: StatsWorkout[], today: string, weeks = 12): { monday: string; days: CalendarDay[] }[] {
+  const byDate = new Map<string, { count: number; strength: boolean; cardio: boolean }>();
+  for (const w of workouts) {
+    const day = byDate.get(w.date) ?? { count: 0, strength: false, cardio: false };
+    const kind = workoutKind(w);
+    byDate.set(w.date, { count: day.count + 1, strength: day.strength || kind !== "cardio", cardio: day.cardio || kind !== "strength" });
+  }
   const last = mondayOf(today);
   return Array.from({ length: weeks }, (_, i) => {
     const monday = addDays(last, -7 * (weeks - 1 - i));
@@ -295,7 +318,10 @@ export function trainingCalendar(workouts: StatsWorkout[], today: string, weeks 
       monday,
       days: Array.from({ length: 7 }, (_, d) => {
         const date = addDays(monday, d);
-        return { date, count: daysBetween(today, date) > 0 ? null : (counts.get(date) ?? 0) };
+        if (daysBetween(today, date) > 0) return { date, count: null, kind: null };
+        const day = byDate.get(date);
+        if (!day) return { date, count: 0, kind: null };
+        return { date, count: day.count, kind: day.strength && day.cardio ? "both" : day.cardio ? "cardio" : "strength" };
       }),
     };
   });
