@@ -28,13 +28,13 @@ export function AreaSwitcher({ compact = false, className }: { compact?: boolean
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "-ml-1 inline-flex min-h-12 min-w-0 items-center gap-3 rounded-2xl py-1 pr-2 pl-1 text-left transition-colors hover:bg-accent/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none data-popup-open:bg-accent/60",
+          "inline-flex min-h-11 min-w-0 items-center gap-2.5 rounded-full bg-muted py-1 pr-3 pl-1 text-left transition-colors hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none data-popup-open:bg-accent",
           className,
         )}
         aria-label={`Bereich: ${current.label}. Bereich wechseln`}
       >
-        <AreaTile area={current} size={compact ? "sm" : "md"} />
-        <span className={cn("truncate font-heading font-semibold tracking-tight", compact ? "flex-1 text-lg" : "text-2xl")}>
+        <AreaTile area={current} size="sm" className="rounded-full" />
+        <span className={cn("truncate font-semibold", compact && "flex-1")}>
           {current.label}
         </span>
         <ChevronDown className="size-5 shrink-0 text-muted-foreground" aria-hidden />

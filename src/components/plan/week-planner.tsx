@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useRef, useState, type TouchEvent } from "react";
-import { Boxes, ChevronLeft, ChevronRight, CookingPot, Dumbbell, Plus, Repeat, Store } from "lucide-react";
+import { Boxes, ChevronLeft, ChevronRight, CookingPot, Plus, Repeat, Store } from "lucide-react";
 import { GroupHeading, ListCard, TagLabel } from "@/components/layout/list-blocks";
 import { GenerateDialog } from "@/components/shopping/generate-dialog";
 import {
@@ -374,7 +374,6 @@ function DayTile({
         isToday && !active && "border-primary",
       )}
     >
-      {training ? <Dumbbell className="absolute top-1 right-0.5 size-3 opacity-80" aria-hidden /> : null}
       <span className={cn("text-xs font-medium", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{weekdayShort(day)}</span>
       <span className="text-lg leading-none font-semibold tabular-nums">{day.slice(8)}</span>
       <span

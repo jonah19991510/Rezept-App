@@ -15,7 +15,7 @@ export function Sidebar() {
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-8 border-r bg-sidebar px-4 py-6 text-sidebar-foreground md:flex">
-      <AreaSwitcher compact className="ml-0 w-full" />
+      <AreaSwitcher compact className="w-full" />
       <nav aria-label="Hauptnavigation">
         <ul className="grid gap-1">
           {navItemsFor(area).map((item) => {

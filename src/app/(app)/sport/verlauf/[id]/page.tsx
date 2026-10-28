@@ -63,7 +63,7 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
   return (
     <article className="space-y-6">
       <div>
-        <Link href="/sport/verlauf" className="-ml-2 inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/sport/verlauf" className="inline-flex min-h-10 items-center gap-1 rounded-full bg-muted pr-4 pl-2.5 text-sm font-medium transition-colors hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
           <ChevronLeft className="size-4" aria-hidden />
           Verlauf
         </Link>

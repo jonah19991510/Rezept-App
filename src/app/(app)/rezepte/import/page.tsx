@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, FileText, Link2 } from "lucide-react";
+import { ChevronLeft, FileText, Link2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { ImportFlow } from "@/components/recipes/import/import-flow";
 import { MarkdownImportFlow } from "@/components/recipes/import/markdown-import-flow";
@@ -27,9 +27,9 @@ export default async function ImportPage({ searchParams }: PageProps<"/rezepte/i
     <div className="mx-auto max-w-3xl">
       <Link
         href="/einstellungen#daten"
-        className="mb-2 inline-flex min-h-11 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="mb-2 inline-flex min-h-10 items-center gap-1 rounded-full bg-muted pr-4 pl-2.5 text-sm font-medium transition-colors hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
       >
-        <ArrowLeft className="size-4" aria-hidden />
+        <ChevronLeft className="size-4" aria-hidden />
         Einstellungen
       </Link>
       <PageHeader

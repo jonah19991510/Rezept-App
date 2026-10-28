@@ -37,7 +37,15 @@ export default async function HistoryPage() {
 
   return (
     <>
-      <PageHeader title="Training" actions={<LogPastWorkout plans={planOptions} />} />
+      {/* Knopf (44px) darf die Titelzeile (36px, md 40px) nicht höher machen, sonst springt „Training“ beim Tab-Wechsel */}
+      <PageHeader
+        title="Training"
+        actions={
+          <div className="-my-1 md:-my-0.5">
+            <LogPastWorkout plans={planOptions} />
+          </div>
+        }
+      />
       <SportTabs active="verlauf" />
       {active ? <ActiveWorkoutBanner workout={active} /> : null}
       {finished.length === 0 ? (
