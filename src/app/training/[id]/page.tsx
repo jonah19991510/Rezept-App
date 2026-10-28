@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { AreaTheme } from "@/components/layout/area-theme";
 import { WorkoutView } from "@/components/sport/workout/workout-view";
 import { requireUser } from "@/lib/auth";
 import { getExercises } from "@/lib/server/sport";
@@ -27,5 +28,10 @@ export default async function TrainingPage({ params, searchParams }: PageProps<"
     getExercises(user.id),
     getLastSets([...new Set(session.exercises.map((e) => e.exercise.id))], id),
   ]);
-  return <WorkoutView initial={session} exercises={exercises} last={last} mode={edit ? "edit" : "live"} />;
+  // Sport-Akzent (Petrol) wie im übrigen Sport-Bereich
+  return (
+    <AreaTheme>
+      <WorkoutView initial={session} exercises={exercises} last={last} mode={edit ? "edit" : "live"} />
+    </AreaTheme>
+  );
 }

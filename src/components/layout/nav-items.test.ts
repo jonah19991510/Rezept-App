@@ -21,6 +21,7 @@ describe("isEditorPath", () => {
 describe("areaForPath", () => {
   it("ordnet Seiten den Bereichen zu", () => {
     expect(areaForPath("/")).toBe("start");
+    expect(areaForPath("/training/abc")).toBe("sport");
     expect(areaForPath("/sport")).toBe("sport");
     expect(areaForPath("/sport/training")).toBe("sport");
     expect(areaForPath("/rezepte")).toBe("food");

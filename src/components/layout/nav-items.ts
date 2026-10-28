@@ -95,7 +95,8 @@ export const AREA_PARAM = "bereich";
  */
 export function areaForPath(pathname: string, areaParam?: string | null): AreaKey {
   if (pathname === "/") return "start";
-  if (isActivePath(pathname, "/sport")) return "sport";
+  // Das laufende Training (/training/…, ohne App-Layout) gehört zu Sport
+  if (isActivePath(pathname, "/sport") || isActivePath(pathname, "/training")) return "sport";
   if (SHARED_PATHS.some((p) => isActivePath(pathname, p)) && (areaParam === "sport" || areaParam === "start")) return areaParam;
   return "food";
 }
