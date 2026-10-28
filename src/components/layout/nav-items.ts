@@ -76,7 +76,7 @@ export type Area = {
 /** Bereiche der App (26.10.2026): Startseite, Essen & Trinken (alles bisherige), Sport & Gesundheit (ab Phase S1). */
 export const AREAS: Area[] = [
   { key: "start", label: "Start", href: "/", icon: House, tile: { background: "var(--foreground)", color: "var(--background)" } },
-  { key: "food", label: "Essen & Trinken", href: "/rezepte", icon: Utensils, tile: { background: "var(--primary)", color: "var(--primary-foreground)" } },
+  { key: "food", label: "Essen & Trinken", href: "/rezepte", icon: Utensils, tile: { background: "var(--food)", color: "var(--food-foreground)" } },
   { key: "sport", label: "Sport & Gesundheit", href: "/sport/plaene", icon: HeartPulse, tile: { background: "var(--sport)", color: "var(--sport-foreground)" } },
 ];
 

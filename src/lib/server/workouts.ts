@@ -99,6 +99,21 @@ export async function getLastSets(exerciseIds: string[], excludeWorkoutId: strin
   return result;
 }
 
+/** Plan und Tag des zuletzt beendeten Trainings mit einem Plan (hervorgehobener Plan auf der Pläne-Seite). */
+export async function getLastPlanWorkout(userId: string): Promise<{ planId: string; dayId: string | null } | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("workouts")
+    .select("plan_id, plan_day_id")
+    .eq("user_id", userId)
+    .not("plan_id", "is", null)
+    .not("ended_at", "is", null)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.plan_id ? { planId: data.plan_id, dayId: data.plan_day_id ?? null } : null;
+}
+
 /** Tag des zuletzt beendeten Trainings mit diesem Plan (für „als Nächstes“). */
 export async function getLastPlanDayId(userId: string, planId: string): Promise<string | null> {
   const supabase = await createClient();

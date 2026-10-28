@@ -169,6 +169,24 @@
   --sidebar-ring: oklch(0.68 0.14 40);
 }
 
+/* Sport & Gesundheit: Akzent Petrol statt Terrakotta (Terrakotta gehört zu Essen & Trinken); gesetzt von AreaTheme */
+:root {
+  /* Akzent von Essen & Trinken, bleibt auch im Sport-Bereich Terrakotta (Kachel im Bereichs-Umschalter) */
+  --food: oklch(0.6 0.14 38);
+  --food-foreground: oklch(0.985 0.01 80);
+}
+.dark {
+  --food: oklch(0.68 0.14 40);
+  --food-foreground: oklch(0.18 0.015 50);
+}
+[data-area="sport"] {
+  --primary: var(--sport);
+  --primary-foreground: var(--sport-foreground);
+  --ring: var(--sport);
+  --sidebar-primary: var(--sport);
+  --sidebar-primary-foreground: var(--sport-foreground);
+}
+
 /* Bar-Stimmung (Phase 15): tiefes Grün mit Bernstein-Akzent, gleiches System */
 [data-mood="bar"] {
   --background: oklch(0.22 0.03 165);

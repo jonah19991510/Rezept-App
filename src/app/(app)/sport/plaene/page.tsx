@@ -1,68 +1,31 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronDown, ClipboardList, Globe } from "lucide-react";
+import { ChevronDown, ClipboardList } from "lucide-react";
 import { EmptyState } from "@/components/layout/empty-state";
-import { TagLabel } from "@/components/layout/list-blocks";
 import { PageHeader } from "@/components/layout/page-header";
 import { NewRecipeFab } from "@/components/recipes/new-recipe-fab";
 import { ActiveWorkoutBanner } from "@/components/sport/active-workout-banner";
-import { PlanMenu } from "@/components/sport/plan-menu";
+import { PlanCard } from "@/components/sport/plan-card";
 import { SportTabs } from "@/components/sport/sport-tabs";
 import { StartTraining } from "@/components/sport/start-training";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
-import { planSummary } from "@/lib/domain/training-plan";
-import { getTrainingPlans, type PlanListItem } from "@/lib/server/sport";
-import { getActiveWorkout } from "@/lib/server/workouts";
+import { getTrainingPlans } from "@/lib/server/sport";
+import { getActiveWorkout, getLastPlanDayId, getLastPlanWorkout } from "@/lib/server/workouts";
+import { nextPlanDay } from "@/lib/domain/workout";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Trainingspläne" };
 
-function PlanCard({ plan }: { plan: PlanListItem }) {
-  return (
-    <li className="relative rounded-3xl border bg-card transition-colors hover:border-primary/40">
-      <div className="flex items-start gap-2 p-4 pr-2 md:p-5 md:pr-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-xl leading-tight font-semibold wrap-anywhere">
-            {/* Der Titel-Link deckt die ganze Karte ab, das Menü liegt darüber */}
-            <Link href={`/sport/plaene/${plan.id}`} className="after:absolute after:inset-0 after:rounded-3xl focus-visible:outline-none">
-              {plan.title}
-            </Link>
-          </h2>
-          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-            {planSummary(plan.days.map((d) => ({ exercises: Array(d.exerciseCount) })))}
-            {plan.isPublic ? (
-              // Symbol als Kind statt als icon-Prop: Komponenten-Funktionen lassen sich nicht an Client-Komponenten übergeben
-              <TagLabel>
-                <Globe className="size-3" aria-hidden />
-                Öffentlich
-              </TagLabel>
-            ) : null}
-          </p>
-        </div>
-        <div className="relative z-10">
-          <PlanMenu planId={plan.id} title={plan.title} archived={plan.isArchived} />
-        </div>
-      </div>
-      {plan.days.length > 0 ? (
-        <ul className="flex flex-wrap gap-1.5 px-4 pb-4 md:px-5 md:pb-5" aria-label="Trainingstage">
-          {plan.days.map((d) => (
-            <li key={d.id} className="max-w-full truncate rounded-full bg-sport-soft px-3 py-1 text-sm text-sport">
-              {d.name}
-              {d.focus ? <span className="opacity-75"> · {d.focus}</span> : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </li>
-  );
-}
-
 export default async function PlansPage() {
   const user = await requireUser();
-  const [plans, active] = await Promise.all([getTrainingPlans(user.id), getActiveWorkout(user.id)]);
+  const [plans, active, last] = await Promise.all([getTrainingPlans(user.id), getActiveWorkout(user.id), getLastPlanWorkout(user.id)]);
   const current = plans.filter((p) => !p.isArchived);
   const archived = plans.filter((p) => p.isArchived);
+  // Hervorgehoben: der zuletzt trainierte Plan, sonst der zuletzt geänderte
+  const featured = current.find((p) => p.id === last?.planId) ?? current[0] ?? null;
+  const lastDayId = !featured ? null : featured.id === last?.planId ? last.dayId : await getLastPlanDayId(user.id, featured.id);
+  const nextDay = featured ? nextPlanDay(featured.days, lastDayId) : null;
 
   return (
     // Unten Platz lassen, damit der schwebende Knopf die letzte Karte nicht verdeckt
@@ -89,7 +52,7 @@ export default async function PlansPage() {
           {current.length > 0 ? (
             <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {current.map((p) => (
-                <PlanCard key={p.id} plan={p} />
+                <PlanCard key={p.id} plan={p} next={p.id === featured?.id ? nextDay : undefined} />
               ))}
             </ul>
           ) : (

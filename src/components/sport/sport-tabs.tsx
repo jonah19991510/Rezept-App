@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 type Tab = "plaene" | "verlauf";
 
-/** Unterseiten von „Pläne“ als runder Umschalter (wie Küche | Bar): Pläne, Verlauf. */
+/** Unterseiten von „Pläne“ als runder Umschalter (wie Küche | Bar, aktiv aber hell statt im Bereichs-Akzent). */
 export function SportTabs({ active }: { active: Tab }) {
   const tabs: { key: Tab; href: string; label: string }[] = [
     { key: "plaene", href: "/sport/plaene", label: "Pläne" },
@@ -18,7 +18,7 @@ export function SportTabs({ active }: { active: Tab }) {
           aria-current={key === active ? "page" : undefined}
           className={cn(
             "flex min-h-11 min-w-0 items-center justify-center rounded-full px-4 text-sm font-medium whitespace-nowrap text-muted-foreground transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-            key === active && "bg-primary text-primary-foreground shadow-sm hover:text-primary-foreground",
+            key === active && "bg-foreground text-background shadow-sm hover:text-background",
           )}
         >
           {label}

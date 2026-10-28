@@ -23,6 +23,7 @@ export function StartTraining({
   nextDayId = null,
   label = "Training starten",
   variant = "default",
+  iconOnly = false,
   className,
 }: {
   planId?: string | null;
@@ -30,6 +31,8 @@ export function StartTraining({
   nextDayId?: string | null;
   label?: string;
   variant?: "default" | "outline";
+  /** nur das Symbol als runder Knopf (label wird zum aria-label) */
+  iconOnly?: boolean;
   className?: string;
 }) {
   const router = useRouter();
@@ -71,9 +74,17 @@ export function StartTraining({
 
   return (
     <>
-      <Button type="button" variant={variant} onClick={onClick} disabled={pending || (planId != null && days.length === 0)} className={cn("h-12 rounded-full px-6 text-base", className)}>
-        {planId ? <Play aria-hidden /> : <Dumbbell aria-hidden />}
-        {label}
+      <Button
+        type="button"
+        variant={variant}
+        onClick={onClick}
+        disabled={pending || (planId != null && days.length === 0)}
+        aria-label={iconOnly ? label : undefined}
+        title={iconOnly ? label : undefined}
+        className={cn(iconOnly ? "size-11 rounded-full" : "h-12 rounded-full px-6 text-base", className)}
+      >
+        {planId ? <Play className={cn(iconOnly && "fill-current")} aria-hidden /> : <Dumbbell aria-hidden />}
+        {iconOnly ? null : label}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
