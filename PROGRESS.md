@@ -1361,8 +1361,9 @@ Chips; im Dunkeln ohne Rand. Hervorgehoben (`bg-sport-soft`) ist der zuletzt tra
 `data-area` (Wrapper im App-Layout und `<html>` für Dialoge); in `globals.css` macht `[data-area="sport"]` `primary`,
 `ring` und `sidebar-primary` zu Petrol. Damit sind Plus, „Training starten“, Privat/Öffentlich, Statistik-Chips usw.
 unter Sport blau, Essen & Trinken bleibt Terrakotta. Die Kachel „Essen & Trinken“ im Umschalter nutzt dafür `--food`.
-Pläne | Verlauf: aktiver Knopf `bg-foreground` (weiß im Dunkeln). Nicht erfasst: die laufende Trainingsansicht
-(`/training/…`, außerhalb des App-Layouts) hat weiter Terrakotta-Akzente. Beim Test blieb es beim Nutzer zunächst
+Pläne | Verlauf: aktiver Knopf `bg-foreground` (weiß im Dunkeln). Nachtrag: Auch die laufende Trainingsansicht
+(`/training/…`, außerhalb des App-Layouts) ist jetzt Petrol: `areaForPath` ordnet `/training` Sport zu, die Seite steckt
+in `AreaTheme` (Push `5e6cb82` → Deployment `dpl_6oVuyfzMMXpPF77YAuE5VoAwwePH` „READY“, keine Fehler im Log; im Browser nicht von Claude geprüft, Anmeldung nötig). Beim Test blieb es beim Nutzer zunächst
 orange, obwohl Testseiten (hell/dunkel) blau zeigten; nach einer weiteren Änderung an `globals.css` kam es an
 (vermutlich wieder veraltete CSS, siehe „Bekannte Probleme“).
 
