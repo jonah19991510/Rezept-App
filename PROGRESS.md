@@ -1348,6 +1348,19 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Design 28.10.2026: untere Navigation als schwebende Pille
+
+**Live** seit 28.10.2026: vom Nutzer am LAN-Server getestet („passt“); Push `dc5f98d` → Deployment
+`dpl_6stnofvB5akwjyE3tYkAwnCN2cTt` (`production`, „READY“; per Vercel-Connector geprüft, keine Fehler im Log).
+
+Nach Vorlage-Bildern des Nutzers (`BottomNav`, nur am Handy): Leiste schwebt fest 12 px über dem unteren Rand
+(`max(0.75rem, safe-area)`), runde Pille `bg-card/80` mit Blur. Inaktive Punkte nur als Symbol (Name als `sr-only`),
+der aktive mit Namen in einer Pille `bg-foreground`. Startseite hat jetzt auch die Leiste: Start, Ernährung
+(`/rezepte`), Sport (`/sport/plaene`) (`START_NAV_ITEMS`). Plus (`fabClass`), Messen-Knopf und die mitlaufenden
+Import-Leisten sitzen bei `calc(max(0.75rem, safe-area) + 4.75rem)` über der Leiste. Beim Test waren Leiste und Plus
+zunächst unsichtbar: Turbopack lieferte nach der Änderung alte CSS aus (siehe „Bekannte Probleme“); `.next/dev`
+gelöscht und neu gestartet, danach in Vorschau (temporäre Seite im App-Aufbau, gelöscht) und beim Nutzer korrekt.
+
 ### Design 28.10.2026: runde Umschalter und Zurück-Knöpfe
 
 **Live** seit 28.10.2026: Push `e5ac674` → Deployment `dpl_FyhJFp686uSwz15WXR2YyRt33een` (`production`, „READY“;
