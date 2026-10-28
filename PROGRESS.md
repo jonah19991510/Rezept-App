@@ -1348,6 +1348,18 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Nachtrag 28.10.2026: Trainingstage nach Kraft und Ausdauer gefärbt
+
+**Live** seit 28.10.2026: Push `b78dad2` → Deployment `dpl_563WtdZVgD8ikV8hHyaRqwBScumB`
+(`production`, „READY“; per Vercel-Connector geprüft, keine Fehler im Log). Am PC (LAN) vom Nutzer gesehen; am Handy (LAN) blieb
+es wegen veralteter CSS im Browser-Cache gleichfarbig (siehe „Bekannte Probleme“), deshalb in der Live-App zu prüfen.
+
+Kalender „Trainingstage“ in der Sport-Statistik: `workoutKind` (Ausdauer = Muskelgruppe `cardio` oder Erfassung
+`distance_time`, nur Übungen mit erledigten Sätzen; sonst Kraft), `trainingCalendar` liefert je Tag `kind`
+(strength/cardio/both). Kraft Petrol, Ausdauer Bernstein (neues Token `--cardio`), beides diagonal geteilt (Verlauf
+135°); ein Training heller als mehrere. Legende unter dem Kalender, Tabelle mit „Tage mit Ausdauer“. Tests ergänzt.
+In der Vorschau mit Beispieldaten geprüft (hell und dunkel, Handy-Format; temporäre Seite gelöscht).
+
 ### Nachtrag 28.10.2026: Getränke per Drag & Drop sortieren
 
 **Live** seit 28.10.2026: vom Nutzer am LAN-Server getestet; Push `e632e07` → Deployment
@@ -1968,6 +1980,13 @@ zum Ausbau sichtbar, ausgegraut mit „Kommt bald“. Vorlage: Design-Entwurf �
   k-Anonymität) ist aus. Optional im Dashboard (Authentication → Policies/Passwords), evtl. nur in bezahlten Plänen.
 
 ## Bekannte Probleme
+
+- **Handy am LAN-Server zeigt alte Farben/Styles (28.10.2026):** Der Entwicklungsserver liefert die CSS immer unter
+  demselben Dateinamen. Das Handy lud danach zwar neues JavaScript (neue Elemente sichtbar), behielt aber die alte
+  CSS (neue Klassen fehlten), während der PC und Claudes Vorschau sie hatten. Server und LAN-Adresse lieferten
+  nachweislich die neue Datei. Abhilfe: am Handy Cache leeren bzw. Tab ganz neu öffnen, oder in der Live-App prüfen
+  (dort Dateinamen mit Hash). Zusätzlich lieferte Turbopack nach Änderungen an `globals.css` mehrmals selbst alte CSS
+  aus (`.next/dev` löschen, neu starten).
 
 - **Alte Homescreen-Icons starten bei den Rezepten (26.10.2026):** Die Startadresse war bis zur Startseite
   `/rezepte`. iPhones speichern sie beim Hinzufügen fest im Icon (Android aktualisiert erst nach Tagen). Abhilfe: Icon
