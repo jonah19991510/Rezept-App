@@ -1348,6 +1348,19 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Design 28.10.2026: runde Umschalter und Zurück-Knöpfe
+
+**Live** seit 28.10.2026: Push `e5ac674` → Deployment `dpl_FyhJFp686uSwz15WXR2YyRt33een` (`production`, „READY“;
+per Vercel-Connector geprüft, keine Fehler im Log).
+
+Nach Vorlage-Bildern des Nutzers: Bereichs-Umschalter oben als Pille mit `bg-muted` und runder Kachel (kleiner, Schrift
+`text-base` statt `text-2xl`, auch in der Seitenleiste); „Pläne | Verlauf“ (`SportTabs`) als runder Umschalter wie
+„Küche | Bar“ statt Unterstrich-Tabs; Zurück-Links (Plan, Training, Getränke-Tag, Rezept-Import) als runde Pille mit
+Chevron; Wochenleiste im Wochenplan ohne Hantelsymbol (Trainingstag steht weiter im `aria-label`). Vom Nutzer gemeldet:
+„Training“ sprang beim Wechsel Pläne ↔ Verlauf, weil der 44-px-Knopf „Nachtragen“ die Titelzeile (36/40 px,
+`items-end`) höher machte; jetzt mit negativem Rand um den Knopf ausgeglichen. Im Browser nicht von Claude geprüft
+(Anmeldung nötig), der Nutzer prüft selbst.
+
 ### Bugfix 27.10.2026: Übungsauswahl scrollte nach Tipp auf eine Kategorie nicht
 
 **Live** seit 27.10.2026: Push `ffed7f0` → Deployment `dpl_HCAYoaMM5qn1T7gY9T2ZpCPq3GSF` (`production`, „READY“; per
