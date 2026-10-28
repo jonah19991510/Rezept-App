@@ -9,12 +9,12 @@ export default function LexiconPage() {
     <ComingSoon
       icon={BookOpenText}
       title="Lexikon"
-      intro="Hier entsteht ein Nachschlagewerk zu Gesundheitsthemen: kurz erklärt, mit Quellen und ohne Fachchinesisch. Es ersetzt keine ärztliche Beratung."
+      intro="Hier entsteht ein Nachschlagewerk zu Gesundheitsthemen: verständlich erklärt und mit Quellen. Es ersetzt keine ärztliche Beratung."
       features={[
-        "Blutwerte: was sie bedeuten und welche Bereiche als normal gelten",
         "Ernährung: Makro- und Mikronährstoffe, Kalorien, Trinken",
         "Supplements: was belegt ist, wie viel sinnvoll ist, worauf man achten sollte",
         "Training: Begriffe, Belastung, Erholung und Regeneration",
+        "Blutwerte: was sie bedeuten und welche Bereiche als normal gelten",
       ]}
     />
   );
