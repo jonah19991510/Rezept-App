@@ -1348,6 +1348,24 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Design 28.10.2026: Pläne-Seite neu, Blau als Akzent im Sport-Bereich
+
+**Live** seit 28.10.2026: vom Nutzer am LAN-Server getestet; Push `a1fef12` → Deployment
+`dpl_DiFXNjSFEyj4qMuL53UG92fTndDL` (`production`, „READY“; per Vercel-Connector geprüft, keine Fehler im Log).
+
+Nach Vorlage-Bild des Nutzers (Schrift bewusst unverändert): Plankarten (`PlanCard`, jetzt in
+`components/sport/plan-card.tsx`) mit Kreis (Zahl der Tage), Titel, Umfang, Globus bei öffentlichen Plänen, Tage als
+Chips; im Dunkeln ohne Rand. Hervorgehoben (`bg-sport-soft`) ist der zuletzt trainierte aktive Plan
+(`getLastPlanWorkout`), sonst der zuletzt geänderte; sein nächster Tag (`nextPlanDay`) ist als Chip markiert und unten
+„Als Nächstes“ per rundem Play-Knopf direkt startbar (`StartTraining` mit `iconOnly`). Akzent: `AreaTheme` setzt
+`data-area` (Wrapper im App-Layout und `<html>` für Dialoge); in `globals.css` macht `[data-area="sport"]` `primary`,
+`ring` und `sidebar-primary` zu Petrol. Damit sind Plus, „Training starten“, Privat/Öffentlich, Statistik-Chips usw.
+unter Sport blau, Essen & Trinken bleibt Terrakotta. Die Kachel „Essen & Trinken“ im Umschalter nutzt dafür `--food`.
+Pläne | Verlauf: aktiver Knopf `bg-foreground` (weiß im Dunkeln). Nicht erfasst: die laufende Trainingsansicht
+(`/training/…`, außerhalb des App-Layouts) hat weiter Terrakotta-Akzente. Beim Test blieb es beim Nutzer zunächst
+orange, obwohl Testseiten (hell/dunkel) blau zeigten; nach einer weiteren Änderung an `globals.css` kam es an
+(vermutlich wieder veraltete CSS, siehe „Bekannte Probleme“).
+
 ### Design 28.10.2026: untere Navigation als schwebende Pille
 
 **Live** seit 28.10.2026: vom Nutzer am LAN-Server getestet („passt“); Push `dc5f98d` → Deployment
