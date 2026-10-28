@@ -157,6 +157,20 @@ export async function saveDrinkAction(drinkId: string | null, input: DrinkInput)
   return { ok: true, id: result.data[0].id };
 }
 
+/** Reihenfolge der Getränke speichern (Drag & Drop in der Liste): Position = Index in `ids`. */
+export async function reorderDrinksAction(ids: string[]): Promise<{ ok: boolean; message?: string }> {
+  const user = await requireUser();
+  const parsed = z.array(idSchema).max(200).safeParse(ids);
+  if (!parsed.success || new Set(parsed.data).size !== parsed.data.length) return { ok: false, message: "Ungültige Reihenfolge." };
+  const supabase = await createClient();
+  const results = await Promise.all(
+    parsed.data.map((id, position) => supabase.from("drinks").update({ position }).eq("id", id).eq("user_id", user.id)),
+  );
+  if (results.some((r) => r.error)) return { ok: false, message: "Die Reihenfolge konnte nicht gespeichert werden." };
+  revalidateDrinks();
+  return { ok: true };
+}
+
 /** Getränk löschen; frühere Einträge bleiben mit Name und Werten erhalten. */
 export async function deleteDrinkAction(drinkId: string): Promise<{ ok: boolean; message?: string }> {
   await requireUser();

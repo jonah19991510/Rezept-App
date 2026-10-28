@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { ChevronRight, Plus, Target } from "lucide-react";
 import { toast } from "sonner";
-import { setDrinkGoalAction } from "@/app/(app)/sport/getraenke/actions";
+import { reorderDrinksAction, setDrinkGoalAction } from "@/app/(app)/sport/getraenke/actions";
 import { chipClass } from "@/components/recipes/chip-select";
+import { announcements, screenReaderInstructions, SortableRow, useEditorSensors, verticalOnly } from "@/components/recipes/editor/sortable";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -16,14 +19,39 @@ import { DrinkSheet } from "./drink-sheet";
 
 const GOAL_PRESETS = [1500, 2000, 2500, 3000, 3500];
 
-/** Tab „Getränke“: Tagesziel mit „Ändern“, Getränkeliste (antippen bearbeitet) und „+ Getränk hinzufügen“. */
+/**
+ * Tab „Getränke“: Tagesziel mit „Ändern“, Getränkeliste (antippen bearbeitet, am Griff ziehen ändert die Reihenfolge,
+ * gespeichert beim Ablegen) und „+ Getränk hinzufügen“.
+ */
 export function DrinkManager({ goalMl, drinks }: { goalMl: number; drinks: Drink[] }) {
   const [editing, setEditing] = useState<Drink | "neu" | null>(null);
+  // Reihenfolge lokal (sofort sichtbar); neue Daten vom Server (Getränk angelegt/gelöscht) übernehmen
+  const [ordered, setOrdered] = useState(drinks);
+  const [source, setSource] = useState(drinks);
+  if (drinks !== source) {
+    setSource(drinks);
+    setOrdered(drinks);
+  }
+  const sensors = useEditorSensors();
   const [goalOpen, setGoalOpen] = useState(false);
   const [goalInput, setGoalInput] = useState("");
   const [pending, startTransition] = useTransition();
   const goalValue = parseDecimal(goalInput);
   const goalMlInput = goalValue != null ? Math.round(goalValue * 1000) : null;
+
+  function onDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+    const before = ordered;
+    const next = arrayMove(ordered, ordered.findIndex((d) => d.id === active.id), ordered.findIndex((d) => d.id === over.id));
+    setOrdered(next);
+    startTransition(async () => {
+      const result = await reorderDrinksAction(next.map((d) => d.id));
+      if (!result.ok) {
+        setOrdered(before);
+        toast.error(result.message ?? "Die Reihenfolge konnte nicht gespeichert werden.");
+      }
+    });
+  }
 
   function saveGoal(event: React.FormEvent) {
     event.preventDefault();
@@ -69,29 +97,43 @@ export function DrinkManager({ goalMl, drinks }: { goalMl: number; drinks: Drink
           </h2>
           <span className="text-sm text-muted-foreground">Werte pro 100 ml</span>
         </div>
-        {drinks.length > 0 ? (
-          <ul className="divide-y overflow-hidden rounded-3xl border bg-card">
-            {drinks.map((d) => (
-              <li key={d.id}>
-                <button type="button" onClick={() => setEditing(d)} className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-muted/40">
-                  <DrinkDot color={d.color} className="size-4" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{d.name}</span>
-                    <span className="block truncate text-sm text-muted-foreground">
-                      {drinkFacts(d)}
-                      {d.ingredients ? ` · ${formatNumber(d.waterPercent, 1)} % Wasser` : d.waterPercent >= 100 ? " · Wasser" : ""}
-                    </span>
-                    {d.ingredients ? (
-                      <span className="block truncate text-xs text-muted-foreground">
-                        Mischgetränk: {d.ingredients.map((i) => `${i.ml} ml ${i.name}`).join(" + ")}
+        {ordered.length > 0 ? (
+          <DndContext
+            collisionDetection={closestCenter}
+            sensors={sensors}
+            modifiers={[verticalOnly]}
+            onDragEnd={onDragEnd}
+            accessibility={{ announcements: announcements((id) => ordered.find((d) => d.id === id)?.name ?? "Getränk"), screenReaderInstructions }}
+          >
+            <SortableContext items={ordered.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+              <ul className="divide-y rounded-3xl border bg-card">
+                {ordered.map((d) => (
+                  <SortableRow key={d.id} id={d.id} handleLabel={`${d.name} verschieben`} className="overflow-hidden first:rounded-t-3xl last:rounded-b-3xl">
+                    <button
+                      type="button"
+                      onClick={() => setEditing(d)}
+                      className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 pr-4 text-left transition hover:bg-muted/40"
+                    >
+                      <DrinkDot color={d.color} className="size-4" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{d.name}</span>
+                        <span className="block truncate text-sm text-muted-foreground">
+                          {drinkFacts(d)}
+                          {d.ingredients ? ` · ${formatNumber(d.waterPercent, 1)} % Wasser` : d.waterPercent >= 100 ? " · Wasser" : ""}
+                        </span>
+                        {d.ingredients ? (
+                          <span className="block truncate text-xs text-muted-foreground">
+                            Mischgetränk: {d.ingredients.map((i) => `${i.ml} ml ${i.name}`).join(" + ")}
+                          </span>
+                        ) : null}
                       </span>
-                    ) : null}
-                  </span>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    </button>
+                  </SortableRow>
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         ) : (
           <p className="rounded-3xl border border-dashed p-5 text-center text-sm text-muted-foreground">Noch keine Getränke. Leg dein erstes an.</p>
         )}
@@ -104,7 +146,7 @@ export function DrinkManager({ goalMl, drinks }: { goalMl: number; drinks: Drink
         </p>
       </section>
 
-      {editing ? <DrinkSheet key={editing === "neu" ? "neu" : editing.id} drink={editing === "neu" ? null : editing} drinks={drinks} onClose={() => setEditing(null)} /> : null}
+      {editing ? <DrinkSheet key={editing === "neu" ? "neu" : editing.id} drink={editing === "neu" ? null : editing} drinks={ordered} onClose={() => setEditing(null)} /> : null}
 
       <Dialog open={goalOpen} onOpenChange={setGoalOpen}>
         <DialogContent>
