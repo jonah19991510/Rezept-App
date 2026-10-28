@@ -516,7 +516,7 @@ export function RecipeEditor({
           "z-40 flex items-center justify-between gap-3 bg-background/95 backdrop-blur",
           pageMode
             ? "fixed inset-x-0 bottom-0 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:sticky md:bottom-4 md:rounded-2xl md:border md:p-3 md:shadow-lg"
-            : "sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] rounded-2xl border p-3 shadow-lg md:bottom-4",
+            : "sticky bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.75rem)] rounded-2xl border p-3 shadow-lg md:bottom-4",
         )}
       >
         <p className="min-w-0 tabular-nums">

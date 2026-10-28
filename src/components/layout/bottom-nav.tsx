@@ -6,41 +6,37 @@ import { cn } from "@/lib/utils";
 import { navItemsFor, isActiveItem, isEditorPath } from "./nav-items";
 import { useArea } from "./use-area";
 
-/** Navigation am unteren Rand, nur auf dem Handy (Essen & Trinken). */
+/**
+ * Schwebende Navigation am unteren Rand, nur auf dem Handy, in jedem Bereich (auf der Startseite: Start, Ernährung,
+ * Sport). Inaktive Punkte zeigen nur ihr Symbol, der aktive dazu seinen Namen in einer hellen Pille.
+ */
 export function BottomNav() {
   const pathname = usePathname();
   const area = useArea();
-  // Im Rezept-Editor ersetzt die Speicherleiste die Navigation; die Startseite führt über ihre Kacheln weiter
-  if (isEditorPath(pathname) || area === "start") return null;
+  // Im Rezept- und Plan-Editor ersetzt die Speicherleiste die Navigation
+  if (isEditorPath(pathname)) return null;
 
   return (
     <nav
       aria-label="Hauptnavigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 pr-[max(0.375rem,env(safe-area-inset-right))] pb-[env(safe-area-inset-bottom)] pl-[max(0.375rem,env(safe-area-inset-left))] backdrop-blur md:hidden"
+      className="fixed right-[max(0.75rem,env(safe-area-inset-right))] bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-[max(0.75rem,env(safe-area-inset-left))] z-40 md:hidden"
     >
-      <ul className="mx-auto grid max-w-lg grid-cols-5">
+      <ul className="mx-auto flex max-w-lg items-center gap-1 rounded-full border bg-card/80 p-1.5 shadow-lg shadow-black/20 backdrop-blur-xl">
         {navItemsFor(area).map((item) => {
           const { href, label, icon: Icon } = item;
           const active = isActiveItem(pathname, item);
           return (
-            <li key={href} className="min-w-0">
+            <li key={href} className={cn("min-w-0", active ? "shrink-0" : "flex-1")}>
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[0.68rem] leading-tight font-medium tracking-tight transition-colors",
-                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                  "flex h-12 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                  active ? "bg-foreground px-5 text-background shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span
-                  className={cn(
-                    "grid h-7 w-12 place-items-center rounded-full transition-colors",
-                    active && "bg-primary/12",
-                  )}
-                >
-                  <Icon className="size-5" aria-hidden />
-                </span>
-                <span className="max-w-full truncate">{label}</span>
+                <Icon className="size-5 shrink-0" aria-hidden />
+                <span className={active ? "whitespace-nowrap" : "sr-only"}>{label}</span>
               </Link>
             </li>
           );

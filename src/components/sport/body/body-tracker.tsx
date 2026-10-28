@@ -145,7 +145,7 @@ export function BodyTracker({ measurements, settings, today }: { measurements: M
       <button
         type="button"
         onClick={() => setSheet({ measurement: null })}
-        className="fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 inline-flex h-14 items-center gap-2 rounded-full bg-sport px-5 font-semibold text-sport-foreground shadow-lg transition hover:opacity-90 focus-visible:ring-4 focus-visible:ring-ring/50 focus-visible:outline-none active:scale-95 md:right-8 md:bottom-8"
+        className="fixed right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.75rem)] z-30 inline-flex h-14 items-center gap-2 rounded-full bg-sport px-5 font-semibold text-sport-foreground shadow-lg transition hover:opacity-90 focus-visible:ring-4 focus-visible:ring-ring/50 focus-visible:outline-none active:scale-95 md:right-8 md:bottom-8"
       >
         <Plus className="size-5" aria-hidden />
         Neue Messung

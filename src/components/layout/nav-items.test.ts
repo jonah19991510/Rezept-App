@@ -33,6 +33,7 @@ describe("navItemsFor", () => {
   it("zeigt im Sport-Bereich die Sport-Navigation", () => {
     expect(navItemsFor("sport")[0].label).toBe("Pläne");
     expect(navItemsFor("food")[0].label).toBe("Rezepte");
+    expect(navItemsFor("start").map((i) => i.label)).toEqual(["Start", "Ernährung", "Sport"]);
   });
 });
 

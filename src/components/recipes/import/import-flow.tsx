@@ -280,7 +280,7 @@ export function ImportReview({
         )}
       </section>
 
-      <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur md:bottom-4">
+      <div className="sticky bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+4.75rem)] z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur md:bottom-4">
         <p className="text-sm" aria-live="polite">
           {summary.used} von {draft.lines.length} Zutaten zugeordnet
           {summary.missing ? ` · ${summary.missing} ohne Zutat (fallen weg)` : ""}

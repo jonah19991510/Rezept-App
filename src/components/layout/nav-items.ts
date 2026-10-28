@@ -34,9 +34,16 @@ export const SPORT_NAV_ITEMS: NavItem[] = [
   { href: "/sport/entdecken", label: "Entdecken", icon: Compass },
 ];
 
+/** Untere Navigation der Startseite: zu den Bereichen. */
+export const START_NAV_ITEMS: NavItem[] = [
+  { href: "/", label: "Start", icon: House },
+  { href: "/rezepte", label: "Ernährung", icon: Utensils },
+  { href: "/sport/plaene", label: "Sport", icon: HeartPulse },
+];
+
 /** Navigation eines Bereichs. */
 export function navItemsFor(area: AreaKey): NavItem[] {
-  return area === "sport" ? SPORT_NAV_ITEMS : NAV_ITEMS;
+  return area === "sport" ? SPORT_NAV_ITEMS : area === "start" ? START_NAV_ITEMS : NAV_ITEMS;
 }
 
 /** Ist der Navigationspunkt auf dieser Seite aktiv? */
