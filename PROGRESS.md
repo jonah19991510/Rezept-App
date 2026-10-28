@@ -1348,6 +1348,17 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Nachtrag 28.10.2026: Getränke per Drag & Drop sortieren
+
+**Live** seit 28.10.2026: vom Nutzer am LAN-Server getestet; Push `e632e07` → Deployment
+`dpl_enWC21k28TTNvDsjWM4mzF29LQf5` (`production`, „READY“; per Vercel-Connector geprüft, keine Fehler im Log).
+
+Tab „Getränke“ (`DrinkManager`): Griff links an jedem Getränk (`SortableRow` aus dem Rezept-Editor, wie Startseite),
+Reihenfolge lokal sofort, gespeichert beim Ablegen über `reorderDrinksAction` (setzt `drinks.position` = Index, nur
+eigene Getränke). Bei Fehler springt die Liste zurück und es erscheint eine Meldung. Die Reihenfolge gilt überall, wo
+Getränke nach `position` sortiert werden (auch beim Eintragen). Ziehen in der Vorschau geprüft (temporäre Seite,
+gelöscht), Speichern nur beim Nutzer (Anmeldung nötig).
+
 ### Design 28.10.2026: Pläne-Seite neu, Blau als Akzent im Sport-Bereich
 
 **Live** seit 28.10.2026: vom Nutzer am LAN-Server getestet; Push `a1fef12` → Deployment
