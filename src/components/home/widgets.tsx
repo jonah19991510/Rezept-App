@@ -13,18 +13,19 @@ import {
   Ruler,
   ShoppingBasket,
   Star,
+  Utensils,
   type LucideIcon,
 } from "lucide-react";
 import { AreaTile } from "@/components/layout/area-tile";
 import { AREAS } from "@/components/layout/nav-items";
 import { SLOT_TODAY, upcomingEntry } from "@/lib/domain/home";
+import { formatLiters } from "@/lib/domain/drinks";
 import { expiryLabel } from "@/lib/domain/pantry";
 import { SLOT_LABELS } from "@/lib/domain/plan";
-import { hasAnyGoal } from "@/lib/domain/training";
 import { formatNumber } from "@/lib/format";
 import { addDays, mondayOf, weekdayShort } from "@/lib/domain/week";
 import { workoutDuration } from "@/lib/domain/workout";
-import type { ExpiringItem, LongAgoRecipe, SportSummary, TodayPlan } from "@/lib/server/home";
+import type { DrinkToday, ExpiringItem, LongAgoRecipe, SportSummary, TodayPlan } from "@/lib/server/home";
 import { cn } from "@/lib/utils";
 
 // Widgets der Startseite (Server-Komponenten). Anordnen und Ausblenden übernimmt HomeWidgets.
@@ -33,7 +34,6 @@ const CARD = "rounded-3xl border bg-card p-5 text-card-foreground md:p-6";
 const LINK_CARD = cn(CARD, "block transition-colors hover:border-primary/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none");
 
 const fmt = (n: number) => formatNumber(Math.round(n), 0);
-const portions = (n: number) => `${formatNumber(n, 1)} ${n === 1 ? "Portion" : "Portionen"}`;
 
 /** Kopfzeile kleiner Widgets: Symbol, Titel und rechts ein Hinweis oder Link. */
 function WidgetTitle({ icon: Icon, title, aside }: { icon: LucideIcon; title: string; aside?: ReactNode }) {
@@ -61,94 +61,87 @@ function Empty({ children }: { children: ReactNode }) {
   return <p className="text-sm text-muted-foreground">{children}</p>;
 }
 
-/** Heute: kcal laut Wochenplan gegen das Tagesziel, Trainingstag, Protein mit Balken. */
-export function TodayWidget({ plan }: { plan: TodayPlan }) {
-  const { totals, goals, training, entries } = plan;
-  const proteinRest = goals.protein != null ? Math.round(goals.protein - totals.protein) : null;
-  const proteinRatio = goals.protein ? Math.min(1, totals.protein / goals.protein) : 0;
+type Ring = { label: string; href: string; color: string; value: string; goal: string; ratio: number | null };
 
+/** Drei Ringe ineinander (außen der erste), Spur in heller Ringfarbe, Fortschritt bis höchstens voll. */
+function Rings({ rings }: { rings: Ring[] }) {
+  const stroke = 9;
   return (
-    <Link href="/wochenplan" className={LINK_CARD} aria-label="Heute im Wochenplan öffnen">
-      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
-        <p className="flex items-baseline gap-2">
-          <span className="font-heading text-4xl font-semibold tracking-tight tabular-nums">{fmt(totals.kcal)}</span>
-          <span className="text-muted-foreground">{goals.kcal != null ? `von ${fmt(goals.kcal)} kcal` : "kcal geplant"}</span>
-        </p>
-        {training ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-sport-soft px-3 py-1 text-sm font-medium text-sport">
-            <Dumbbell className="size-4" aria-hidden />
-            Trainingstag
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
-          <span className="font-medium">Protein</span>
-          <span className="text-muted-foreground tabular-nums">
-            {goals.protein != null ? (
-              <>
-                {fmt(totals.protein)} / {fmt(goals.protein)} g ·{" "}
-                {proteinRest != null && proteinRest > 0 ? `noch ${fmt(proteinRest)} g` : "Ziel erreicht"}
-              </>
-            ) : (
-              `${fmt(totals.protein)} g`
-            )}
-          </span>
-        </div>
-        {goals.protein ? (
-          <div
-            className="mt-2 h-2 overflow-hidden rounded-full bg-muted"
-            role="progressbar"
-            aria-label={`Protein: ${Math.round(proteinRatio * 100)} % vom Ziel`}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(proteinRatio * 100)}
-          >
-            <div className="h-full rounded-full bg-macro-protein" style={{ width: `${proteinRatio * 100}%` }} />
-          </div>
-        ) : null}
-      </div>
-
-      {entries.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">Für heute ist noch nichts geplant.</p>
-      ) : !hasAnyGoal(goals) ? (
-        <p className="mt-3 text-sm text-muted-foreground">Tagesziele legst du in den Einstellungen fest.</p>
-      ) : null}
-    </Link>
+    <svg viewBox="0 0 120 120" className="size-32 shrink-0 -rotate-90 md:size-36" aria-hidden>
+      {rings.map((ring, i) => {
+        const r = 60 - stroke / 2 - i * (stroke + 3.5);
+        const length = 2 * Math.PI * r;
+        const ratio = Math.min(1, Math.max(0, ring.ratio ?? 0));
+        return (
+          <g key={ring.label} style={{ stroke: ring.color }} fill="none" strokeWidth={stroke}>
+            <circle cx="60" cy="60" r={r} strokeOpacity={0.2} />
+            {ratio > 0 ? (
+              <circle cx="60" cy="60" r={r} strokeLinecap="round" strokeDasharray={length} strokeDashoffset={length * (1 - ratio)} />
+            ) : null}
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
-type Tile = { href: string; label: string; icon: LucideIcon };
+/** „0,50“ bzw. mit `digits = 1` „2,0“ (Liter ohne Einheit) */
+const liters = (ml: number, digits = 2) =>
+  new Intl.NumberFormat("de-DE", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(ml / 1000);
 
-/** Bereichskarte: Kachel, Titel, Untertitel und vier Abkürzungen in den Bereich. */
-function AreaCard({ areaKey, subtitle, tiles, tileClass }: { areaKey: "food" | "sport"; subtitle: string; tiles: Tile[]; tileClass: string }) {
-  const area = AREAS.find((a) => a.key === areaKey)!;
+/**
+ * Heute: Ringe für kcal und Protein laut Wochenplan gegen das Tagesziel (Trainingstag oder normal) und die heutige
+ * Trinkmenge gegen das Trinkziel. Jede Zeile führt zu ihrer Seite.
+ */
+export function TodayWidget({ plan, drink }: { plan: TodayPlan; drink: DrinkToday | null }) {
+  const { totals, goals } = plan;
+  const rings: Ring[] = [
+    {
+      label: "Kalorien",
+      href: "/wochenplan",
+      color: "var(--macro-kcal)",
+      value: fmt(totals.kcal),
+      goal: goals.kcal != null ? `/ ${fmt(goals.kcal)} kcal` : "kcal geplant",
+      ratio: goals.kcal ? totals.kcal / goals.kcal : null,
+    },
+    {
+      label: "Protein",
+      href: "/wochenplan",
+      color: "var(--ring-protein)",
+      value: fmt(totals.protein),
+      goal: goals.protein != null ? `/ ${fmt(goals.protein)} g` : "g geplant",
+      ratio: goals.protein ? totals.protein / goals.protein : null,
+    },
+  ];
+  if (drink) {
+    rings.push({
+      label: "Trinken",
+      href: "/sport/getraenke",
+      color: "var(--ring-water)",
+      value: liters(drink.ml),
+      goal: `/ ${liters(drink.goalMl, 1)} l`,
+      ratio: drink.ml / drink.goalMl,
+    });
+  }
+
   return (
-    <section className={cn(CARD, "p-2.5 md:p-4")} aria-label={area.label}>
-      <Link
-        href={area.href}
-        className="flex items-center gap-4 rounded-2xl p-2 transition-colors hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-      >
-        <AreaTile area={area} size="lg" />
-        <span className="min-w-0 flex-1">
-          <span className="block font-heading text-2xl leading-tight font-semibold tracking-tight">{area.label}</span>
-          <span className="block text-muted-foreground">{subtitle}</span>
-        </span>
-        <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-      </Link>
-      <ul className="mt-2 grid grid-cols-2 gap-2.5 md:mt-3 md:gap-3">
-        {tiles.map(({ href, label, icon: Icon }) => (
-          <li key={label} className="min-w-0">
+    <section className={cn(CARD, "flex items-center gap-5 sm:gap-8")} aria-label="Heute">
+      <Rings rings={rings} />
+      <ul className="min-w-0 flex-1 space-y-1">
+        {rings.map((ring) => (
+          <li key={ring.label}>
             <Link
-              href={href}
-              className={cn(
-                "flex min-h-14 items-center gap-2.5 rounded-2xl px-3 font-medium transition-[filter] hover:brightness-95 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:gap-3 md:px-4 dark:hover:brightness-110",
-                tileClass,
-              )}
+              href={ring.href}
+              className="-mx-2 block rounded-xl px-2 py-0.5 transition-colors hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
             >
-              <Icon className="size-5 shrink-0" aria-hidden />
-              <span className="truncate">{label}</span>
+              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span className="size-2 shrink-0 rounded-full" style={{ background: ring.color }} aria-hidden />
+                {ring.label}
+              </span>
+              <span className="block truncate">
+                <span className="text-2xl font-semibold tracking-tight tabular-nums">{ring.value}</span>{" "}
+                <span className="text-sm text-muted-foreground tabular-nums">{ring.goal}</span>
+              </span>
             </Link>
           </li>
         ))}
@@ -157,45 +150,155 @@ function AreaCard({ areaKey, subtitle, tiles, tileClass }: { areaKey: "food" | "
   );
 }
 
-/** Essen & Trinken: nächste Mahlzeit von heute, Abkürzungen zu Rezepten, Wochenplan, Einkauf und Bar. */
-export function FoodAreaWidget({ plan, hour, shoppingCount }: { plan: TodayPlan | null; hour: number; shoppingCount: number | null }) {
-  const next = plan ? upcomingEntry(plan.entries, hour) : null;
-  const subtitle = next
-    ? `${SLOT_TODAY[next.slot]}: ${next.recipeTitle}${next.recipeId ? ` · ${portions(next.servings)}` : ""}`
-    : plan && plan.entries.length > 0
-      ? "Für heute ist alles gegessen"
-      : "Rezepte, Wochenplan, Einkauf und Bar";
+/** Kachel unter „Als Nächstes“: Symbol oben, Hinweis und Titel unten, in der Farbe des Bereichs. */
+function NextTile({ href, area, icon: Icon, label, title }: { href: string; area: "food" | "sport"; icon: LucideIcon; label: string; title: string }) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex min-h-36 min-w-0 flex-col justify-between gap-4 rounded-3xl p-4 transition-[filter] hover:brightness-95 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none dark:hover:brightness-110",
+        area === "food" ? "bg-food-soft" : "bg-sport-soft",
+      )}
+    >
+      <span className={cn("grid size-9 place-items-center rounded-xl", area === "food" ? "bg-food text-food-foreground" : "bg-sport text-sport-foreground")}>
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <span className="min-w-0">
+        <span className={cn("block text-xs font-medium", area === "food" ? "text-food" : "text-sport")}>{label}</span>
+        <span className="mt-0.5 line-clamp-3 font-heading text-lg leading-tight font-semibold tracking-tight break-words">{title}</span>
+      </span>
+    </Link>
+  );
+}
+
+const clock = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+
+/** Als Nächstes: nächste Mahlzeit von heute und nächstes (oder laufendes) Training. */
+export function NextWidget({ plan, sport, hour }: { plan: TodayPlan | null; sport: SportSummary | null; hour: number }) {
+  const meal = plan ? upcomingEntry(plan.entries, hour) : null;
+  const food = meal
+    ? {
+        href: meal.recipeId && meal.available ? `/rezepte/${meal.recipeId}` : "/wochenplan",
+        label: SLOT_TODAY[meal.slot],
+        title: meal.recipeTitle,
+      }
+    : { href: "/wochenplan", label: "Heute", title: plan && plan.entries.length > 0 ? "Alles gegessen" : "Noch nichts geplant" };
+
+  const training = sport?.active
+    ? { href: `/training/${sport.active.id}`, label: "Training läuft", title: `Seit ${clock.format(new Date(sport.active.startedAt))} Uhr` }
+    : sport?.next
+      ? { href: "/sport/plaene", label: "Nächstes Training", title: `${sport.next.dayName}${sport.next.focus ? ` · ${sport.next.focus}` : ""}` }
+      : { href: "/sport/plaene", label: "Training", title: sport?.hasPlan ? "Plan ohne Tage" : "Ersten Plan anlegen" };
+
+  return (
+    <section aria-labelledby="als-naechstes">
+      <h2 id="als-naechstes" className="mb-3 text-xl font-semibold">
+        Als Nächstes
+      </h2>
+      <div className="grid grid-cols-2 gap-3">
+        <NextTile area="food" icon={Utensils} {...food} />
+        <NextTile area="sport" icon={Dumbbell} {...training} />
+      </div>
+    </section>
+  );
+}
+
+type Tile = { href: string; label: string; icon: LucideIcon; badge?: number };
+
+/** Bereichskarte: Kachel, Titel, Untertitel und vier runde Abkürzungen in den Bereich. */
+function AreaCard({ areaKey, subtitle, tiles }: { areaKey: "food" | "sport"; subtitle: string; tiles: Tile[] }) {
+  const area = AREAS.find((a) => a.key === areaKey)!;
+  return (
+    <section className={cn(CARD, "p-2.5 md:p-4")} aria-label={area.label}>
+      <Link
+        href={area.href}
+        className="flex items-center gap-3 rounded-2xl p-2 transition-colors md:gap-4 hover:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+      >
+        <AreaTile area={area} size="lg" className="max-md:size-12 max-md:rounded-[0.95rem]" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-heading text-[1.375rem] leading-tight font-semibold tracking-tight md:text-2xl">{area.label}</span>
+          <span className="block text-sm text-muted-foreground">{subtitle}</span>
+        </span>
+        <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+      </Link>
+      <ul className="mt-2 grid grid-cols-4">
+        {tiles.map(({ href, label, icon: Icon, badge }) => (
+          <li key={label} className="min-w-0">
+            <Link
+              href={href}
+              aria-label={badge ? `${label}, ${badge} offen` : undefined}
+              className="group flex flex-col items-center gap-2 rounded-2xl py-2 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            >
+              <span
+                className={cn(
+                  "relative grid size-14 place-items-center rounded-full transition-[filter] group-hover:brightness-95 dark:group-hover:brightness-110",
+                  areaKey === "food" ? "bg-food-soft text-food" : "bg-sport-soft text-sport",
+                )}
+              >
+                <Icon className="size-6" aria-hidden />
+                {badge ? (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-food px-1 text-xs font-semibold text-food-foreground tabular-nums"
+                    aria-hidden
+                  >
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                ) : null}
+              </span>
+              <span className="max-w-full truncate text-xs font-medium sm:text-sm">{label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Essen & Trinken: was bis zum kcal-Ziel noch fehlt, Abkürzungen zu Rezepten, Wochenplan, Einkauf und Bar. */
+export function FoodAreaWidget({ plan, shoppingCount }: { plan: TodayPlan | null; shoppingCount: number | null }) {
+  const rest = plan && plan.goals.kcal != null ? Math.round(plan.goals.kcal - plan.totals.kcal) : null;
+  const subtitle =
+    rest == null
+      ? plan && plan.totals.kcal > 0
+        ? `Heute ${fmt(plan.totals.kcal)} kcal geplant`
+        : "Rezepte, Wochenplan, Einkauf und Bar"
+      : rest > 0
+        ? `Noch ${fmt(rest)} kcal bis zum Ziel`
+        : rest === 0
+          ? "kcal-Ziel für heute erreicht"
+          : `${fmt(-rest)} kcal über dem Ziel`;
   return (
     <AreaCard
       areaKey="food"
       subtitle={subtitle}
-      tileClass="bg-primary/10 text-primary dark:bg-primary/15"
       tiles={[
         { href: "/rezepte", label: "Rezepte", icon: BookOpen },
         { href: "/wochenplan", label: "Wochenplan", icon: CalendarDays },
-        { href: "/einkauf", label: shoppingCount ? `Einkauf · ${shoppingCount}` : "Einkauf", icon: ShoppingBasket },
+        { href: "/einkauf", label: "Einkauf", icon: ShoppingBasket, badge: shoppingCount ?? undefined },
         { href: "/rezepte/bar", label: "Bar", icon: Martini },
       ]}
     />
   );
 }
 
-const clock = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
-
-/** Sport & Gesundheit: laufendes Training bzw. nächster Tag, Abkürzungen zu Plänen, Körper, Energie und Lexikon. */
-export function SportAreaWidget({ sport }: { sport: SportSummary }) {
+/** Sport & Gesundheit: laufendes Training bzw. was heute noch zu trinken ist, Abkürzungen zu Training, Körper, Energie, Lexikon. */
+export function SportAreaWidget({ sport, drink }: { sport: SportSummary; drink: DrinkToday | null }) {
+  const rest = drink ? drink.goalMl - drink.ml : null;
   const subtitle = sport.active
     ? `Training läuft seit ${clock.format(new Date(sport.active.startedAt))} Uhr`
-    : sport.next
-      ? `Als Nächstes: ${sport.next.dayName}${sport.next.focus ? ` · ${sport.next.focus}` : ""}`
-      : sport.hasPlan
-        ? "Dein Plan hat noch keine Tage"
-        : "Leg deinen ersten Trainingsplan an";
+    : rest != null
+      ? rest > 0
+        ? `Trinken: noch ${formatLiters(rest)} heute`
+        : "Trinkziel für heute erreicht"
+      : sport.next
+        ? `Als Nächstes: ${sport.next.dayName}${sport.next.focus ? ` · ${sport.next.focus}` : ""}`
+        : sport.hasPlan
+          ? "Dein Plan hat noch keine Tage"
+          : "Leg deinen ersten Trainingsplan an";
   return (
     <AreaCard
       areaKey="sport"
       subtitle={subtitle}
-      tileClass="bg-sport-soft text-sport"
       tiles={[
         { href: sport.active ? `/training/${sport.active.id}` : "/sport/plaene", label: "Training", icon: Dumbbell },
         { href: "/sport/koerper", label: "Körper", icon: Ruler },

@@ -1348,6 +1348,31 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Design 30.10.2026: Startseite nach Vorlage-Fotos neu
+
+**Lokal**, nicht gepusht (Freigabe des Nutzers steht aus). Nach zwei Fotos des Nutzers (hell/dunkel, Handy):
+
+- **Kopf:** Datum klein über der Begrüßung (Fraunces, `text-4xl`); Begrüßung 11–18 Uhr jetzt „Guten Tag“ statt
+  „Hallo“. Bereichs-Umschalter und Avatar wie bisher (App-Kopf).
+- **Heute** (`TodayWidget`): drei Ringe ineinander (SVG) mit Werten rechts: Kalorien und Protein **laut Wochenplan**
+  gegen das Tagesziel (Trainingstag oder normal; ein Ess-Tagebuch gibt es nicht), „Trinken“ = alle Getränke von heute
+  gegen das Trinkziel (gleiche Zahl wie auf der Getränke-Seite; `getDrinkToday`, legt anders als die Getränke-Seite
+  nichts an, ohne Ziel 2 l). Jede Zeile führt zu ihrer Seite. Ringfarben: kcal wie Makro-kcal, Protein **senf nur
+  hier** (`--ring-protein`; sonst bleibt Protein blau), Trinken blau (`--ring-water`).
+- **Als Nächstes** (`NextWidget`, neues Widget): Kachel in Essen-Farbe mit der nächsten Mahlzeit von heute
+  (`upcomingEntry`, „Heute Abend“ + Gericht, Link zum Rezept) und Kachel in Sport-Farbe mit laufendem bzw. nächstem
+  Training („Tag B · Rücken“). Neues Token `--food-soft` (helle Essen-Fläche, wie `--sport-soft`).
+- **Bereichskarten:** Untertitel „Noch 2.074 kcal bis zum Ziel“ (bzw. „… kcal über dem Ziel“) und „Trinken: noch
+  1,50 l heute“ (laufendes Training hat Vorrang); vier runde Schnellzugriffe in heller Bereichsfarbe, offene
+  Einkaufs-Einträge als Zahl am Korb.
+- **Anpassbarkeit bleibt** (Nutzerwunsch): Standard zeigt nur Heute, Als Nächstes, Essen & Trinken, Sport &
+  Gesundheit; die übrigen Widgets sind wählbar, aber ausgeblendet. Gespeicherte Anordnungen ohne „Als Nächstes“
+  (also von vor der Neugestaltung) fallen **einmalig** auf den neuen Standard zurück (`normalizeHomeLayout`, Tests).
+- Geprüft: Lint, Typen, Tests; Vorschau mit Beispieldaten bei 375 px hell und dunkel sowie Desktop (temporäre Seite
+  gelöscht). Der laufende LAN-Server lieferte dabei alte CSS (siehe „Bekannte Probleme“); für die Vorschau wurde die
+  CSS einmal separat mit Tailwind gebaut. Am Handy daher ggf. Server neu starten (`.next/dev` löschen) bzw. Cache
+  leeren.
+
 ### Nachtrag 30.10.2026: Tabs der unteren Navigation vorgeladen
 
 **Live** seit 30.10.2026: Push `e1aad44` → Deployment `dpl_BjjfwQLiK6JeRtoLRYiN8RLAogWt` (`production`, „READY“;

@@ -11,26 +11,41 @@ describe("normalizeHomeLayout", () => {
     const layout = normalizeHomeLayout([
       { id: "shopping", visible: true },
       { id: "today", visible: false },
+      { id: "next", visible: true },
     ]);
-    expect(layout.slice(0, 2)).toEqual([
+    expect(layout.slice(0, 3)).toEqual([
       { id: "shopping", visible: true },
       { id: "today", visible: false },
+      { id: "next", visible: true },
     ]);
     expect(layout).toHaveLength(HOME_WIDGETS.length);
     expect(layout.find((w) => w.id === "expiring")).toEqual({ id: "expiring", visible: false });
   });
 
   it("verwirft Unbekanntes und Doppeltes", () => {
-    const layout = normalizeHomeLayout([{ id: "gibtsnicht" }, { id: "food" }, { id: "food", visible: false }, 3, null]);
+    const layout = normalizeHomeLayout([{ id: "gibtsnicht" }, { id: "food" }, { id: "food", visible: false }, 3, null, { id: "next" }]);
     expect(layout[0]).toEqual({ id: "food", visible: true });
     expect(layout.filter((w) => w.id === "food")).toHaveLength(1);
+  });
+
+  it("setzt Anordnungen von vor der Neugestaltung (ohne „Als Nächstes“) auf den Standard", () => {
+    expect(
+      normalizeHomeLayout([
+        { id: "shopping", visible: true },
+        { id: "today", visible: false },
+      ]),
+    ).toEqual(defaultHomeLayout());
+  });
+
+  it("zeigt im Standard nur Ringe, „Als Nächstes“ und die Bereiche", () => {
+    expect(defaultHomeLayout().filter((w) => w.visible).map((w) => w.id)).toEqual(["today", "next", "food", "sport"]);
   });
 });
 
 describe("greeting", () => {
   it("passt zur Tageszeit", () => {
     expect(greeting(7)).toBe("Guten Morgen");
-    expect(greeting(13)).toBe("Hallo");
+    expect(greeting(13)).toBe("Guten Tag");
     expect(greeting(20)).toBe("Guten Abend");
     expect(greeting(2)).toBe("Guten Abend");
   });

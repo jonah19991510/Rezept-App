@@ -1,5 +1,6 @@
 import "server-only";
 import { longNotCooked } from "@/lib/domain/cooklog";
+import { DEFAULT_GOAL_ML } from "@/lib/domain/drinks";
 import { normalizeHomeLayout, type HomeWidget } from "@/lib/domain/home";
 import { expiryStatus } from "@/lib/domain/pantry";
 import { entryMacros, sumMacros, type DayMacros, type Goals } from "@/lib/domain/plan";
@@ -7,6 +8,7 @@ import { goalsForDay, isTrainingDay } from "@/lib/domain/training";
 import { mondayOf, todayInBerlin } from "@/lib/domain/week";
 import { nextPlanDay } from "@/lib/domain/workout";
 import { createClient } from "@/lib/supabase/server";
+import { getDrinkEntries } from "./drinks";
 import { getCookLogs, getLongNotCookedWeeks } from "./kitchen-log";
 import { getPantry } from "./pantry";
 import { getAllGoals, getTrainingDays, getWeekEntries, type PlanEntry } from "./plan";
@@ -107,4 +109,24 @@ export async function getSportSummary(userId: string, today: string): Promise<Sp
     week: finished.filter((w) => w.date >= monday && w.date <= today),
     last: finished[0] ?? null,
   };
+}
+
+export type DrinkToday = { ml: number; goalMl: number };
+
+/**
+ * Heute getrunken (alle Getränke, wie auf der Getränke-Seite) und das Tagesziel. Legt anders als die Getränke-Seite
+ * nichts an: ohne gesetztes Ziel gelten 2 l. Fehler (z. B. Tabellen fehlen) = kein Ring.
+ */
+export async function getDrinkToday(userId: string, today: string): Promise<DrinkToday | null> {
+  try {
+    const supabase = await createClient();
+    const [settings, entries] = await Promise.all([
+      supabase.from("user_settings").select("drink_goal_ml").eq("user_id", userId).maybeSingle(),
+      getDrinkEntries(userId, today, today),
+    ]);
+    if (settings.error) return null;
+    return { ml: entries.reduce((sum, e) => sum + e.ml, 0), goalMl: settings.data?.drink_goal_ml ?? DEFAULT_GOAL_ML };
+  } catch {
+    return null;
+  }
 }

@@ -1,18 +1,20 @@
 import type { MealSlot } from "./plan";
 
 // Startseite (26.10.2026): Widgets in eigener Reihenfolge, einzeln ein- und ausblendbar, gespeichert je Nutzer
-// in user_settings.home_widgets als [{ id, visible }].
+// in user_settings.home_widgets als [{ id, visible }]. Neu gestaltet am 30.10.2026 (Ringe, „Als Nächstes“,
+// Bereichskarten); die übrigen Widgets sind seitdem im Standard ausgeblendet.
 
 export const HOME_WIDGETS = [
-  { id: "today", label: "Heute", description: "kcal und Protein von heute", visible: true },
+  { id: "today", label: "Heute", description: "Ringe für Kalorien, Protein und Trinken", visible: true },
+  { id: "next", label: "Als Nächstes", description: "Nächste Mahlzeit und nächstes Training", visible: true },
   { id: "food", label: "Essen & Trinken", description: "Bereich mit Rezepte, Wochenplan, Einkauf, Bar", visible: true },
-  { id: "sport", label: "Sport & Gesundheit", description: "Bereich mit Plänen, Körper, Energie, Lexikon", visible: true },
-  { id: "meals", label: "Heute geplant", description: "Mahlzeiten aus dem Wochenplan", visible: true },
-  { id: "shopping", label: "Einkaufsliste", description: "Was noch fehlt", visible: true },
-  { id: "ready", label: "Was kann ich kochen?", description: "Rezepte und Cocktails aus dem Vorrat", visible: true },
+  { id: "sport", label: "Sport & Gesundheit", description: "Bereich mit Training, Körper, Energie, Lexikon", visible: true },
+  { id: "meals", label: "Heute geplant", description: "Mahlzeiten aus dem Wochenplan", visible: false },
+  { id: "shopping", label: "Einkaufsliste", description: "Was noch fehlt", visible: false },
+  { id: "ready", label: "Was kann ich kochen?", description: "Rezepte und Cocktails aus dem Vorrat", visible: false },
+  { id: "training", label: "Training diese Woche", description: "Trainings, Dauer und letztes Training", visible: false },
   { id: "expiring", label: "Läuft bald ab", description: "Vorrat mit Ablaufdatum", visible: false },
   { id: "longNotCooked", label: "Lange nicht gekocht", description: "Gut bewertete Rezepte von früher", visible: false },
-  { id: "training", label: "Training diese Woche", description: "Trainings, Dauer und letztes Training", visible: true },
 ] as const;
 
 export type HomeWidgetId = (typeof HOME_WIDGETS)[number]["id"];
@@ -29,11 +31,20 @@ export function defaultHomeLayout(): HomeWidget[] {
 }
 
 /**
+ * Anordnungen ohne „Als Nächstes“ stammen von vor der Neugestaltung (30.10.2026) und gelten einmalig nicht mehr:
+ * Sie fallen auf den neuen Standard zurück. Wer danach speichert, hat das Widget immer in der Liste.
+ */
+const REDESIGN_MARKER: HomeWidgetId = "next";
+
+/**
  * Gespeicherte Anordnung lesen: Unbekanntes und Doppeltes fällt weg, neue Widgets (später z. B. aus Sport)
  * kommen mit ihrer Standard-Sichtbarkeit hinten dazu. Ohne gespeicherte Anordnung gilt der Standard.
  */
 export function normalizeHomeLayout(raw: unknown): HomeWidget[] {
   if (!Array.isArray(raw)) return defaultHomeLayout();
+  if (!raw.some((item) => typeof item === "object" && item !== null && (item as { id?: unknown }).id === REDESIGN_MARKER)) {
+    return defaultHomeLayout();
+  }
   const seen = new Set<HomeWidgetId>();
   const result: HomeWidget[] = [];
   for (const item of raw) {
@@ -55,7 +66,7 @@ export function berlinHour(now: Date = new Date()): number {
 
 export function greeting(hour: number): string {
   if (hour >= 5 && hour < 11) return "Guten Morgen";
-  if (hour >= 11 && hour < 18) return "Hallo";
+  if (hour >= 11 && hour < 18) return "Guten Tag";
   return "Guten Abend";
 }
 
