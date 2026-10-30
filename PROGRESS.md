@@ -1348,6 +1348,22 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Nachtrag 30.10.2026: Tabs der unteren Navigation vorgeladen
+
+**Noch nicht live** (nur Commit, kein Push). Vom Nutzer gemeldet: Leiste reagiert jetzt sofort, die Seite selbst braucht
+aber gefühlt eine halbe Sekunde. Ursache: Alle Seiten sind dynamisch; Next lud beim Vorladen nur bis zum Lade-Skelett
+(`(app)/loading.tsx`), die Daten erst nach dem Tippen (Server in fra1, Supabase eu-central-1, Anmeldung per
+`getClaims` lokal mit ES256 und Abfragen je Seite schon parallel, daran lag es nicht).
+
+- `BottomNav`: Links mit `prefetch` (ganze Seite samt Daten im Hintergrund, nur in der fertigen App, nicht im
+  Entwicklungsserver). Kostet je Seitenaufruf bis zu vier zusätzliche Server-Renders (die anderen Tabs), solange der
+  Vorrat abgelaufen ist.
+- `next.config.ts`: `experimental.staleTimes` `{ dynamic: 30, static: 60 }`. Vorgeladene Tabs gelten 60 s, zuletzt
+  besuchte Seiten 30 s. Eigene Änderungen leeren den Vorrat sofort (Server-Aktionen mit `revalidatePath`, Foto-Upload
+  mit `router.refresh`); Änderungen von anderen Geräten/Personen erscheinen beim Tab-Wechsel höchstens so spät.
+- Geprüft: Lint, Typen, `next build` (meldet `staleTimes` als Experiment). Das Vorladen selbst konnte Claude ohne
+  Login nicht im Browser beobachten.
+
 ### Bugfix 30.10.2026: Tab-Wechsel in der unteren Navigation träge
 
 **Live** seit 30.10.2026: Push `6d870ff` → Deployment `dpl_8M79nAAG8MjC1ocxmwZKCfKvwDz1` (`production`, „READY“;

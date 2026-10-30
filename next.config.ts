@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   // Nur für den Entwicklungsserver: Zugriff vom Handy im Heimnetz (npm run dev:lan, http://192.168.x.x:3000)
   allowedDevOrigins: ["192.168.*.*", "10.*.*.*"],
+  experimental: {
+    // Zwischenspeicher im Browser für Seitenwechsel (Sekunden). `static` gilt auch für die vorgeladenen Tabs der
+    // unteren Navigation, `dynamic` für zuletzt besuchte Seiten (schnelles Hin- und Herwechseln). Eigene Änderungen
+    // leeren ihn sofort (revalidatePath); Änderungen anderer sind höchstens so lange unsichtbar.
+    staleTimes: {
+      dynamic: 30,
+      static: 60,
+    },
+  },
   turbopack: {
     rules: {
       "*.css": {

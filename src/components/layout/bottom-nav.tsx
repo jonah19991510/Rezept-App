@@ -35,6 +35,9 @@ export function BottomNav() {
             <li key={href} className={cn("min-w-0", active ? "shrink-0" : "flex-1")}>
               <Link
                 href={href}
+                // Ganze Seite samt Daten im Hintergrund vorladen, damit der Tab beim Antippen sofort fertig ist
+                // (sonst nur bis zum Lade-Skelett). Wie lange das gilt: `staleTimes` in next.config.ts.
+                prefetch
                 onClick={() => setTapped({ href, from: pathname })}
                 aria-current={active ? "page" : undefined}
                 className={cn(
