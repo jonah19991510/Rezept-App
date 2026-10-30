@@ -67,7 +67,8 @@ type Ring = { label: string; href: string; color: string; value: string; goal: s
 function Rings({ rings }: { rings: Ring[] }) {
   const stroke = 9;
   return (
-    <svg viewBox="0 0 120 120" className="size-32 shrink-0 -rotate-90 md:size-36" aria-hidden>
+    // width/height als Rückfall: ohne geladene CSS (alte Datei im Handy-Cache) würde das SVG sonst bildschirmbreit
+    <svg viewBox="0 0 120 120" width={128} height={128} className="size-32 shrink-0 -rotate-90 md:size-36" aria-hidden>
       {rings.map((ring, i) => {
         const r = 60 - stroke / 2 - i * (stroke + 3.5);
         const length = 2 * Math.PI * r;

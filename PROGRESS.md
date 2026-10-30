@@ -1372,6 +1372,9 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
   gelöscht). Der laufende LAN-Server lieferte dabei alte CSS (siehe „Bekannte Probleme“); für die Vorschau wurde die
   CSS einmal separat mit Tailwind gebaut. Am Handy daher ggf. Server neu starten (`.next/dev` löschen) bzw. Cache
   leeren.
+- Nachtrag: Am Handy (LAN) war nur ein bildschirmbreiter Ring zu sehen, weil das Handy die alte CSS behielt (der
+  Server lieferte die neue). Das SVG hat jetzt `width`/`height` als Rückfall. Das Datum steht wie in der Vorlage als
+  „Freitag, 30. Oktober“ (`longDate`) statt „30.10.“.
 
 ### Nachtrag 30.10.2026: Tabs der unteren Navigation vorgeladen
 

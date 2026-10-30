@@ -15,7 +15,8 @@ import {
 } from "@/components/home/widgets";
 import { requireUser } from "@/lib/auth";
 import { berlinHour, greeting, type HomeWidgetId } from "@/lib/domain/home";
-import { dayMonth, todayInBerlin, weekdayLong } from "@/lib/domain/week";
+import { longDate } from "@/lib/domain/drinks";
+import { todayInBerlin } from "@/lib/domain/week";
 import {
   getDrinkToday,
   getExpiringPantry,
@@ -74,7 +75,7 @@ export default async function HomePage() {
           {firstName ? `, ${firstName}` : ""}
         </h1>
         <p className="mb-1 text-muted-foreground">
-          {weekdayLong(today)}, {dayMonth(today)}
+          {longDate(today)}
         </p>
       </header>
       {/* key: nach dem Speichern mit der neuen Anordnung neu starten */}
