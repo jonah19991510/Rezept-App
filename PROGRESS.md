@@ -1350,7 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Bugfix 30.10.2026: Getränke-Sheet überlappte, Übungsfilter nach Muskelgruppe
 
-**Noch nicht live** (nur Commit, kein Push). Vom Nutzer mit Handy-Fotos gemeldet:
+**Live** seit 30.10.2026: Push `e15a5a6` → Deployment `dpl_EqLrGpqsTHi6JadLNc6ja8pek4Y5` (`production`, „READY“;
+per Vercel-Connector geprüft). Am iPhone noch vom Nutzer zu prüfen. Vom Nutzer mit Handy-Fotos gemeldet:
 
 - **Getränk eintragen** (iPhone): Die Getränke-Chips liefen über „Menge in ml“, das Uhrzeit-Feld ragte rechts aus dem
   Sheet. Ursache: Der Inhalt aller Bearbeiten-Sheets war ein Grid mit fester Höhe (`*:min-h-min`); Safari ließ die
