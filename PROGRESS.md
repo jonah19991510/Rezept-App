@@ -1350,7 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Nachtrag 30.10.2026: Tabs der unteren Navigation vorgeladen
 
-**Noch nicht live** (nur Commit, kein Push). Vom Nutzer gemeldet: Leiste reagiert jetzt sofort, die Seite selbst braucht
+**Live** seit 30.10.2026: Push `e1aad44` → Deployment `dpl_BjjfwQLiK6JeRtoLRYiN8RLAogWt` (`production`, „READY“;
+per Vercel-Connector geprüft). Am Handy noch vom Nutzer zu prüfen. Vom Nutzer gemeldet: Leiste reagiert jetzt sofort, die Seite selbst braucht
 aber gefühlt eine halbe Sekunde. Ursache: Alle Seiten sind dynamisch; Next lud beim Vorladen nur bis zum Lade-Skelett
 (`(app)/loading.tsx`), die Daten erst nach dem Tippen (Server in fra1, Supabase eu-central-1, Anmeldung per
 `getClaims` lokal mit ES256 und Abfragen je Seite schon parallel, daran lag es nicht).
