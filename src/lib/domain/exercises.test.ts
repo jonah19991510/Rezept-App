@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canEditExercise, filterLibrary, groupByMuscle, normalizeSearch, searchExercises, type ExerciseOption } from "./exercises";
+import { canEditExercise, filterLibrary, groupByMuscle, groupLibrary, normalizeSearch, searchExercises, type ExerciseOption } from "./exercises";
 
 const ex = (name: string, muscleGroup: ExerciseOption["muscleGroup"], extra: Partial<ExerciseOption> = {}): ExerciseOption => ({
   id: name,
@@ -51,6 +51,23 @@ describe("groupByMuscle", () => {
     const groups = groupByMuscle(list);
     expect(groups.map((g) => g.muscle)).toEqual(["chest", "back", "triceps", "quads"]);
     expect(groups[0].items.map((e) => e.name)).toEqual(["Bankdrücken (Langhantel)", "Schrägbankdrücken (Kurzhantel)"]);
+  });
+});
+
+describe("groupLibrary", () => {
+  it("ohne Filter wie nach Hauptmuskel", () => {
+    expect(groupLibrary(list, null).map((g) => g.label)).toEqual(["Brust", "Rücken", "Trizeps", "Beinstrecker"]);
+  });
+
+  it("mit Filter: gewählter Hauptmuskel zuerst, danach Nebenmuskel-Treffer", () => {
+    const groups = groupLibrary(searchExercises(list, "", "triceps"), "triceps");
+    expect(groups.map((g) => g.label)).toEqual(["Trizeps", "Als Nebenmuskel"]);
+    expect(groups[0].items.map((e) => e.name)).toEqual(["Enges Bankdrücken"]);
+    expect(groups[1].items.map((e) => e.name)).toEqual(["Bankdrücken (Langhantel)", "Schrägbankdrücken (Kurzhantel)"]);
+  });
+
+  it("lässt leere Gruppen weg", () => {
+    expect(groupLibrary(searchExercises(list, "", "back"), "back").map((g) => g.label)).toEqual(["Rücken"]);
   });
 });
 

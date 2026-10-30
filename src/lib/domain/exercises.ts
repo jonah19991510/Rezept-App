@@ -180,6 +180,22 @@ export function filterLibrary<E extends LibraryExercise>(list: E[], options: { q
   );
 }
 
+export type LibraryGroup<E> = { key: string; label: string; items: E[] };
+
+/**
+ * Gruppen der Datenbank-Seite. Ohne Muskelfilter nach Hauptmuskel; mit Filter erst die Übungen mit diesem
+ * Hauptmuskel, danach alle, die ihn nur als Nebenmuskel haben (sonst stünde bei „Schultern“ die Gruppe Brust oben).
+ */
+export function groupLibrary<E extends Pick<ExerciseOption, "name" | "muscleGroup">>(list: E[], muscle: MuscleGroup | null): LibraryGroup<E>[] {
+  if (!muscle) return groupByMuscle(list).map((g) => ({ key: g.muscle, label: MUSCLE_LABELS[g.muscle], items: g.items }));
+  const main = list.filter((e) => e.muscleGroup === muscle).sort(byName);
+  const secondary = list.filter((e) => e.muscleGroup !== muscle).sort(byName);
+  return [
+    { key: muscle, label: MUSCLE_LABELS[muscle], items: main },
+    { key: "nebenmuskel", label: "Als Nebenmuskel", items: secondary },
+  ].filter((g) => g.items.length > 0);
+}
+
 /** Darf der Nutzer die Übung ändern? Eigene immer, den Grundbestand nur Admins. */
 export function canEditExercise(e: Pick<LibraryExercise, "origin">, isAdmin: boolean): boolean {
   return e.origin === "own" || (e.origin === "seed" && isAdmin);

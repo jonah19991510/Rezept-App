@@ -19,7 +19,7 @@ import {
   EQUIPMENT_LABELS,
   EQUIPMENT_ORDER,
   filterLibrary,
-  groupByMuscle,
+  groupLibrary,
   LIBRARY_VIEW_LABELS,
   matchesLibraryView,
   MUSCLE_LABELS,
@@ -72,7 +72,7 @@ export function ExerciseLibrary({ exercises, isAdmin }: { exercises: LibraryExer
   const [view, setView] = useState<LibraryView>("alle");
   const [muscle, setMuscle] = useState<MuscleGroup | null>(null);
   const [sort, setSort] = useState<"muskel" | "name">("muskel");
-  const [openGroups, setOpenGroups] = useState<Set<MuscleGroup>>(() => new Set());
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set());
   const [sheet, setSheet] = useState<{ id: string | null; open: boolean } | null>(null);
   const [draft, setDraft] = useState<Draft>(draftOf(null));
   const [errors, setErrors] = useState<Record<string, string[]>>({});
@@ -197,12 +197,12 @@ export function ExerciseLibrary({ exercises, isAdmin }: { exercises: LibraryExer
         </div>
       ) : (
         <div className="space-y-2">
-          {groupByMuscle(shown).map(({ muscle: m, items }) => {
+          {groupLibrary(shown, muscle).map(({ key: m, label, items }) => {
             // Beim Suchen/Filtern sind alle Gruppen offen
             const expanded = filtering || openGroups.has(m);
             const listId = `uebungen-${m}`;
             return (
-              <section key={m} aria-label={MUSCLE_LABELS[m]}>
+              <section key={m} aria-label={label}>
                 <h2>
                   <button
                     type="button"
@@ -218,7 +218,7 @@ export function ExerciseLibrary({ exercises, isAdmin }: { exercises: LibraryExer
                     }
                     className={cn(groupHeadingClass, "rounded-lg transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none")}
                   >
-                    <span className="truncate">{MUSCLE_LABELS[m]}</span>
+                    <span className="truncate">{label}</span>
                     <span className="flex shrink-0 items-center gap-1.5 font-medium tabular-nums">
                       {items.length}
                       <ChevronDown className={cn("size-4 transition-transform", !expanded && "-rotate-90")} aria-hidden />

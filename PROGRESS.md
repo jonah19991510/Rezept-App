@@ -1348,6 +1348,24 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Bugfix 30.10.2026: Getränke-Sheet überlappte, Übungsfilter nach Muskelgruppe
+
+**Noch nicht live** (nur Commit, kein Push). Vom Nutzer mit Handy-Fotos gemeldet:
+
+- **Getränk eintragen** (iPhone): Die Getränke-Chips liefen über „Menge in ml“, das Uhrzeit-Feld ragte rechts aus dem
+  Sheet. Ursache: Der Inhalt aller Bearbeiten-Sheets war ein Grid mit fester Höhe (`*:min-h-min`); Safari ließ die
+  Abschnitte dort kleiner als ihren Inhalt werden. Jetzt Flex-Spalte mit `*:shrink-0` (`BODY_CLASS` in
+  `editor-parts.tsx`, gilt für alle Bearbeiten-Sheets, Scrollen wie vorher). Datum/Uhrzeit: iOS zeichnet diese Felder
+  in fester Mindestbreite; `globals.css` setzt auf iOS (`@supports (-webkit-touch-callout: none)`) `appearance: none`
+  und `min-width: 0`, die Spalten im Getränke-Sheet haben `min-w-0`.
+- **Übungen → Muskelgruppe:** Der Filter zählt Nebenmuskeln mit, die Gruppen-Ansicht sortierte aber nach Hauptmuskel
+  in fester Reihenfolge, deshalb stand bei „Schultern“ die Gruppe Brust oben (bei „Bizeps“ Rücken). Jetzt
+  `groupLibrary`: zuerst die Übungen mit dem gewählten Hauptmuskel, danach „Als Nebenmuskel“.
+- Geprüft auf einer temporären Vorschauseite (375 px, Chromium, gelöscht): Abschnitte ohne Überlappung, Inhalt
+  scrollt, Datum/Uhrzeit in ihren Spalten; Filter „Schultern“ zeigt „Schultern“, dann „Als Nebenmuskel“. Das
+  Safari-Verhalten selbst konnte Claude nicht nachstellen, am iPhone in der Live-App prüfen (CSS-Cache, siehe
+  „Bekannte Probleme“).
+
 ### Nachtrag 28.10.2026: Trainingstage nach Kraft und Ausdauer gefärbt
 
 **Live** seit 28.10.2026: Push `b78dad2` → Deployment `dpl_563WtdZVgD8ikV8hHyaRqwBScumB`

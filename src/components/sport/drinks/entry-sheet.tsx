@@ -142,11 +142,11 @@ function EntrySheetInner({ state, onClose, drinks, today }: { state: NonNullable
       </section>
 
       <section className="grid grid-cols-2 gap-3">
-        <div className="grid gap-1.5">
+        <div className="grid min-w-0 gap-1.5">
           <Label htmlFor="entry-date">Datum</Label>
           <Input id="entry-date" type="date" required max={today} value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} className="h-12 px-3 text-base" />
         </div>
-        <div className="grid gap-1.5">
+        <div className="grid min-w-0 gap-1.5">
           <Label htmlFor="entry-time">Uhrzeit</Label>
           <Input id="entry-time" type="time" required value={form.time} onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))} className="h-12 px-3 text-base" />
         </div>

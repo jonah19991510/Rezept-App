@@ -30,7 +30,9 @@ export function useIsDesktop() {
  * Grid Kinder mit `overflow-hidden` (z. B. runde Listen) auf die Resthöhe zusammen, schneidet sie ab, der Inhalt
  * scrollt nicht mehr und das Sheet nimmt jede Wischbewegung als „Sheet ziehen“.
  */
-const BODY_CLASS = "grid min-h-0 flex-1 grid-cols-1 content-start gap-6 overflow-y-auto overscroll-contain px-5 py-5 *:min-h-min";
+// Flex-Spalte statt Grid: Safari (iOS) ließ Abschnitte im Grid mit fester Höhe kleiner als ihren Inhalt werden, sie
+// überlappten sich. `*:shrink-0` hält jedes Kind auf voller Inhaltshöhe, gescrollt wird der ganze Inhalt.
+const BODY_CLASS = "flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto overscroll-contain px-5 py-5 *:shrink-0";
 
 /**
  * Bearbeiten-Sheet: auf dem Handy ein Drawer von unten (Wischen nach unten schließt), am Desktop ein zentrierter

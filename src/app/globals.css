@@ -219,6 +219,18 @@
   html {
     @apply font-sans;
   }
+  /* iOS zeichnet Datum/Uhrzeit-Felder sonst in fester Mindestbreite, breiter als ihre Spalte */
+  @supports (-webkit-touch-callout: none) {
+    input[type="date"],
+    input[type="time"] {
+      appearance: none;
+      min-width: 0;
+    }
+    input[type="date"]::-webkit-date-and-time-value,
+    input[type="time"]::-webkit-date-and-time-value {
+      text-align: start;
+    }
+  }
   h1,
   h2,
   h3 {
