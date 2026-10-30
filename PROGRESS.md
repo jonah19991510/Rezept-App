@@ -1348,6 +1348,20 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Bugfix 30.10.2026: Tab-Wechsel in der unteren Navigation träge
+
+**Noch nicht live** (nur Commit, kein Push). Vom Nutzer gemeldet: Seit der schwebenden Leiste (`dc5f98d`) wechselt die
+App nicht mehr so flüssig zwischen den Tabs. Ursachen in `BottomNav`:
+
+- Der aktive Punkt hing an `usePathname`, wechselte also erst, wenn die neue Seite geladen war. Früher änderte sich
+  dabei nur die Farbe; jetzt springt die ganze Leiste um (aktive Pille mit Namen, die anderen schrumpfen), dadurch
+  wirkte jeder Tipp verzögert. Jetzt merkt sich die Leiste den angetippten Punkt (`tapped`, gilt nur solange der Pfad
+  noch der alte ist) und zeigt ihn sofort als aktiv; dazu `active:scale-95` als Rückmeldung beim Tippen.
+- `backdrop-blur-xl` (24 px) über dem ganzen Seiteninhalt muss bei jedem Seitenwechsel und beim pulsierenden
+  Lade-Skelett neu gerechnet werden (auf iOS teuer). Jetzt `backdrop-blur-md` (12 px) mit `bg-card/90`.
+- Geprüft auf einer temporären Vorschauseite (Navigation per `preventDefault` abgefangen, gelöscht): Pille springt im
+  selben Moment auf den getippten Punkt, Blur 12 px. Echte Seitenwechsel mit Login nicht von Claude geprüft.
+
 ### Bugfix 30.10.2026: Getränke-Sheet überlappte, Übungsfilter nach Muskelgruppe
 
 **Live** seit 30.10.2026: Push `e15a5a6` → Deployment `dpl_EqLrGpqsTHi6JadLNc6ja8pek4Y5` (`production`, „READY“;
