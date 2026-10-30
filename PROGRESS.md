@@ -1350,7 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Bugfix 30.10.2026: Tab-Wechsel in der unteren Navigation träge
 
-**Noch nicht live** (nur Commit, kein Push). Vom Nutzer gemeldet: Seit der schwebenden Leiste (`dc5f98d`) wechselt die
+**Live** seit 30.10.2026: Push `6d870ff` → Deployment `dpl_8M79nAAG8MjC1ocxmwZKCfKvwDz1` (`production`, „READY“;
+per Vercel-Connector geprüft). Am Handy noch vom Nutzer zu prüfen. Vom Nutzer gemeldet: Seit der schwebenden Leiste (`dc5f98d`) wechselt die
 App nicht mehr so flüssig zwischen den Tabs. Ursachen in `BottomNav`:
 
 - Der aktive Punkt hing an `usePathname`, wechselte also erst, wenn die neue Seite geladen war. Früher änderte sich
