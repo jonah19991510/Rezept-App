@@ -1350,7 +1350,9 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Design 30.10.2026: Startseite nach Vorlage-Fotos neu
 
-**Lokal**, nicht gepusht (Freigabe des Nutzers steht aus). Nach zwei Fotos des Nutzers (hell/dunkel, Handy):
+**Live** seit 30.10.2026: vom Nutzer am Handy (LAN) geprüft; Push `339b44f` → Deployment
+`dpl_2ZAueLQyBU4WE3K5MnvgLBwLKEYP` (`production`, „READY“; per Vercel-Connector geprüft). Nach zwei Fotos des Nutzers
+(hell/dunkel, Handy):
 
 - **Kopf:** Datum klein über der Begrüßung (Fraunces, `text-4xl`); Begrüßung 11–18 Uhr jetzt „Guten Tag“ statt
   „Hallo“. Bereichs-Umschalter und Avatar wie bisher (App-Kopf).
