@@ -1392,6 +1392,8 @@ gemeinsam anpassen.
   Tage, Mo–So-Balken, Stand der Wöchentlichen; führt zur Statistik), „Training geplant“ (Mo–So mit Punkten je Einheit,
   Einheiten von heute bzw. dem nächsten Tag mit Training). Gemeinsame Widget-Bausteine in
   `components/home/widget-parts.tsx`. Per Vorschauseite (gelöscht) bei 375 px und Desktop geprüft; mit Login nicht.
+  **Live** seit 02.11.2026: Push `f00a3d8` → Deployment `dpl_9QbicyNyM535jSfvE6acHq35VJKL` (`production`, `fra1`,
+  nach ca. 38 s „READY“; per Vercel-Connector geprüft).
 
 ### Design 30.10.2026: Startseite nach Vorlage-Fotos neu
 
