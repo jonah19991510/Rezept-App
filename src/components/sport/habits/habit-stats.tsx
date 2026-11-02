@@ -197,7 +197,7 @@ export function HabitStats({
       ) : (
         <>
           <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Kpi label="Erfüllt" value={kpis.rate != null ? percent(kpis.rate) : "–"} sub="von allem, was dran war" good={kpis.rate != null && kpis.rate >= 0.8} />
+            <Kpi label="Erfüllt" value={kpis.rate != null ? percent(kpis.rate) : "–"} sub="von allem, was bis heute dran ist" good={kpis.rate != null && kpis.rate >= 0.8} />
             <Kpi label="Perfekte Tage" value={`${kpis.perfect}/${kpis.days}`} sub="alle Täglichen erledigt" />
             <Kpi label="Abgehakt" value={`${kpis.total}×`} sub={focus ? focus.name : `${byKind.length} Habits`} />
             <Kpi

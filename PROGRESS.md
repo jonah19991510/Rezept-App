@@ -1384,6 +1384,14 @@ gemeinsam anpassen.
 - Geprüft: 495 Tests, Typecheck, Lint grün. Über eine temporäre Vorschauseite mit Beispieldaten (gelöscht) bei 375 px
   und Desktop: Heute, Sheet, Wochenplan, Statistik Woche/Monat, Übersicht, Drag & Drop (lokal). **Nicht geprüft:**
   alles mit Login und echter Datenbank (Speichern, Abhaken, Reihenfolge speichern).
+- **Nachtrag 02.11.2026 (Wunsch des Nutzers):** „Erfüllt“ stand nach dem ersten Abhaken auf 100 %, obwohl noch Habits
+  offen waren (Folge der Regel oben). Neu: In die Quote zählt alles, was bis einschließlich heute dran ist; heute offene
+  tägliche zählen mit, die laufende Woche/der laufende Monat mit dem ganzen Ziel. Serien und „Perfekte Tage“ bleiben
+  wie gehabt (heute zählt erst, wenn erfüllt). Startseiten-Widgets (im Standard sichtbar, hinten angehängt):
+  „Habits heute“ (direkt abhaken, Client-Komponente mit `useHabitCounts`), „Habits diese Woche“ (Erfüllt, perfekte
+  Tage, Mo–So-Balken, Stand der Wöchentlichen; führt zur Statistik), „Training geplant“ (Mo–So mit Punkten je Einheit,
+  Einheiten von heute bzw. dem nächsten Tag mit Training). Gemeinsame Widget-Bausteine in
+  `components/home/widget-parts.tsx`. Per Vorschauseite (gelöscht) bei 375 px und Desktop geprüft; mit Login nicht.
 
 ### Design 30.10.2026: Startseite nach Vorlage-Fotos neu
 

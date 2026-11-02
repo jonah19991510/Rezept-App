@@ -1,7 +1,7 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import {
   BookOpen,
+  CalendarClock,
   CalendarDays,
   ChefHat,
   ChevronRight,
@@ -9,6 +9,7 @@ import {
   Flame,
   Hourglass,
   ListChecks,
+  ListTodo,
   Martini,
   Ruler,
   ShoppingBasket,
@@ -19,47 +20,31 @@ import {
 import { AreaTile } from "@/components/layout/area-tile";
 import { AREAS } from "@/components/layout/nav-items";
 import { SLOT_TODAY, upcomingEntry } from "@/lib/domain/home";
-import { formatLiters } from "@/lib/domain/drinks";
+import { formatLiters, periodRange } from "@/lib/domain/drinks";
+import {
+  categoryOf,
+  checkIndex,
+  dayRates,
+  formatDuration,
+  habitPeriodStats,
+  periodKpis,
+  slotLabel,
+  sortSchedule,
+  WEEKDAYS,
+  type ScheduleEntry,
+} from "@/lib/domain/habits";
 import { expiryLabel } from "@/lib/domain/pantry";
 import { SLOT_LABELS } from "@/lib/domain/plan";
 import { formatNumber } from "@/lib/format";
-import { addDays, mondayOf, weekdayShort } from "@/lib/domain/week";
+import { addDays, isoWeekday, mondayOf, weekdayShort } from "@/lib/domain/week";
 import { workoutDuration } from "@/lib/domain/workout";
-import type { DrinkToday, ExpiringItem, LongAgoRecipe, SportSummary, TodayPlan } from "@/lib/server/home";
+import type { DrinkToday, ExpiringItem, HabitHome, LongAgoRecipe, SportSummary, TodayPlan } from "@/lib/server/home";
 import { cn } from "@/lib/utils";
+import { AsideLink, CARD, Empty, LINK_CARD, WidgetTitle } from "./widget-parts";
 
 // Widgets der Startseite (Server-Komponenten). Anordnen und Ausblenden übernimmt HomeWidgets.
 
-const CARD = "rounded-3xl border bg-card p-5 text-card-foreground md:p-6";
-const LINK_CARD = cn(CARD, "block transition-colors hover:border-primary/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none");
-
 const fmt = (n: number) => formatNumber(Math.round(n), 0);
-
-/** Kopfzeile kleiner Widgets: Symbol, Titel und rechts ein Hinweis oder Link. */
-function WidgetTitle({ icon: Icon, title, aside }: { icon: LucideIcon; title: string; aside?: ReactNode }) {
-  return (
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <h2 className="flex min-w-0 items-center gap-2 font-sans text-base font-semibold tracking-normal">
-        <Icon className="size-4.5 shrink-0 text-muted-foreground" aria-hidden />
-        <span className="truncate">{title}</span>
-      </h2>
-      {aside}
-    </div>
-  );
-}
-
-function AsideLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <Link href={href} className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-lg text-sm font-medium text-primary hover:underline">
-      {children}
-      <ChevronRight className="size-4" aria-hidden />
-    </Link>
-  );
-}
-
-function Empty({ children }: { children: ReactNode }) {
-  return <p className="text-sm text-muted-foreground">{children}</p>;
-}
 
 type Ring = { label: string; href: string; color: string; value: string; goal: string; ratio: number | null };
 
@@ -497,6 +482,139 @@ export function TrainingWidget({ sport, today }: { sport: SportSummary; today: s
         </Link>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">Noch kein Training. Starte eins über deine Pläne.</p>
+      )}
+    </section>
+  );
+}
+
+const pct = (share: number) => `${formatNumber(Math.round(share * 100), 0)} %`;
+
+/**
+ * Habits diese Woche: „Erfüllt“ (wie in der Statistik: alles, was bis heute dran ist), perfekte Tage, je Tag ein
+ * Balken mit dem Anteil der täglichen Habits und der Stand der wöchentlichen. Führt zur Statistik.
+ */
+export function HabitWeekWidget({ data, today }: { data: HabitHome; today: string }) {
+  const { from, to } = periodRange("woche", today);
+  const index = checkIndex(data.checks);
+  const habits = data.habits.filter((h) => h.startDate <= to && (h.pausedOn == null || h.pausedOn > from));
+  const stats = habits.map((h) => habitPeriodStats(h, index, from, to, today));
+  const rates = dayRates(habits, index, from, to, today);
+  const kpis = periodKpis(stats, rates, today);
+  const weekly = stats.filter((s) => s.habit.frequency === "weekly" && s.periods.length > 0).slice(0, 3);
+
+  return (
+    <Link href="/sport/habits/statistik" className={LINK_CARD}>
+      <WidgetTitle icon={ListTodo} title="Habits diese Woche" aside={<span className="text-sm text-muted-foreground">Statistik</span>} />
+      {habits.length === 0 ? (
+        <Empty>Leg Habits an, dann siehst du hier deine Woche.</Empty>
+      ) : (
+        <>
+          <div className="flex items-end justify-between gap-4">
+            <p className="shrink-0 text-sm whitespace-nowrap text-muted-foreground">
+              <span className={cn("block font-heading text-4xl font-semibold text-foreground tabular-nums", kpis.rate != null && kpis.rate >= 0.8 && "text-sage")}>
+                {kpis.rate != null ? pct(kpis.rate) : "–"}
+              </span>
+              <span className="block">erfüllt</span>
+              <span className="block">{kpis.perfect === 1 ? "1 perfekter Tag" : `${kpis.perfect} perfekte Tage`}</span>
+            </p>
+            <ol className="grid h-24 max-w-56 min-w-0 flex-1 grid-cols-7 gap-1.5" aria-label="Erledigt je Tag">
+              {rates.map((r) => {
+                const share = r.due > 0 ? r.done / r.due : 0;
+                return (
+                  <li key={r.date} className="flex min-w-0 flex-col items-center gap-1">
+                    <span className="relative w-full flex-1 overflow-hidden rounded-md bg-muted">
+                      {share > 0 ? (
+                        <span className={cn("absolute inset-x-0 bottom-0 rounded-md", share >= 1 ? "bg-sage" : "bg-sport")} style={{ height: `${share * 100}%` }} />
+                      ) : null}
+                    </span>
+                    <span className={cn("text-[0.7rem] leading-none text-muted-foreground", r.date === today && "font-semibold text-foreground")}>
+                      {weekdayShort(r.date).slice(0, 2)}
+                    </span>
+                    <span className="sr-only">{r.future ? "noch nicht" : r.due > 0 ? `${r.done} von ${r.due}` : "nichts fällig"}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+          {weekly.length > 0 ? (
+            <ul className="mt-4 flex flex-wrap gap-1.5">
+              {weekly.map((s) => {
+                const p = s.periods[0];
+                return (
+                  <li key={s.habit.id} className={cn("max-w-full truncate rounded-full px-3 py-1 text-sm tabular-nums", p.done >= p.target ? "bg-sage/15 text-sage" : "bg-muted")}>
+                    {s.habit.name} {Math.min(p.done, p.target)}/{p.target}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </>
+      )}
+    </Link>
+  );
+}
+
+/**
+ * Training geplant: Mo–So mit farbigen Punkten je Einheit aus dem Trainings-Wochenplan, darunter die Einheiten von
+ * heute (ist heute nichts geplant: der nächste Tag mit Training).
+ */
+export function ScheduleWidget({ schedule, today }: { schedule: ScheduleEntry[]; today: string }) {
+  const sorted = sortSchedule(schedule);
+  const todayN = isoWeekday(today);
+  const monday = mondayOf(today);
+  // Heute, sonst der nächste Wochentag mit Einheiten (auch über das Wochenende hinaus)
+  const offset = [0, 1, 2, 3, 4, 5, 6].find((i) => sorted.some((e) => e.weekday === ((todayN - 1 + i) % 7) + 1));
+  const nextN = offset != null ? ((todayN - 1 + offset) % 7) + 1 : null;
+  const nextEntries = sorted.filter((e) => e.weekday === nextN);
+  const heading = offset === 0 ? "Heute" : offset === 1 ? "Morgen" : nextN ? WEEKDAYS[nextN - 1].long : "";
+
+  return (
+    <section className={CARD}>
+      <WidgetTitle icon={CalendarClock} title="Training geplant" aside={<AsideLink href="/sport/habits/wochenplan">Wochenplan</AsideLink>} />
+      {sorted.length === 0 ? (
+        <Empty>Noch nichts geplant. Im Wochenplan legst du fest, wann du trainierst, z. B. morgens Gym und abends Dehnen.</Empty>
+      ) : (
+        <>
+          <ol className="grid grid-cols-7 gap-1.5" aria-label="Geplante Einheiten Mo–So">
+            {WEEKDAYS.map((w) => {
+              const entries = sorted.filter((e) => e.weekday === w.n);
+              const past = addDays(monday, w.n - 1) < today;
+              return (
+                <li key={w.n} className="flex flex-col items-center gap-1.5">
+                  <span
+                    className={cn(
+                      "grid size-8 place-items-center rounded-full text-xs font-medium",
+                      w.n === todayN ? "bg-sport text-sport-foreground" : past ? "text-muted-foreground" : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {w.short}
+                  </span>
+                  <span className="flex h-2 items-center gap-0.5" aria-hidden>
+                    {entries.slice(0, 3).map((e) => (
+                      <span key={e.id} className="size-1.5 rounded-full" style={{ background: categoryOf(e.category).color }} />
+                    ))}
+                  </span>
+                  <span className="sr-only">
+                    {w.long}: {entries.length ? entries.map((e) => e.title).join(", ") : "nichts geplant"}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          <p className="mt-4 mb-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">{heading}</p>
+          <ul className="space-y-1.5">
+            {nextEntries.map((e) => (
+              <li key={e.id} className="flex items-center gap-3 text-sm">
+                <span className="h-8 w-1 shrink-0 rounded-full" style={{ background: categoryOf(e.category).color }} aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{e.title}</span>
+                  <span className="block text-xs text-muted-foreground tabular-nums">{slotLabel(e)}</span>
+                </span>
+                {e.durationMin ? <span className="shrink-0 text-muted-foreground tabular-nums">{formatDuration(e.durationMin)}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );

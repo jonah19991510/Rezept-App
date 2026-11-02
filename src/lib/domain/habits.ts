@@ -291,7 +291,7 @@ export type HabitCell = { date: string; state: CellState; count: number };
 
 export type HabitPeriodStats = {
   habit: Habit;
-  /** fällige Einheiten im Zeitraum (laufender Tag/Woche/Monat nur, wenn erfüllt) */
+  /** fällige Einheiten im Zeitraum bis einschließlich heute (laufende Woche/laufender Monat mit dem ganzen Ziel) */
   due: number;
   done: number;
   /** null = im Zeitraum nichts fällig (bzw. Monatliche in der Wochenansicht) */
@@ -345,7 +345,7 @@ export function habitPeriodStats(h: Habit, index: CheckIndex, from: string, to: 
     if (d <= today) total += count;
     const state = cellState(h, count, d, today);
     cells.push({ date: d, state, count });
-    if (h.frequency === "daily" && (state === "done" || state === "partial" || state === "missed")) {
+    if (h.frequency === "daily" && (state === "done" || state === "partial" || state === "missed" || state === "open")) {
       due += h.target;
       done += Math.min(count, h.target);
     }
@@ -355,8 +355,6 @@ export function habitPeriodStats(h: Habit, index: CheckIndex, from: string, to: 
     .filter((p) => p.from <= today && activeBetween(h, p.from, p.to))
     .map((p) => ({ ...p, done: countBetween(index, h.id, p.from, p.to), target: h.target }));
   for (const p of periods) {
-    const running = p.to >= today;
-    if (running && p.done < p.target) continue; // läuft noch
     due += p.target;
     done += Math.min(p.done, p.target);
   }
@@ -365,7 +363,7 @@ export function habitPeriodStats(h: Habit, index: CheckIndex, from: string, to: 
 
 export type DayRate = { date: string; done: number; due: number; future: boolean };
 
-/** Je Tag: erledigte Einheiten der fälligen täglichen Gewohnheiten (heute zählt nur Erledigtes als fällig). */
+/** Je Tag: erledigte und fällige Einheiten der täglichen Gewohnheiten (künftige Tage: 0). */
 export function dayRates(habits: Habit[], index: CheckIndex, from: string, to: string, today: string): DayRate[] {
   const out: DayRate[] = [];
   for (let d = from; d <= to; d = addDays(d, 1)) {

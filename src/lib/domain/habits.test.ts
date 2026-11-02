@@ -147,14 +147,14 @@ describe("Serien", () => {
 });
 
 describe("Statistik je Zeitraum", () => {
-  it("rechnet tägliche Quote ohne den offenen heutigen Tag", () => {
+  it("rechnet den heutigen Tag in die tägliche Quote mit ein", () => {
     const h = habit({ startDate: "2026-11-02" });
     const index = checkIndex(checks("h1", ["2026-11-02", "2026-11-04"]));
     // Woche Mo 2.–So 8.11., heute Do 5.11.: Mo erledigt, Di verpasst, Mi erledigt, Do offen
     const s = habitPeriodStats(h, index, "2026-11-02", "2026-11-08", "2026-11-05");
     expect(s.cells.map((c) => c.state)).toEqual(["done", "missed", "done", "open", "future", "future", "future"]);
-    expect([s.done, s.due]).toEqual([2, 3]);
-    expect(s.rate).toBeCloseTo(2 / 3);
+    expect([s.done, s.due]).toEqual([2, 4]);
+    expect(s.rate).toBeCloseTo(0.5);
   });
 
   it("zählt teilweise erledigte Tage anteilig", () => {
@@ -165,7 +165,7 @@ describe("Statistik je Zeitraum", () => {
     expect([s.done, s.due]).toEqual([1, 2]);
   });
 
-  it("wertet wöchentliche je Woche, die laufende nur erfüllt", () => {
+  it("wertet wöchentliche je Woche", () => {
     const h = habit({ frequency: "weekly", target: 2 });
     const index = checkIndex(checks("h1", ["2026-10-05", "2026-10-06", "2026-10-13", "2026-10-27", "2026-10-28"]));
     // Oktober 2026: Wochen mit Donnerstag im Oktober = 28.9., 5.10., 12.10., 19.10., 26.10.; heute 30.10. (Woche 26.10. läuft, ist erfüllt)
@@ -180,6 +180,12 @@ describe("Statistik je Zeitraum", () => {
     expect([s.done, s.due]).toEqual([5, 10]);
     expect(s.cells.find((c) => c.date === "2026-10-05")?.state).toBe("checked");
     expect(s.cells.find((c) => c.date === "2026-10-07")?.state).toBe("none");
+  });
+
+  it("zählt die laufende Woche mit dem ganzen Ziel", () => {
+    const h = habit({ frequency: "weekly", target: 3 });
+    const s = habitPeriodStats(h, checkIndex(checks("h1", ["2026-11-02"])), "2026-11-02", "2026-11-08", "2026-11-04");
+    expect([s.done, s.due]).toEqual([1, 3]);
   });
 
   it("lässt Monatliche in der Wochenansicht aus der Quote", () => {
@@ -199,8 +205,8 @@ describe("Statistik je Zeitraum", () => {
       [0, 1],
     ]);
     const stats = list.map((h) => habitPeriodStats(h, index, "2026-11-02", "2026-11-08", "2026-11-04"));
-    // Mi (heute) noch offen: zählt nicht mit
-    expect(periodKpis(stats, rates, "2026-11-04")).toEqual({ rate: 1, perfect: 2, days: 2, total: 3 });
+    // Mi (heute) noch offen: zählt in die Quote, aber (noch) nicht als Tag für „Perfekte Tage“
+    expect(periodKpis(stats, rates, "2026-11-04")).toEqual({ rate: 0.75, perfect: 2, days: 2, total: 3 });
     const byWeekday = weekdayRates(list, index, "2026-11-04", 1);
     expect(byWeekday[0]).toMatchObject({ weekday: 1, due: 2, done: 2, rate: 1 });
     expect(byWeekday[2]).toMatchObject({ weekday: 3, due: 0, rate: null });
