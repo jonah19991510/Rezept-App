@@ -62,6 +62,9 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `user_settings.body_settings` | Körpergröße für BMI und Körperfett, Geschlecht (Navy-Formel), ausgeblendete Maße | Körpermaße (27.10.2026) | nur Nutzer selbst |
 | `user_settings.energy_profile` | Eingaben des Energiebedarfsrechners: Geschlecht, Alter, Größe, Gewicht, Körperfett, Aktivität, Sport, Ziel, Wunschgewicht, Protein/Fett | Energiebedarfsrechner (27.10.2026) | nur Nutzer selbst |
 | Browser (`localStorage`, Schlüssel `getraenke:zuletzt`) | zuletzt gewähltes Getränk auf „Heute“ | Getränketracker (27.10.2026) | nur das Gerät |
+| `habits` | Gewohnheiten und Supplemente: Name, Art, Rhythmus und Ziel, Wochentage, Tageszeit, Uhrzeit, Dosis, Notizen, Farbe, Reihenfolge, pausiert seit | Habit Tracker (02.11.2026) | nur Nutzer selbst |
+| `habit_checks` | an welchem Tag eine Gewohnheit wie oft erledigt wurde | Habit Tracker (02.11.2026) | nur Nutzer selbst |
+| `training_schedule` | Trainings-Wochenplan: Wochentag, Tageszeit, Uhrzeit, Titel, Art, Dauer, Notiz | Habit Tracker (02.11.2026) | nur Nutzer selbst |
 | `exercises` (Spalte `created_by`) | selbst angelegte Übungen (Name, Muskelgruppe, Gerät) | S1 (26.10.2026) | Übungen sind wie Zutaten für alle lesbar; ändern nur, wer sie angelegt hat; `created_by` wird beim Löschen auf leer gesetzt |
 | Storage-Bucket `recipe-photos/<user-id>/<rezept-id>/…` (privat) | Rezeptfotos (groß + Vorschaubild), vor dem Upload im Browser verkleinert und neu kodiert, dadurch **ohne EXIF/GPS** | 7 | wie das Rezept (Owner; bei öffentlichen Rezepten alle Eingeloggten), ausgeliefert nur über die App-Route `/foto/…` |
 
@@ -136,6 +139,10 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **02.11.2026, Habit Tracker:** Neue Tabellen `habits`, `habit_checks` und `training_schedule` (RLS nur der Nutzer,
+  Cascade am Profil; Häkchen nur zu eigenen Gewohnheiten). Im Datenexport als `habits`, `habits_abgehakt` und
+  `trainings_wochenplan`. Supplemente, Dosis und Notizen können Gesundheitsdaten sein (Hinweis für die
+  Datenschutzerklärung). Keine neuen Dienstleister.
 - **27.10.2026, Körpermaße:** Neue Tabelle `body_measurements` (RLS nur der Nutzer, Cascade am Profil) und Spalte
   `user_settings.body_settings`. BMI und Taille-Hüft-Verhältnis rechnet die App, sie werden nicht gespeichert. Im
   Datenexport als `koerpermasse` (Einstellungen unter `einstellungen`). Gewicht und Körpermaße sind Gesundheitsdaten.

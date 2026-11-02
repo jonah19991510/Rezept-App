@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTransition } from "react";
 import { useTheme } from "next-themes";
-import { Calculator, Carrot, Dumbbell, Euro, LogOut, Monitor, Moon, Ruler, Scale, Settings, ShieldCheck, Sun } from "lucide-react";
+import { BookOpenText, Calculator, Carrot, Dumbbell, Euro, LogOut, Monitor, Moon, Ruler, Scale, Settings, ShieldCheck, Sun } from "lucide-react";
 import { logoutAction } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ const ITEM = "min-h-11 gap-2.5 px-2.5";
 
 /**
  * Profilmenü oben rechts: Einstellungen, je Bereich die passenden Werkzeuge (Essen & Trinken: Zutaten, Preise, Umrechner;
- * Sport: Übungen, Körpermaße, Energiebedarf), Admin (nur Admins), Darstellung, Abmelden.
+ * Sport: Übungen, Körpermaße, Energiebedarf, Lexikon), Admin (nur Admins), Darstellung, Abmelden.
  */
 export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmin: boolean }) {
   const { theme, setTheme } = useTheme();
@@ -81,6 +81,10 @@ export function UserMenu({ displayName, isAdmin }: { displayName: string; isAdmi
             <DropdownMenuItem className={ITEM} render={<Link href="/sport/energie" />}>
               <Calculator aria-hidden />
               Energiebedarfsrechner
+            </DropdownMenuItem>
+            <DropdownMenuItem className={ITEM} render={<Link href="/sport/lexikon" />}>
+              <BookOpenText aria-hidden />
+              Lexikon
             </DropdownMenuItem>
           </>
         ) : null}

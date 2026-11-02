@@ -2,13 +2,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   BookOpen,
-  BookOpenText,
   CalendarDays,
   ChefHat,
   ChevronRight,
   Dumbbell,
   Flame,
   Hourglass,
+  ListChecks,
   Martini,
   Ruler,
   ShoppingBasket,
@@ -282,7 +282,7 @@ export function FoodAreaWidget({ plan, shoppingCount }: { plan: TodayPlan | null
   );
 }
 
-/** Sport & Gesundheit: laufendes Training bzw. was heute noch zu trinken ist, Abkürzungen zu Training, Körper, Energie, Lexikon. */
+/** Sport & Gesundheit: laufendes Training bzw. was heute noch zu trinken ist, Abkürzungen zu Training, Körper, Energie, Habits. */
 export function SportAreaWidget({ sport, drink }: { sport: SportSummary; drink: DrinkToday | null }) {
   const rest = drink ? drink.goalMl - drink.ml : null;
   const subtitle = sport.active
@@ -304,7 +304,7 @@ export function SportAreaWidget({ sport, drink }: { sport: SportSummary; drink: 
         { href: sport.active ? `/training/${sport.active.id}` : "/sport/plaene", label: "Training", icon: Dumbbell },
         { href: "/sport/koerper", label: "Körper", icon: Ruler },
         { href: "/sport/energie", label: "Energie", icon: Flame },
-        { href: "/sport/lexikon", label: "Lexikon", icon: BookOpenText },
+        { href: "/sport/habits", label: "Habits", icon: ListChecks },
       ]}
     />
   );

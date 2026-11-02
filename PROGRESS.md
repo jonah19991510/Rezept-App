@@ -1348,6 +1348,42 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Habit Tracker (02.11.2026)
+
+**In Arbeit:** erster Stand gebaut und lokal committet, **nicht gepusht** (nicht live). Wunsch des
+Nutzers: Lexikon ins Profilmenü, an seine Stelle ein Habit Tracker (Gewohnheiten und Supplemente; täglich, wöchentlich,
+monatlich; optional Tageszeit und Notizen), Trainings-Wochenplan mit Tageszeiten/Uhrzeiten, interaktive Statistiken mit
+Wochen- und Monatsübersicht, Reihenfolge per Drag & Drop, Habits jederzeit bearbeitbar. Danach will der Nutzer alles
+gemeinsam anpassen.
+
+- **Navigation:** Sport-Leiste „Habits“ (`/sport/habits`, Symbol `ListChecks`) statt „Lexikon“; Lexikon (weiter
+  Platzhalter) im Profilmenü unter Sport. Startseite: Schnellzugriff „Habits“ statt „Lexikon“.
+- **Migration** `…20261102090000_habits` (additiv): `habits` (Name, Art habit/supplement, Rhythmus daily/weekly/
+  monthly, Ziel je Zeitraum, Wochentage nur bei täglich, Tageszeit, Uhrzeit, Dosis, Notizen, Farbe, Position,
+  `paused_at`), `habit_checks` (Gewohnheit + Tag + Anzahl, eine Zeile je Tag), `training_schedule` (Wochentag,
+  Tageszeit, Uhrzeit, Titel, Art kraft/ausdauer/mobility/sport/erholung, Dauer, Notiz). RLS nur der Nutzer, Häkchen nur
+  zu eigenen Gewohnheiten, Cascade am Profil. `database.types.ts` von Hand ergänzt.
+- **Migration eingespielt** am 02.11.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers). Per SQL
+  geprüft (zurückgerollt, danach 0 Zeilen in allen drei Tabellen): ein fremdes Konto sieht weder Habits noch Häkchen
+  noch Wochenplan, kann nichts ändern/löschen und kein fremdes Habit abhaken (42501); ungültiger Rhythmus und
+  Wochentag 8 abgelehnt (23514); Löschen eines Habits löscht seine Häkchen. Security-Advisor ohne neue Hinweise.
+- **Tabs:** Heute (Fortschritt, „Training heute“ aus dem Wochenplan, Gruppen Jederzeit/Morgens…/Diese Woche/Diesen
+  Monat, Kreis antippen hakt ab bzw. zählt bei „2× täglich“ hoch, Name antippen bearbeitet, Pfeile zum Nachtragen),
+  Wochenplan (Handy: Tage untereinander, ab xl sieben Spalten; anlegen für mehrere Tage auf einmal), Statistik
+  (Woche/Monat, Filter Alle/Gewohnheiten/Supplemente und je Habit, Kennzahlen, „Erledigt pro Tag“ mit DayBars aus dem
+  Getränketracker, Tag zum Nachtragen, Wochen-/Monatsübersicht als Kästchen je Habit und Tag, Wochentage der letzten
+  12 Wochen), Habits (Liste mit Drag & Drop, Pausierte unten).
+- **Regeln (Entscheidungen von Claude, beim Test ansprechen):** Der laufende Tag/Woche/Monat zählt in Quote und Serie
+  erst, wenn er erfüllt ist. Wöchentliche/monatliche werden je Tag einmal abgehakt; in der Monatsansicht zählen Wochen,
+  deren Donnerstag im Monat liegt; Monatliche zählen in der Wochenansicht nicht zur Quote. Vor dem Anlegen und ab dem
+  Pausieren zählt nichts; nach dem Fortsetzen zählt die Pause wieder als verpasst. Löschen löscht alle Häkchen.
+- Logik `domain/habits.ts` (18 Tests), Server `server/habits.ts`, Aktionen `sport/habits/actions.ts`, Prüfung
+  `validation/habits.ts`, Komponenten `components/sport/habits/`. Datenexport: `habits`, `habits_abgehakt`,
+  `trainings_wochenplan`; `DATENVERARBEITUNG.md` ergänzt.
+- Geprüft: 495 Tests, Typecheck, Lint grün. Über eine temporäre Vorschauseite mit Beispieldaten (gelöscht) bei 375 px
+  und Desktop: Heute, Sheet, Wochenplan, Statistik Woche/Monat, Übersicht, Drag & Drop (lokal). **Nicht geprüft:**
+  alles mit Login und echter Datenbank (Speichern, Abhaken, Reihenfolge speichern).
+
 ### Design 30.10.2026: Startseite nach Vorlage-Fotos neu
 
 **Live** seit 30.10.2026: vom Nutzer am Handy (LAN) geprüft; Push `339b44f` → Deployment

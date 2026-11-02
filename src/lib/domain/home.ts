@@ -8,7 +8,7 @@ export const HOME_WIDGETS = [
   { id: "today", label: "Heute", description: "Ringe für Kalorien, Protein und Trinken", visible: true },
   { id: "next", label: "Als Nächstes", description: "Nächste Mahlzeit und nächstes Training", visible: true },
   { id: "food", label: "Essen & Trinken", description: "Bereich mit Rezepte, Wochenplan, Einkauf, Bar", visible: true },
-  { id: "sport", label: "Sport & Gesundheit", description: "Bereich mit Training, Körper, Energie, Lexikon", visible: true },
+  { id: "sport", label: "Sport & Gesundheit", description: "Bereich mit Training, Körper, Energie, Habits", visible: true },
   { id: "meals", label: "Heute geplant", description: "Mahlzeiten aus dem Wochenplan", visible: false },
   { id: "shopping", label: "Einkaufsliste", description: "Was noch fehlt", visible: false },
   { id: "ready", label: "Was kann ich kochen?", description: "Rezepte und Cocktails aus dem Vorrat", visible: false },

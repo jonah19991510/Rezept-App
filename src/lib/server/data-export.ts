@@ -47,13 +47,30 @@ async function allDrinkEntries(supabase: Awaited<ReturnType<typeof createClient>
   }
 }
 
+/** Alle Häkchen des Habit Trackers; seitenweise wie die Getränke-Einträge. */
+async function allHabitChecks(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const rows: Record<string, unknown>[] = [];
+  for (let page = 0; ; page++) {
+    const { data, error } = await supabase
+      .from("habit_checks")
+      .select("*")
+      .eq("user_id", userId)
+      .order("day")
+      .order("habit_id")
+      .range(page * 1000, page * 1000 + 999);
+    if (error) return { data: null, error };
+    rows.push(...data);
+    if (data.length < 1000) return { data: rows, error: null };
+  }
+}
+
 /** Vollständiger Export aller personenbezogenen Daten des Nutzers als ein JSON-Objekt. */
 export async function buildPersonalDataExport(user: CurrentUser) {
   const supabase = await createClient();
   const id = user.id;
   const [
     profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
-    trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements,
+    trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements, habits, habitChecks, schedule,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, created_at").eq("id", id).maybeSingle(),
     supabase
@@ -96,6 +113,10 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     allDrinkEntries(supabase, id),
     // Körpermaße
     supabase.from("body_measurements").select("*").eq("user_id", id).order("measured_on"),
+    // Habit Tracker und Trainings-Wochenplan
+    supabase.from("habits").select("*").eq("user_id", id).order("position"),
+    allHabitChecks(supabase, id),
+    supabase.from("training_schedule").select("*").eq("user_id", id).order("weekday"),
   ]);
 
   return {
@@ -123,6 +144,9 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     getraenke: must(drinks, "Getränke"),
     getraenke_eintraege: must(drinkEntries, "Getränke-Einträge"),
     koerpermasse: must(bodyMeasurements, "Körpermaße"),
+    habits: must(habits, "Habits"),
+    habits_abgehakt: must(habitChecks, "Abgehakte Habits"),
+    trainings_wochenplan: must(schedule, "Trainings-Wochenplan"),
   };
 }
 

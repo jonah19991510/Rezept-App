@@ -189,6 +189,160 @@ export type Database = {
           },
         ]
       }
+      habits: {
+        Row: {
+          at_time: string | null
+          color: string
+          created_at: string
+          daytime: string | null
+          dose: string | null
+          frequency: string
+          id: string
+          kind: string
+          name: string
+          notes: string | null
+          paused_at: string | null
+          position: number
+          target: number
+          updated_at: string
+          user_id: string
+          weekdays: number[]
+        }
+        Insert: {
+          at_time?: string | null
+          color: string
+          created_at?: string
+          daytime?: string | null
+          dose?: string | null
+          frequency?: string
+          id?: string
+          kind?: string
+          name: string
+          notes?: string | null
+          paused_at?: string | null
+          position?: number
+          target?: number
+          updated_at?: string
+          user_id?: string
+          weekdays?: number[]
+        }
+        Update: {
+          at_time?: string | null
+          color?: string
+          created_at?: string
+          daytime?: string | null
+          dose?: string | null
+          frequency?: string
+          id?: string
+          kind?: string
+          name?: string
+          notes?: string | null
+          paused_at?: string | null
+          position?: number
+          target?: number
+          updated_at?: string
+          user_id?: string
+          weekdays?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habit_checks: {
+        Row: {
+          count: number
+          created_at: string
+          day: string
+          habit_id: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          day: string
+          habit_id: string
+          user_id?: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          day?: string
+          habit_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_checks_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_checks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_schedule: {
+        Row: {
+          at_time: string | null
+          category: string
+          created_at: string
+          daytime: string
+          duration_min: number | null
+          id: string
+          notes: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          weekday: number
+        }
+        Insert: {
+          at_time?: string | null
+          category?: string
+          created_at?: string
+          daytime: string
+          duration_min?: number | null
+          id?: string
+          notes?: string | null
+          title: string
+          updated_at?: string
+          user_id?: string
+          weekday: number
+        }
+        Update: {
+          at_time?: string | null
+          category?: string
+          created_at?: string
+          daytime?: string
+          duration_min?: number | null
+          id?: string
+          notes?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_schedule_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_exercises: {
         Row: {
           exercise_id: string

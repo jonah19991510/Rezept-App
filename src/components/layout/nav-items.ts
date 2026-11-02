@@ -1,6 +1,5 @@
 import {
   BookOpen,
-  BookOpenText,
   CalendarDays,
   ChartLine,
   ChartPie,
@@ -9,6 +8,7 @@ import {
   GlassWater,
   HeartPulse,
   House,
+  ListChecks,
   ShoppingBasket,
   Utensils,
   type LucideIcon,
@@ -25,12 +25,12 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/entdecken", label: "Entdecken", icon: Compass },
 ];
 
-/** Hauptnavigation Sport & Gesundheit (Lexikon kommt später, bis dahin Platzhalterseite). */
+/** Hauptnavigation Sport & Gesundheit. Das Lexikon (noch Platzhalter) steht seit 02.11.2026 im Profilmenü. */
 export const SPORT_NAV_ITEMS: NavItem[] = [
   { href: "/sport/plaene", label: "Pläne", icon: ClipboardList, also: ["/sport/verlauf"] },
   { href: "/sport/getraenke", label: "Getränke", icon: GlassWater },
   { href: "/sport/statistik", label: "Statistik", icon: ChartLine },
-  { href: "/sport/lexikon", label: "Lexikon", icon: BookOpenText },
+  { href: "/sport/habits", label: "Habits", icon: ListChecks },
   { href: "/sport/entdecken", label: "Entdecken", icon: Compass },
 ];
 
