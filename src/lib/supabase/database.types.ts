@@ -17,6 +17,121 @@ export type Database = {
   }
   public: {
     Tables: {
+      lexicon_categories: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          position?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lexicon_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "lexicon_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lexicon_entries: {
+        Row: {
+          blocks: Json
+          created_at: string
+          created_by: string | null
+          facts: Json
+          id: string
+          is_public: boolean
+          keywords: string[]
+          source: string | null
+          term: string
+          updated_at: string
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          created_by?: string | null
+          facts?: Json
+          id?: string
+          is_public?: boolean
+          keywords?: string[]
+          source?: string | null
+          term: string
+          updated_at?: string
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          created_by?: string | null
+          facts?: Json
+          id?: string
+          is_public?: boolean
+          keywords?: string[]
+          source?: string | null
+          term?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lexicon_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lexicon_entry_categories: {
+        Row: {
+          category_id: string
+          entry_id: string
+        }
+        Insert: {
+          category_id: string
+          entry_id: string
+        }
+        Update: {
+          category_id?: string
+          entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lexicon_entry_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "lexicon_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lexicon_entry_categories_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "lexicon_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       body_measurements: {
         Row: {
           belly_cm: number | null

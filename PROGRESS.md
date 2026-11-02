@@ -1348,6 +1348,46 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Lexikon (02.11.2026)
+
+**Stand:** gebaut, Migration eingespielt, **nicht committet**, mit Login noch nicht getestet. Erster
+Stand nach Vorlage-Fotos des Nutzers (Liste, Eintrag, Editor); danach will der Nutzer alles gemeinsam verbessern.
+Wünsche: Nachschlagewerk zu Gesundheitsthemen; **schreiben vorerst nur Admins, später änderbar**; je Eintrag
+„Öffentlich“, damit halbfertige Einträge (Entwürfe) niemand sonst sieht.
+
+- **Migration** `…20261102150000_lexicon` (additiv): `private.can_write_lexicon()` (heute `is_admin()`; zum Freigeben
+  nur diese Funktion ändern, dazu `canWriteLexicon` in `domain/lexicon.ts`), `lexicon_categories` (Name, Farbe,
+  Position, `parent_id` für eine Ebene Unterkategorien, per Trigger erzwungen; Name je Ebene eindeutig),
+  `lexicon_entries` (Begriff eindeutig ohne Groß-/Kleinschreibung, `facts` und `blocks` als jsonb, Stichworte, Quelle,
+  `is_public` Standard false, `created_by` set null), `lexicon_entry_categories`. RLS: Kategorien alle lesen; Einträge
+  öffentlich für alle, Entwürfe nur Ersteller und Admins; schreiben nur mit `can_write_lexicon()` und nur eigene (Admins
+  alle). Startkategorien wie auf den Fotos (Training, Übungen, Ernährung › Aminosäuren, Supplements, Regeneration &
+  Schlaf, Anatomie, Gesundheit, Begriffe, Blutwerte).
+- **Migration eingespielt** am 02.11.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers). Per SQL
+  geprüft (zurückgerollt, danach 0 Einträge, 10 Kategorien): normales Konto sieht öffentliche Einträge und deren
+  Zuordnungen, aber keine Entwürfe; kann weder Einträge noch Kategorien noch Zuordnungen anlegen (42501), ändern oder
+  löschen (0 Zeilen); anon liest nichts (42501). Admin schreibt alles; zweite Ebene Unterkategorien (23514), doppelter
+  Begriff ohne Groß-/Kleinschreibung (23505) und `facts` als Objekt (23514) abgelehnt; Kategorie löschen nimmt
+  Unterkategorien und Zuordnungen mit, Einträge bleiben. Security-Advisor ohne neue Hinweise.
+- **Seite** `/sport/lexikon` (Profilmenü, Platzhalter `coming-soon.tsx` entfernt): Suche über Begriff, Fakten, Text,
+  Tabellen, Stichworte, Quelle (Begriffstreffer zuerst); Kategorie-Chips mit Anzahl, bei Unterkategorien zweite
+  Chip-Reihe; Ansicht A–Z (Umlaute beim Grundbuchstaben, Ziffern unter „#“) oder nach Kategorien; Zeilen mit Vorschau
+  bzw. „Noch kein Text“, Label „Entwurf“. Hinweis „ersetzt keine ärztliche Beratung“.
+- **Eintrag** (Sheet): Kategorien, Fakten-Tabelle, Textfelder (`## `, `- `, `**fett**`, `[[Begriff]]`,
+  `[[Begriff|Text]]`) und Tabellen in eigener Reihenfolge, Stichworte, Quelle (Links anklickbar), „Verweise hierher“.
+  Links öffnen den anderen Eintrag im selben Sheet mit Zurück-Pfeil; Links ohne Eintrag sind für Admins gestrichelt
+  und legen ihn an. Admins: Schalter „Öffentlich“ direkt im Eintrag, Bearbeiten, Löschen mit Rückfrage.
+- **Editor:** Begriff, Öffentlich (neu = Entwurf), Kategorien (Unterkategorien erscheinen nach Wahl der Kategorie),
+  Fakten und Felder mit Pfeilen hoch/runter und X, Tabellen-Editor (Zeilen/Spalten), Stichworte, Quelle. Schließen mit
+  ungespeicherten Änderungen fragt „Verwerfen / Weiter bearbeiten“. **Kategorien bearbeiten:** anlegen, umbenennen,
+  umfärben, sortieren, löschen (Einträge bleiben).
+- Logik `domain/lexicon.ts` (20 Tests), Server `server/lexicon.ts`, Aktionen `sport/lexikon/actions.ts`, Prüfung
+  `validation/lexicon.ts`, Komponenten `components/sport/lexicon/`. Datenexport `lexikon_eintraege`;
+  `DATENVERARBEITUNG.md` ergänzt.
+- Geprüft: 516 Tests, Typecheck, Lint, Build grün. Über eine temporäre Vorschauseite mit Beispieldaten (gelöscht) am
+  PC und bei 375 px: Liste A–Z und nach Kategorien, Eintrag mit Links und Zurück, Editor mit Tabelle, Kategorien,
+  Ansicht ohne Schreibrecht. **Nicht geprüft:** alles mit Login und echter Datenbank (Speichern, RLS).
+
 ### Habit Tracker (02.11.2026)
 
 **Live** seit 02.11.2026: Push `e53440b` → Deployment `dpl_5XDkPjnVgHA6v3idoLgLnvVAnWmz` (`production`, `fra1`,

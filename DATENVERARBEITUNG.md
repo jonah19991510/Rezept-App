@@ -65,6 +65,7 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `habits` | Gewohnheiten und Supplemente: Name, Art, Rhythmus und Ziel, Wochentage, Tageszeit, Uhrzeit, Dosis, Notizen, Farbe, Reihenfolge, pausiert seit | Habit Tracker (02.11.2026) | nur Nutzer selbst |
 | `habit_checks` | an welchem Tag eine Gewohnheit wie oft erledigt wurde | Habit Tracker (02.11.2026) | nur Nutzer selbst |
 | `training_schedule` | Trainings-Wochenplan: Wochentag, Tageszeit, Uhrzeit, Titel, Art, Dauer, Notiz | Habit Tracker (02.11.2026) | nur Nutzer selbst |
+| `lexicon_entries` (Spalte `created_by`, + `lexicon_entry_categories`) | selbst geschriebene Lexikon-Einträge: Begriff, Fakten, Texte, Tabellen, Stichworte, Quelle, öffentlich ja/nein | Lexikon (02.11.2026) | öffentliche Einträge alle Eingeloggten, Entwürfe nur Ersteller und Admins; schreiben vorerst nur Admins; `created_by` wird beim Löschen des Accounts auf leer gesetzt (Einträge bleiben) |
 | `exercises` (Spalte `created_by`) | selbst angelegte Übungen (Name, Muskelgruppe, Gerät) | S1 (26.10.2026) | Übungen sind wie Zutaten für alle lesbar; ändern nur, wer sie angelegt hat; `created_by` wird beim Löschen auf leer gesetzt |
 | Storage-Bucket `recipe-photos/<user-id>/<rezept-id>/…` (privat) | Rezeptfotos (groß + Vorschaubild), vor dem Upload im Browser verkleinert und neu kodiert, dadurch **ohne EXIF/GPS** | 7 | wie das Rezept (Owner; bei öffentlichen Rezepten alle Eingeloggten), ausgeliefert nur über die App-Route `/foto/…` |
 
@@ -139,6 +140,11 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **02.11.2026, Lexikon:** Neue Tabellen `lexicon_categories`, `lexicon_entries` und `lexicon_entry_categories`.
+  Inhalte sind Nachschlagetexte, keine Daten über Nutzer; personenbezogen ist nur `created_by` (wer einen Eintrag
+  angelegt hat). Schreiben vorerst nur Admins, Entwürfe sehen nur Ersteller und Admins. Im Datenexport als
+  `lexikon_eintraege`. Beim Löschen des Accounts bleiben die Einträge ohne Ersteller erhalten (wie eigene Übungen).
+  Keine neuen Dienstleister.
 - **02.11.2026, Habit Tracker:** Neue Tabellen `habits`, `habit_checks` und `training_schedule` (RLS nur der Nutzer,
   Cascade am Profil; Häkchen nur zu eigenen Gewohnheiten). Im Datenexport als `habits`, `habits_abgehakt` und
   `trainings_wochenplan`. Supplemente, Dosis und Notizen können Gesundheitsdaten sein (Hinweis für die

@@ -70,7 +70,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
   const id = user.id;
   const [
     profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
-    trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements, habits, habitChecks, schedule,
+    trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements, habits, habitChecks, schedule, lexicon,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, created_at").eq("id", id).maybeSingle(),
     supabase
@@ -117,6 +117,8 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     supabase.from("habits").select("*").eq("user_id", id).order("position"),
     allHabitChecks(supabase, id),
     supabase.from("training_schedule").select("*").eq("user_id", id).order("weekday"),
+    // Lexikon: selbst geschriebene Einträge
+    supabase.from("lexicon_entries").select("*, lexicon_entry_categories(lexicon_categories(name))").eq("created_by", id).order("term"),
   ]);
 
   return {
@@ -147,6 +149,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     habits: must(habits, "Habits"),
     habits_abgehakt: must(habitChecks, "Abgehakte Habits"),
     trainings_wochenplan: must(schedule, "Trainings-Wochenplan"),
+    lexikon_eintraege: must(lexicon, "Lexikon-Einträge"),
   };
 }
 
