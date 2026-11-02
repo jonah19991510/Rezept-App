@@ -1350,7 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Habit Tracker (02.11.2026)
 
-**In Arbeit:** erster Stand gebaut und lokal committet, **nicht gepusht** (nicht live). Wunsch des
+**Live** seit 02.11.2026: Push `e53440b` → Deployment `dpl_5XDkPjnVgHA6v3idoLgLnvVAnWmz` (`production`, `fra1`,
+nach ca. 61 s „READY“; per Vercel-Connector geprüft). Erster Stand; Anpassungen mit dem Nutzer folgen. Wunsch des
 Nutzers: Lexikon ins Profilmenü, an seine Stelle ein Habit Tracker (Gewohnheiten und Supplemente; täglich, wöchentlich,
 monatlich; optional Tageszeit und Notizen), Trainings-Wochenplan mit Tageszeiten/Uhrzeiten, interaktive Statistiken mit
 Wochen- und Monatsübersicht, Reihenfolge per Drag & Drop, Habits jederzeit bearbeitbar. Danach will der Nutzer alles
