@@ -1350,7 +1350,8 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Lexikon (02.11.2026)
 
-**Stand:** gebaut, Migration eingespielt, **nicht committet**, mit Login noch nicht getestet. Erster
+**Live** seit 02.11.2026: Push `7d6115d` → Deployment `dpl_3F4Y4jes5F13i6Bxi8vbzTRAfdhP` (`production`, `fra1`,
+nach ca. 67 s „READY“; per Vercel-Connector geprüft). Mit Login noch nicht getestet. Erster
 Stand nach Vorlage-Fotos des Nutzers (Liste, Eintrag, Editor); danach will der Nutzer alles gemeinsam verbessern.
 Wünsche: Nachschlagewerk zu Gesundheitsthemen; **schreiben vorerst nur Admins, später änderbar**; je Eintrag
 „Öffentlich“, damit halbfertige Einträge (Entwürfe) niemand sonst sieht.
