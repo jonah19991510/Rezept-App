@@ -1573,7 +1573,8 @@ dann am 1. Dezember neu); Statistik der Vormonate; Dauer frei eingeben (bisher n
 
 #### Nachtrag 03.11.2026: private Challenges
 
-**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+**Live** seit 03.11.2026: vom Nutzer am LAN-Server getestet, Push `1d619b8` → Deployment
+`dpl_CAGp3kNo6Tj5Ektvh5E4SBV2GWTs` (`production`, `source: git`, „READY“; per Vercel-Connector geprüft).
 
 Wunsch des Nutzers: bei jeder Challenge wählen, ob öffentlich oder privat; private sehen andere nicht, ihre Punkte
 zählen nicht für die Gesamtrangliste.
