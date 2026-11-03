@@ -1535,7 +1535,9 @@ Platz 1).
 
 #### Nachtrag 03.11.2026: Bis Monats-/Jahresende, Wiederholen, freie Dauer
 
-**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+**Live** seit 03.11.2026: vom Nutzer am LAN-Server getestet, Push `565be15` → Deployment
+`dpl_4zsUQkEXQ5GFeBY1FvnSjEAhN7cy` (`production`, `source: git`, „READY“; per Vercel-Connector geprüft). Offen: den
+ersten echten Rundenwechsel am 01.12.2026 ansehen (neue Runde, „Frühere Runden“ mit November).
 
 Wünsche des Nutzers: Challenge bis Ende des Monats oder Jahres; nach Ablauf neu starten (z. B. bis Ende November,
 dann am 1. Dezember neu); Statistik der Vormonate; Dauer frei eingeben (bisher nur Auswahl bis 90 Tage).
