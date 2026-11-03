@@ -1473,7 +1473,10 @@ zeigt die Challenges zum Abhaken; Startseite zeigt das Widget „Challenges“ (
 
 #### Phase C3: Trainings teilen, Feed, Kudos, Kommentare, Nachmachen (03.11.2026)
 
-**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+**Live** seit 03.11.2026: vom Nutzer am LAN-Server getestet, Push `5cd3959` → Deployment
+`dpl_CH5dN1ZoBmfH6udxeGsFRyXEe9jm` (`production`, `source: git`, „READY“; per Vercel-Connector geprüft). Damit ist
+der Plan C1–C3 vom 03.11.2026 komplett live. Für später denkbar: ältere Posts nachladen (Feed zeigt die letzten 50),
+Foto zum Post (bewusst weggelassen).
 
 - **Migration** `…20261103180000_workout_posts` (additiv): `workout_posts` (je Training höchstens ein Post, Text,
   `summary` jsonb, `trained_at`; Training gelöscht = Post weg), `post_kudos` (einmal je Person, nicht beim eigenen
