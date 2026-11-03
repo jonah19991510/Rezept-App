@@ -1356,8 +1356,22 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 Wunsch des Nutzers: Icon passender zur jetzt breiteren App (Rezepte, Training, Gesundheit). Aus Entwürfen (Apfel +
 Puls, Topf + Puls, Herz + Blatt, Gabel + Hantel) gewählt: der bisherige Topf mit Pulslinie im Topfkörper
 (`src/lib/app-icon.tsx`, gilt für Favicon, Apple-Icon und Manifest-Icons). iPhone übernimmt es erst nach Löschen und
-neu „Zum Home-Bildschirm“. Offen: neuer App-Name (Vorschläge: Topform, Kraftküche, Satt & Stark, Puls & Pfanne,
-Fit & Satt); bis dahin bleibt „Rezeptbuch“.
+neu „Zum Home-Bildschirm“.
+
+#### Nachtrag 03.11.2026: App heißt „Topform“
+
+**Live** seit 03.11.2026: Push `175f038` → Deployment `dpl_6oVAJMG7HYk8bSfuJRkaVSom5s9A` (`production`,
+`source: git`, „READY“; per Vercel-Connector geprüft, Live-Manifest liefert „Topform“).
+
+Vom Nutzer gewählt (Vorschläge waren Topform, Kraftküche, Satt & Stark, Puls & Pfanne, Fit & Satt). Geändert: Manifest
+(`name`, `short_name`, Beschreibung mit Training), Seitentitel und `applicationName`, iPhone-Homescreen-Titel,
+Logo-Schriftzug (`brand.tsx`), geteilte Rezeptkarte (Fußzeile, `siteName`, Vorschaubild), Offline-, 404- und
+Registrierungsseite, Hinweis im Datenexport, README. Service-Worker-`VERSION` → `v3` (Offline-Seite und Icon neu).
+**Bewusst geblieben:** „In mein Rezeptbuch übernehmen“, „Dein Rezeptbuch ist noch leer“, „Rezeptbuch als Markdown“
+(gemeint ist die eigene Sammlung); Sicherungsformate `rezeptbuch-sport`/`rezeptbuch-rezepte` (Import alter Dateien),
+Cache-Namen `rezeptbuch-*`, Download-Dateinamen, User-Agent `Rezeptbuch/0.1`, Repo, Vercel-Projekt und Adresse
+`unser-rezeptbuch.vercel.app`. **Offen (Nutzer, im Supabase-Dashboard):** Einladungs-Mail sagt noch „Rezeptbuch“.
+Geprüft: 551 Tests, Typecheck, Lint; lokal Manifest, `/login` (Titel, Logo, Apple-Titel) und Offline-Seite.
 
 ### Challenges, Rangliste, Trainings-Posts (ab 03.11.2026)
 
