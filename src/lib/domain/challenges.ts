@@ -203,6 +203,8 @@ export type Progress = {
   completedOn: string | null;
   failedOn: string | null;
   points: { days: number; streak: number; completion: number; total: number };
+  /** Wann welche Punkte dazukamen (für „Dieser Monat“) */
+  pointLog: [date: string, points: number][];
 };
 
 /**
@@ -248,9 +250,21 @@ export function participantProgress(r: ChallengeRules, startDate: string, values
       running += d.value;
       if (!completedOn && running >= target) completedOn = d.date;
     }
-    const share = Math.min(1, sum / target);
-    const pointsDays = Math.round(POINTS.day * r.durationDays * share);
+    // Punkte nach Anteil; jeder Tag bekommt den Zuwachs, den er gebracht hat
+    const maxPoints = POINTS.day * r.durationDays;
+    const pointLog: [string, number][] = [];
+    let cumulative = 0;
+    let given = 0;
+    for (const d of days) {
+      if (!d.value) continue;
+      cumulative += d.value;
+      const now = Math.round(maxPoints * Math.min(1, cumulative / target));
+      if (now > given) pointLog.push([d.date, now - given]);
+      given = now;
+    }
+    const pointsDays = given;
     const completion = completedOn ? POINTS.completion : 0;
+    if (completedOn) pointLog.push([completedOn, completion]);
     const status: ParticipationStatus = today < from ? "upcoming" : completedOn ? "completed" : today > to ? "ended" : "active";
     return {
       status,
@@ -275,6 +289,7 @@ export function participantProgress(r: ChallengeRules, startDate: string, values
       completedOn,
       failedOn: null,
       points: { days: pointsDays, streak: 0, completion, total: pointsDays + completion },
+      pointLog,
     };
   }
 
@@ -292,14 +307,21 @@ export function participantProgress(r: ChallengeRules, startDate: string, values
   let completedOn: string | null = null;
   let failedOn: string | null = null;
   const streakCounts = hasStreak(r);
+  const pointLog: [string, number][] = [];
 
   for (let p = 0; p < periodTotal; p++) {
     const slice = days.slice(p * periodLength, (p + 1) * periodLength);
     const pFrom = slice[0].date;
     const pTo = slice[slice.length - 1].date;
-    const met = slice.filter((d) => d.state === "met").length;
-    // Nach dem Ausscheiden gibt es keine Punkte mehr
-    if (!failedOn) pointsDays += POINTS.day * Math.min(met, needDays);
+    const metCells = slice.filter((d) => d.state === "met");
+    const met = metCells.length;
+    // Nach dem Ausscheiden gibt es keine Punkte mehr; bei „pro Woche“ zählen die ersten x Tage
+    if (!failedOn) {
+      for (const d of metCells.slice(0, needDays)) pointLog.push([d.date, POINTS.day]);
+      pointsDays += POINTS.day * Math.min(met, needDays);
+    }
+    // Tag, an dem der Zeitraum erfüllt war (bei Wochen der x-te erfüllte Tag), sonst sein Ende
+    const settledOn = met >= needDays ? metCells[needDays - 1].date : pTo;
     let state: CellState;
     if (pFrom > today) state = "future";
     else if (met >= needDays) state = "met";
@@ -322,16 +344,20 @@ export function participantProgress(r: ChallengeRules, startDate: string, values
       streak++;
       bestStreak = Math.max(bestStreak, streak);
       // Volle Woche am Stück: bei Tagen jeder 7., bei Wochen jede
-      if (streakCounts && !failedOn && (periodLength === 7 || streak % 7 === 0)) streakBonus += POINTS.streakWeek;
+      if (streakCounts && !failedOn && (periodLength === 7 || streak % 7 === 0)) {
+        streakBonus += POINTS.streakWeek;
+        pointLog.push([settledOn, POINTS.streakWeek]);
+      }
     } else if (state === "missed") {
       streak = 0;
     }
-    if (!completedOn && !failedOn && metPeriods + jokersUsed >= required) completedOn = state === "met" ? lastMetDay(slice) ?? pTo : pTo;
+    if (!completedOn && !failedOn && metPeriods + jokersUsed >= required) completedOn = settledOn;
   }
 
   const covered = metPeriods + jokersUsed;
   const remaining = periods.filter((p) => p.state === "open" || p.state === "future").length;
   const completion = completedOn ? POINTS.completion : 0;
+  if (completedOn) pointLog.push([completedOn, completion]);
   const status: ParticipationStatus =
     today < from ? "upcoming" : failedOn ? "failed" : completedOn ? "completed" : today > to && remaining === 0 ? "ended" : "active";
   return {
@@ -357,11 +383,13 @@ export function participantProgress(r: ChallengeRules, startDate: string, values
     completedOn,
     failedOn,
     points: { days: pointsDays, streak: streakBonus, completion, total: pointsDays + streakBonus + completion },
+    pointLog,
   };
 }
 
-function lastMetDay(slice: DayCell[]): string | null {
-  return slice.filter((d) => d.state === "met").at(-1)?.date ?? null;
+/** Punkte, die zwischen `from` und `to` (einschließlich) dazukamen. */
+export function pointsBetween(p: Pick<Progress, "pointLog">, from: string, to: string): number {
+  return p.pointLog.reduce((sum, [date, points]) => (date >= from && date <= to ? sum + points : sum), 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -602,4 +630,58 @@ export function progressLabel(r: ChallengeRules, p: Progress): string {
 export function progressShare(r: ChallengeRules, p: Progress): number {
   if (r.metric === "total") return Math.min(1, p.sum / (r.totalTarget ?? Infinity));
   return Math.min(1, p.covered / Math.max(1, p.required));
+}
+
+// ---------------------------------------------------------------------------
+// Gesamtrangliste (alle Challenges)
+// ---------------------------------------------------------------------------
+
+export type Participation = { userId: string; name: string; hidden: boolean; progress: Progress };
+
+export type LeaderRow = {
+  userId: string;
+  name: string;
+  isMe: boolean;
+  /** hat sich aus der Rangliste ausgeblendet (nur bei einem selbst sichtbar) */
+  hidden: boolean;
+  points: number;
+  /** Challenges, bei denen man im Zeitraum dabei war */
+  challenges: number;
+  completed: number;
+  bestStreak: number;
+  rank: number;
+};
+
+/** „Dieser Monat“: erster bis letzter Tag des Monats von `today`. */
+export function monthRange(today: string): { from: string; to: string } {
+  const from = `${today.slice(0, 7)}-01`;
+  const [y, m] = today.split("-").map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { from, to: `${today.slice(0, 7)}-${String(last).padStart(2, "0")}` };
+}
+
+/**
+ * Gesamtrangliste: Punkte je Person über alle Challenges, im Zeitraum (`range`) oder insgesamt. Es zählt nur, wer
+ * bei mindestens einer Challenge mitmacht (im Zeitraum: deren Zeitraum überschneidet ihn). Ausgeblendete fehlen,
+ * außer man selbst. Gleiche Punkte = gleicher Platz.
+ */
+export function globalLeaderboard(participations: Participation[], meId: string, range: { from: string; to: string } | null): LeaderRow[] {
+  const byUser = new Map<string, Omit<LeaderRow, "rank">>();
+  for (const p of participations) {
+    if (p.hidden && p.userId !== meId) continue;
+    if (range && (p.progress.to < range.from || p.progress.from > range.to)) continue;
+    const row = byUser.get(p.userId) ?? { userId: p.userId, name: p.name, isMe: p.userId === meId, hidden: p.hidden, points: 0, challenges: 0, completed: 0, bestStreak: 0 };
+    row.points += range ? pointsBetween(p.progress, range.from, range.to) : p.progress.points.total;
+    row.challenges++;
+    const done = p.progress.completedOn;
+    if (done && (!range || (done >= range.from && done <= range.to))) row.completed++;
+    row.bestStreak = Math.max(row.bestStreak, p.progress.bestStreak);
+    byUser.set(p.userId, row);
+  }
+  const sorted = [...byUser.values()].sort((a, b) => b.points - a.points || b.completed - a.completed || a.name.localeCompare(b.name, "de"));
+  let rank = 0;
+  return sorted.map((row, i) => {
+    if (i === 0 || row.points !== sorted[i - 1].points) rank = i + 1;
+    return { ...row, rank };
+  });
 }

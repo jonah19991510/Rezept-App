@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
+import { LeaderboardVisibility } from "@/components/sport/challenges/leaderboard-view";
 import { AreaTile } from "@/components/layout/area-tile";
 import { AREA_PARAM, AREAS, areaForPath } from "@/components/layout/nav-items";
 import { requireUser } from "@/lib/auth";
 import { getCategoryCounts, getCategoryRows } from "@/lib/server/categories";
+import { isLeaderboardHidden } from "@/lib/server/challenges";
 import { getLongNotCookedWeeks } from "@/lib/server/kitchen-log";
 import { getAllGoals, getTrainingWeekdays } from "@/lib/server/plan";
 import { DataSection, DeleteAccount, DisplayNameForm, PasswordForm } from "./account-forms";
@@ -30,7 +32,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/einstel
       <>
         <PageHeader title="Einstellungen" description="Sport & Gesundheit" />
         <AccountSections user={user} />
-        <SportSettings showAllData />
+        <SportSettings userId={user.id} showAllData />
         <DeleteSection user={user} />
       </>
     );
@@ -43,7 +45,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/einstel
         <AreaHeading area="food" />
         <FoodSettings userId={user.id} />
         <AreaHeading area="sport" />
-        <SportSettings showAllData={false} />
+        <SportSettings userId={user.id} showAllData={false} />
         <DeleteSection user={user} />
       </>
     );
@@ -189,7 +191,25 @@ function DeleteSection({ user }: { user: User }) {
 }
 
 /** Einstellungen von Sport & Gesundheit. showAllData: „Meine Daten herunterladen“ (fehlt, wenn Essen & Trinken ihn zeigt). */
-function SportSettings({ showAllData }: { showAllData: boolean }) {
+async function SportSettings({ userId, showAllData }: { userId: string; showAllData: boolean }) {
+  const hidden = await isLeaderboardHidden(userId);
+  return (
+    <>
+      <section id="rangliste" className="mb-6 scroll-mt-20 rounded-3xl border bg-card p-5" aria-labelledby="sec-rangliste">
+        <h2 id="sec-rangliste" className="mb-1 text-lg font-semibold">
+          Rangliste
+        </h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Wer bei Challenges mitmacht, steht mit Anzeigenamen und Punkten in der Gesamtrangliste unter Entdecken.
+        </p>
+        <LeaderboardVisibility hidden={hidden} />
+      </section>
+      <SportDataSettings showAllData={showAllData} />
+    </>
+  );
+}
+
+function SportDataSettings({ showAllData }: { showAllData: boolean }) {
   return (
     <section id="trainingsdaten" className="mb-6 scroll-mt-20 rounded-3xl border bg-card p-5" aria-labelledby="sec-sport-daten">
       <h2 id="sec-sport-daten" className="mb-1 text-lg font-semibold">

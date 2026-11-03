@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { CalendarClock, ChevronLeft, ChevronRight, NotebookPen, Plus } from "lucide-react";
 import { GroupHeading } from "@/components/layout/list-blocks";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import { useHabitCounts } from "./use-habit-counts";
 
 /**
  * Tab „Heute“: Fortschritt des Tages, geplantes Training aus dem Wochenplan, fällige Gewohnheiten und Supplemente
- * nach Tageszeit (dann „Diese Woche“, „Diesen Monat“). Antippen des Kreises hakt ab, antippen des Namens bearbeitet.
+ * nach Tageszeit (dann „Diese Woche“, „Diesen Monat“), dazu die eigenen Challenges. Antippen des Kreises hakt ab, antippen des Namens bearbeitet.
  * Mit den Pfeilen lassen sich frühere Tage nachtragen.
  */
 export function HabitToday({
@@ -38,6 +38,7 @@ export function HabitToday({
   schedule,
   date,
   today,
+  challenges,
 }: {
   habits: Habit[];
   checks: HabitCheck[];
@@ -45,6 +46,8 @@ export function HabitToday({
   schedule: ScheduleEntry[];
   date: string;
   today: string;
+  /** eigene Challenges des Tages (Server-Komponente) */
+  challenges?: ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -124,6 +127,8 @@ export function HabitToday({
           </ul>
         </section>
       ) : null}
+
+      {challenges}
 
       {active.length === 0 ? (
         <div className="rounded-3xl border border-dashed p-6 text-center">

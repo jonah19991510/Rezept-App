@@ -3,7 +3,9 @@ import {
   canJoin,
   challengePhase,
   challengeStats,
+  globalLeaderboard,
   goalLabel,
+  monthRange,
   participantProgress,
   progressLabel,
   rankBoard,
@@ -226,5 +228,49 @@ describe("Texte", () => {
     expect(relaxed.find((l) => l.key === "missed")?.text).toBe("Locker: Verpasste Tage sind kein Problem, sie zählen einfach nicht.");
     expect(relaxed.find((l) => l.key === "done")?.text).toBe("Mit mindestens 25 von 30 Tagen.");
     expect(relaxed.find((l) => l.key === "points")?.text).toBe("10 je erfülltem Tag, +50 fürs Schaffen.");
+  });
+});
+
+describe("Punkte mit Datum und Gesamtrangliste", () => {
+  it("Punkte-Log ergibt die Summe, „pro Woche“ zählt nur die ersten x Tage", () => {
+    const r = rules({ missedRule: "streak", durationDays: 14, backfillDays: 0 });
+    const p = participantProgress(r, START, checked(0, 1, 2, 3, 4, 5, 6, 7), day(9));
+    expect(p.pointLog.reduce((s, [, n]) => s + n, 0)).toBe(p.points.total);
+    // Serienbonus am 7. Tag
+    expect(p.pointLog.filter(([d]) => d === day(6))).toEqual([[day(6), 10], [day(6), 20]]);
+    const w = rules({ frequency: "weekly", daysPerWeek: 2, durationDays: 7, missedRule: "relaxed", backfillDays: 0 });
+    const pw = participantProgress(w, START, checked(0, 2, 4), day(6));
+    expect(pw.pointLog).toEqual([[day(0), 10], [day(2), 10], [day(2), 50]]);
+  });
+
+  it("Gesamtmenge: Punkte je Tag nach Zuwachs", () => {
+    const r = rules({ metric: "total", totalTarget: 100, unit: "km" });
+    const p = participantProgress(r, START, new Map([[day(0), 30], [day(1), 80]]), day(2));
+    expect(p.pointLog).toEqual([[day(0), 30], [day(1), 70], [day(1), 50]]);
+  });
+
+  it("Monat und Rangliste", () => {
+    expect(monthRange("2026-02-14")).toEqual({ from: "2026-02-01", to: "2026-02-28" });
+    const r = rules({ durationDays: 10 });
+    const p = (values: DayValues) => participantProgress(r, START, values, day(9));
+    const rows = globalLeaderboard(
+      [
+        { userId: "a", name: "Anna", hidden: false, progress: p(checked(0, 1)) },
+        { userId: "a", name: "Anna", hidden: false, progress: p(checked(0)) },
+        { userId: "b", name: "Ben", hidden: false, progress: p(checked(0, 1, 2)) },
+        { userId: "c", name: "Clara", hidden: true, progress: p(checked(0, 1, 2, 3)) },
+        { userId: "me", name: "Ich", hidden: true, progress: p(checked(0)) },
+      ],
+      "me",
+      null,
+    );
+    expect(rows.map((x) => [x.userId, x.points, x.rank, x.challenges])).toEqual([
+      ["a", 30, 1, 2],
+      ["b", 30, 1, 1],
+      ["me", 10, 3, 1],
+    ]);
+    // Nur Punkte vom 3.11. an
+    const later = globalLeaderboard([{ userId: "b", name: "Ben", hidden: false, progress: p(checked(0, 1, 2)) }], "x", { from: day(1), to: day(30) });
+    expect(later[0].points).toBe(20);
   });
 });

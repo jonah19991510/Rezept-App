@@ -2,7 +2,7 @@ import type { MealSlot } from "./plan";
 
 // Startseite (26.10.2026): Widgets in eigener Reihenfolge, einzeln ein- und ausblendbar, gespeichert je Nutzer
 // in user_settings.home_widgets als [{ id, visible }]. Neu gestaltet am 30.10.2026 (Ringe, „Als Nächstes“,
-// Bereichskarten); die übrigen Widgets sind seitdem im Standard ausgeblendet. Habit-Widgets seit 02.11.2026.
+// Bereichskarten); die übrigen Widgets sind seitdem im Standard ausgeblendet. Habit-Widgets seit 02.11.2026, Challenges seit 03.11.2026.
 
 export const HOME_WIDGETS = [
   { id: "today", label: "Heute", description: "Ringe für Kalorien, Protein und Trinken", visible: true },
@@ -11,6 +11,7 @@ export const HOME_WIDGETS = [
   { id: "sport", label: "Sport & Gesundheit", description: "Bereich mit Training, Körper, Energie, Habits", visible: true },
   { id: "habits", label: "Habits heute", description: "Gewohnheiten und Supplemente direkt abhaken", visible: true },
   { id: "habitWeek", label: "Habits diese Woche", description: "Erfüllt, perfekte Tage und Mo–So im Überblick", visible: true },
+  { id: "challenges", label: "Challenges", description: "Deine Challenges heute abhaken, Fortschritt", visible: true },
   { id: "schedule", label: "Training geplant", description: "Trainings-Wochenplan: heute und die Woche", visible: true },
   { id: "meals", label: "Heute geplant", description: "Mahlzeiten aus dem Wochenplan", visible: false },
   { id: "shopping", label: "Einkaufsliste", description: "Was noch fehlt", visible: false },

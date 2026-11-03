@@ -73,7 +73,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements, habits, habitChecks, schedule, lexicon,
     ownChallenges, challengeParticipations, challengeEntries,
   ] = await Promise.all([
-    supabase.from("profiles").select("display_name, avatar_url, role, created_at").eq("id", id).maybeSingle(),
+    supabase.from("profiles").select("display_name, avatar_url, role, hide_from_leaderboard, created_at").eq("id", id).maybeSingle(),
     supabase
       .from("recipes")
       .select(

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { HabitsTodayWidget } from "@/components/home/habits-today-widget";
+import { ChallengesWidget } from "@/components/sport/challenges/challenge-day-list";
 import { HomeWidgets } from "@/components/home/home-widgets";
 import {
   ExpiringWidget,
@@ -30,6 +31,7 @@ import {
   getSportSummary,
   getTodayPlan,
 } from "@/lib/server/home";
+import { getMyChallenges } from "@/lib/server/challenges";
 import { getSchedule } from "@/lib/server/habits";
 import { countReadyRecipes } from "@/lib/server/pantry";
 
@@ -45,7 +47,7 @@ export default async function HomePage() {
   const needs = (...ids: HomeWidgetId[]) => ids.some((id) => visible.has(id));
 
   // Nur laden, was sichtbare Widgets brauchen
-  const [plan, drink, shopping, dishes, cocktails, expiring, longAgo, sport, habits, schedule] = await Promise.all([
+  const [plan, drink, shopping, dishes, cocktails, expiring, longAgo, sport, habits, schedule, challenges] = await Promise.all([
     needs("today", "next", "food", "meals") ? getTodayPlan(user.id, today) : null,
     needs("today", "sport") ? getDrinkToday(user.id, today) : null,
     needs("food", "shopping") ? getOpenShopping(user.id) : null,
@@ -57,6 +59,7 @@ export default async function HomePage() {
     needs("next", "sport", "training") ? getSportSummary(user.id, today) : null,
     needs("habits", "habitWeek") ? getHabitHome(user.id, today) : null,
     needs("schedule") ? getSchedule(user.id).catch(() => null) : null,
+    needs("challenges") ? getMyChallenges(user.id) : null,
   ]);
 
   const widgets: Partial<Record<HomeWidgetId, ReactNode>> = {
@@ -73,6 +76,7 @@ export default async function HomePage() {
     habits: habits && visible.has("habits") ? <HabitsTodayWidget habits={habits.habits} checks={habits.checks} today={today} /> : null,
     habitWeek: habits && visible.has("habitWeek") ? <HabitWeekWidget data={habits} today={today} /> : null,
     schedule: schedule ? <ScheduleWidget schedule={schedule} today={today} /> : null,
+    challenges: challenges ? <ChallengesWidget items={challenges} today={today} /> : null,
   };
 
   const firstName = user.displayName.trim().split(/\s+/)[0];

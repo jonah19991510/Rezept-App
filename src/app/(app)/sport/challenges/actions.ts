@@ -19,6 +19,8 @@ export type SaveResult = { ok: true; id: string } | { ok: false; message?: strin
 function revalidateChallenges(id?: string) {
   revalidatePath("/sport/entdecken", "layout");
   if (id) revalidatePath(`/sport/challenges/${id}`);
+  // Challenges stehen auch unter Habits „Heute“ und auf der Startseite
+  revalidatePath("/sport/habits");
   revalidatePath("/");
 }
 
@@ -126,5 +128,16 @@ export async function setChallengeEntryAction(challengeId: string, date: string,
   if (error?.code === "42501") return { ok: false, message: "Dieser Tag lässt sich nicht mehr ändern." };
   if (error) return { ok: false, message: "Das konnte nicht gespeichert werden." };
   revalidateChallenges(challengeId);
+  return { ok: true };
+}
+
+/** In der Gesamtrangliste zeigen oder ausblenden (nur das eigene Profil). */
+export async function setLeaderboardHiddenAction(hidden: boolean): Promise<Result> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ hide_from_leaderboard: Boolean(hidden) }).eq("id", user.id);
+  if (error) return { ok: false, message: "Das konnte nicht gespeichert werden." };
+  revalidatePath("/sport/entdecken", "layout");
+  revalidatePath("/einstellungen");
   return { ok: true };
 }

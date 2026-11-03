@@ -37,8 +37,8 @@ describe("normalizeHomeLayout", () => {
     ).toEqual(defaultHomeLayout());
   });
 
-  it("zeigt im Standard Ringe, „Als Nächstes“, die Bereiche und die Habit-Widgets", () => {
-    expect(defaultHomeLayout().filter((w) => w.visible).map((w) => w.id)).toEqual(["today", "next", "food", "sport", "habits", "habitWeek", "schedule"]);
+  it("zeigt im Standard Ringe, „Als Nächstes“, die Bereiche, die Habit-Widgets und die Challenges", () => {
+    expect(defaultHomeLayout().filter((w) => w.visible).map((w) => w.id)).toEqual(["today", "next", "food", "sport", "habits", "habitWeek", "challenges", "schedule"]);
   });
 });
 

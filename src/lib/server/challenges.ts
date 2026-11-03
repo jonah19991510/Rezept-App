@@ -9,6 +9,7 @@ import {
   type ChallengeSource,
   type DayValues,
   type MissedRule,
+  type Participation,
   type Progress,
   type StartMode,
 } from "@/lib/domain/challenges";
@@ -179,4 +180,75 @@ export async function getChallengeForEdit(id: string): Promise<{ challenge: Chal
   if (!challenge.data) return null;
   const c = toChallenge(challenge.data as ChallengeRow);
   return { challenge: c, locked: (others.data ?? []).some((p) => p.user_id !== c.createdBy) };
+}
+
+/** Eigene Challenges (aktive zuerst) für Habits „Heute“ und die Startseite. Fehler = keine. */
+export async function getMyChallenges(userId: string): Promise<ChallengeListItem[] | null> {
+  try {
+    return (await getChallenges(userId)).filter((i) => i.mine);
+  } catch {
+    return null;
+  }
+}
+
+export type Leaderboard = { participations: Participation[]; meHidden: boolean };
+
+/**
+ * Alle Teilnahmen aller Challenges mit Fortschritt (für die Gesamtrangliste). Die Rangliste selbst rechnet
+ * `globalLeaderboard`; Ausgeblendete bleiben drin, damit man sich selbst trotzdem sieht.
+ */
+export async function getLeaderboard(userId: string): Promise<Leaderboard> {
+  const supabase = await createClient();
+  const [challenges, participants, me] = await Promise.all([
+    supabase.from("challenges").select(CHALLENGE_COLUMNS),
+    supabase.from("challenge_participants").select("challenge_id, user_id, start_date, profiles!challenge_participants_user_id_fkey(display_name, hide_from_leaderboard)"),
+    supabase.from("profiles").select("hide_from_leaderboard").eq("id", userId).maybeSingle(),
+  ]);
+  if (challenges.error) throw new Error(`Challenges konnten nicht geladen werden (${challenges.error.code})`);
+  if (participants.error) throw new Error(`Teilnehmer konnten nicht geladen werden (${participants.error.code})`);
+
+  const list = (challenges.data as ChallengeRow[]).map(toChallenge);
+  const byId = new Map(list.map((c) => [c.id, c]));
+  // Einträge aller selbst eingetragenen Challenges auf einmal, Trainings je Challenge
+  const values = new Map<string, Map<string, DayValues>>();
+  for (let page = 0; ; page++) {
+    const { data, error } = await supabase
+      .from("challenge_entries")
+      .select("challenge_id, user_id, day, value")
+      .order("challenge_id")
+      .order("user_id")
+      .order("day")
+      .range(page * 1000, page * 1000 + 999);
+    if (error) throw new Error(`Einträge konnten nicht gelesen werden (${error.code})`);
+    for (const r of data) {
+      let users = values.get(r.challenge_id);
+      if (!users) values.set(r.challenge_id, (users = new Map()));
+      let days = users.get(r.user_id);
+      if (!days) users.set(r.user_id, (days = new Map()));
+      days.set(r.day, Number(r.value));
+    }
+    if (data.length < 1000) break;
+  }
+  await Promise.all(list.filter((c) => c.source === "workouts").map(async (c) => values.set(c.id, await dayValues(c))));
+
+  const today = todayInBerlin();
+  const participations: Participation[] = [];
+  for (const p of participants.data) {
+    const c = byId.get(p.challenge_id);
+    if (!c) continue;
+    participations.push({
+      userId: p.user_id,
+      name: authorName(p.profiles?.display_name),
+      hidden: p.profiles?.hide_from_leaderboard ?? false,
+      progress: participantProgress(c, p.start_date, values.get(c.id)?.get(p.user_id) ?? new Map(), today),
+    });
+  }
+  return { participations, meHidden: me.data?.hide_from_leaderboard ?? false };
+}
+
+/** Hat sich die Person aus der Gesamtrangliste ausgeblendet? (Fehler, z. B. Spalte fehlt = nein) */
+export async function isLeaderboardHidden(userId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("profiles").select("hide_from_leaderboard").eq("id", userId).maybeSingle();
+  return data?.hide_from_leaderboard ?? false;
 }

@@ -1436,6 +1436,39 @@ Schritt: C2 (Gesamtrangliste) nach OK des Nutzers.
    gesperrt, Name änderbar; „Löschen“ geht nicht mehr (nur Admin).
 5. Trainings-Challenge („3× pro Woche trainieren“, ab Beitritt), dann ein Training beenden → Tag zählt.
 
+#### Phase C2: Gesamtrangliste, Challenges in Habits und auf der Startseite (03.11.2026)
+
+**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+
+- **Punkte mit Datum:** `participantProgress` liefert jetzt `pointLog` (wann welche Punkte dazukamen): Tagespunkte am
+  erfüllten Tag (bei „pro Woche“ die ersten x Tage), Serienbonus am Tag, an dem die Woche voll war, Schaffen am Tag
+  des Schaffens, Gesamtmenge je Tag nach Zuwachs. `pointsBetween`, `monthRange`, `globalLeaderboard` (21 Tests in
+  `challenges.test.ts`).
+- **Tab „Rangliste“** (`/sport/entdecken/rangliste`, Tabs jetzt Challenges | Rangliste | Pläne): Umschalter
+  „November“ (laufender Monat) / „Gesamt“, Treppchen für die ersten drei, darunter alle weiteren (Anzahl Challenges,
+  geschafft, beste Serie), eigene Zeile „Du“ (auch wenn ausgeblendet), „So gibt es Punkte“, Schalter „In der
+  Gesamtrangliste zeigen“. Es zählt nur, wer mitmacht; im Monat nur Teilnahmen, die ihn überschneiden. Gleiche
+  Punkte = gleicher Platz.
+- **Ausblenden:** Migration `…20261103150000_leaderboard_hidden` (Spalte `profiles.hide_from_leaderboard`, nur selbst
+  änderbar). Schalter auch in den Einstellungen (Sport & Gesundheit bzw. alle Bereiche) unter „Rangliste“. Die
+  Ranglisten der einzelnen Challenges zeigen weiter alle Teilnehmer.
+- **Habits „Heute“:** Abschnitt „Challenges“ mit den eigenen Challenges des gezeigten Tages (ohne Ausgeschiedene),
+  abhaken bzw. eintragen, solange der Tag sich ändern lässt; bei Trainings-Challenges „Trainieren“.
+- **Startseite:** neues Widget „Challenges“ (Standard sichtbar, bei gespeicherter Anordnung hinten angehängt):
+  laufende Challenges mit Stand, Fortschrittsbalken und heutigem Abhaken/Eintragen; ohne Challenge ein Link zum
+  Mitmachen.
+- **Migration eingespielt** am 03.11.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers). Per SQL
+  geprüft (zurückgerollt, danach niemand ausgeblendet): eigenes Profil ausblenden geht, fremdes 0 Zeilen, `role`
+  ändern weiter abgelehnt (42501), andere lesen den Wert. Security-Advisor ohne neue Hinweise.
+- Datenexport: `hide_from_leaderboard` unter `konto`; `DATENVERARBEITUNG.md` ergänzt.
+- Geprüft: 537 Tests, Typecheck, Lint, Build grün. Rangliste, Startseiten-Widget und Habits-Abschnitt über eine
+  temporäre Vorschauseite mit Beispieldaten (gelöscht) bei 375 px: kein seitliches Scrollen. **Nicht geprüft:** mit
+  Login und echten Daten.
+
+**Wie der Nutzer C2 testet:** Entdecken → Rangliste (Monat/Gesamt, eigene Zeile); Schalter aus → man verschwindet für
+andere (zweites Konto), sieht sich selbst mit „–“; Einstellungen → Rangliste zeigt denselben Schalter; Habits → Heute
+zeigt die Challenges zum Abhaken; Startseite zeigt das Widget „Challenges“ (unter „Startseite anpassen“ ein-/ausblendbar).
+
 ### Lexikon (02.11.2026)
 
 **Live** seit 02.11.2026: Push `7d6115d` → Deployment `dpl_3F4Y4jes5F13i6Bxi8vbzTRAfdhP` (`production`, `fra1`,
