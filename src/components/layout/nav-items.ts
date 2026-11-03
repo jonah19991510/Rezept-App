@@ -29,8 +29,8 @@ export const NAV_ITEMS: NavItem[] = [
 export const SPORT_NAV_ITEMS: NavItem[] = [
   { href: "/sport/plaene", label: "Pläne", icon: ClipboardList, also: ["/sport/verlauf"] },
   { href: "/sport/getraenke", label: "Getränke", icon: GlassWater },
-  { href: "/sport/statistik", label: "Statistik", icon: ChartLine },
   { href: "/sport/habits", label: "Habits", icon: ListChecks },
+  { href: "/sport/statistik", label: "Statistik", icon: ChartLine },
   { href: "/sport/entdecken", label: "Entdecken", icon: Compass, also: ["/sport/challenges"] },
 ];
 
