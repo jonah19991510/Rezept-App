@@ -318,7 +318,7 @@ function MinutesField({
   );
 }
 
-/** Einzelauswahl als wischbare Chip-Leiste; erneutes Antippen hebt die Auswahl auf. */
+/** Einzelauswahl als Chip-Leiste (am Handy wischbar, ab Tablet umbrechend); erneutes Antippen hebt die Auswahl auf. */
 function ChoiceRow<T extends string>({
   label,
   value,
@@ -350,7 +350,7 @@ function ChoiceRow<T extends string>({
         role="radiogroup"
         aria-labelledby={labelId}
         onKeyDown={onKeyDown}
-        className="flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 [scrollbar-width:none] md:flex-wrap md:overflow-visible [&::-webkit-scrollbar]:hidden"
       >
         {options.map((o, i) => {
           const selected = o.value === value;
