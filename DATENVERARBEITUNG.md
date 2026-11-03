@@ -66,6 +66,10 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `habit_checks` | an welchem Tag eine Gewohnheit wie oft erledigt wurde | Habit Tracker (02.11.2026) | nur Nutzer selbst |
 | `training_schedule` | Trainings-Wochenplan: Wochentag, Tageszeit, Uhrzeit, Titel, Art, Dauer, Notiz | Habit Tracker (02.11.2026) | nur Nutzer selbst |
 | `lexicon_entries` (Spalte `created_by`, + `lexicon_entry_categories`) | selbst geschriebene Lexikon-Einträge: Begriff, Fakten, Texte, Tabellen, Stichworte, Quelle, öffentlich ja/nein | Lexikon (02.11.2026) | öffentliche Einträge alle Eingeloggten, Entwürfe nur Ersteller und Admins; schreiben vorerst nur Admins; `created_by` wird beim Löschen des Accounts auf leer gesetzt (Einträge bleiben) |
+| `challenges` (Spalte `created_by`) | selbst angelegte Challenges: Name, Beschreibung, Symbol, Farbe, Regeln | Challenges (03.11.2026) | alle Eingeloggten lesen; ändern Ersteller und Admins; `created_by` wird beim Löschen des Accounts auf leer gesetzt (die Challenge bleibt für die anderen) |
+| `challenge_participants` | bei welcher Challenge man mitmacht, ab welchem Tag, Beitrittszeit | Challenges (03.11.2026) | alle Eingeloggten (Rangliste mit Anzeigenamen); Cascade am Profil |
+| `challenge_entries` | Abhaken bzw. Menge je Challenge und Tag | Challenges (03.11.2026) | alle Eingeloggten (Rangliste, Statistik); schreiben nur selbst im erlaubten Zeitfenster; Cascade über die Teilnahme |
+| `workouts` (über `challenge_workout_days`) | bei Trainings-Challenges: Anzahl beendeter Trainings je Tag im Zeitraum, nur für Teilnehmer dieser Challenge | Challenges (03.11.2026) | alle Eingeloggten sehen nur die Anzahl, nie die Trainings selbst |
 | `exercises` (Spalte `created_by`) | selbst angelegte Übungen (Name, Muskelgruppe, Gerät) | S1 (26.10.2026) | Übungen sind wie Zutaten für alle lesbar; ändern nur, wer sie angelegt hat; `created_by` wird beim Löschen auf leer gesetzt |
 | Storage-Bucket `recipe-photos/<user-id>/<rezept-id>/…` (privat) | Rezeptfotos (groß + Vorschaubild), vor dem Upload im Browser verkleinert und neu kodiert, dadurch **ohne EXIF/GPS** | 7 | wie das Rezept (Owner; bei öffentlichen Rezepten alle Eingeloggten), ausgeliefert nur über die App-Route `/foto/…` |
 
@@ -140,6 +144,14 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **03.11.2026, Challenges (Phase C1):** Neue Tabellen `challenges`, `challenge_participants` und `challenge_entries`.
+  Anders als Habits sind Teilnahmen und Einträge **für alle Eingeloggten sichtbar** (Rangliste und Statistik mit
+  Anzeigenamen); wer nicht mitmacht, erscheint nirgends. Bei Trainings-Challenges gibt die Funktion
+  `challenge_workout_days` nur die Anzahl beendeter Trainings je Tag heraus, und nur für Teilnehmer. Austreten löscht
+  Teilnahme und Einträge. Beim Löschen des Accounts verschwinden Teilnahmen und Einträge per Cascade; selbst angelegte
+  Challenges bleiben ohne Ersteller stehen. Im Datenexport als `challenges_angelegt`, `challenge_teilnahmen` und
+  `challenge_eintraege`. Einträge wie „kein Alkohol“ können Gesundheitsdaten sein und sind für die Runde sichtbar
+  (Hinweis für die Datenschutzerklärung, beim Öffnen der Registrierung prüfen). Keine neuen Dienstleister.
 - **02.11.2026, Lexikon:** Neue Tabellen `lexicon_categories`, `lexicon_entries` und `lexicon_entry_categories`.
   Inhalte sind Nachschlagetexte, keine Daten über Nutzer; personenbezogen ist nur `created_by` (wer einen Eintrag
   angelegt hat). Schreiben vorerst nur Admins, Entwürfe sehen nur Ersteller und Admins. Im Datenexport als

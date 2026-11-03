@@ -31,7 +31,7 @@ export const SPORT_NAV_ITEMS: NavItem[] = [
   { href: "/sport/getraenke", label: "Getränke", icon: GlassWater },
   { href: "/sport/statistik", label: "Statistik", icon: ChartLine },
   { href: "/sport/habits", label: "Habits", icon: ListChecks },
-  { href: "/sport/entdecken", label: "Entdecken", icon: Compass },
+  { href: "/sport/entdecken", label: "Entdecken", icon: Compass, also: ["/sport/challenges"] },
 ];
 
 /** Untere Navigation der Startseite: zu den Bereichen. */
@@ -55,9 +55,9 @@ export function isActivePath(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Rezept- und Plan-Editor (neu/bearbeiten): ohne untere Navigation, am Handy ohne App-Kopf (eigene Leiste unten). */
+/** Rezept-, Plan- und Challenge-Editor (neu/bearbeiten): ohne untere Navigation, am Handy ohne App-Kopf (eigene Leiste unten). */
 export function isEditorPath(pathname: string) {
-  return /^\/(rezepte|sport\/plaene)\/(neu|[^/]+\/bearbeiten)\/?$/.test(pathname);
+  return /^\/(rezepte|sport\/plaene|sport\/challenges)\/(neu|[^/]+\/bearbeiten)\/?$/.test(pathname);
 }
 
 export type AreaKey = "start" | "food" | "sport";

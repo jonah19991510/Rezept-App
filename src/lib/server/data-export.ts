@@ -71,6 +71,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
   const [
     profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
     trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements, habits, habitChecks, schedule, lexicon,
+    ownChallenges, challengeParticipations, challengeEntries,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, created_at").eq("id", id).maybeSingle(),
     supabase
@@ -119,6 +120,10 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     supabase.from("training_schedule").select("*").eq("user_id", id).order("weekday"),
     // Lexikon: selbst geschriebene Einträge
     supabase.from("lexicon_entries").select("*, lexicon_entry_categories(lexicon_categories(name))").eq("created_by", id).order("term"),
+    // Challenges: selbst angelegte, eigene Teilnahmen und Einträge
+    supabase.from("challenges").select("*").eq("created_by", id).order("created_at"),
+    supabase.from("challenge_participants").select("*, challenges!challenge_participants_challenge_id_fkey(title)").eq("user_id", id).order("joined_at"),
+    supabase.from("challenge_entries").select("*").eq("user_id", id).order("day"),
   ]);
 
   return {
@@ -150,6 +155,9 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     habits_abgehakt: must(habitChecks, "Abgehakte Habits"),
     trainings_wochenplan: must(schedule, "Trainings-Wochenplan"),
     lexikon_eintraege: must(lexicon, "Lexikon-Einträge"),
+    challenges_angelegt: must(ownChallenges, "Challenges"),
+    challenge_teilnahmen: must(challengeParticipations, "Challenge-Teilnahmen"),
+    challenge_eintraege: must(challengeEntries, "Challenge-Einträge"),
   };
 }
 

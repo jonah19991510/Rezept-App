@@ -7,6 +7,8 @@ describe("isEditorPath", () => {
     expect(isEditorPath("/rezepte/0b6c2f2e-1d6f-4a51-9a51-2b7b3c3f2a10/bearbeiten")).toBe(true);
     expect(isEditorPath("/sport/plaene/neu")).toBe(true);
     expect(isEditorPath("/sport/plaene/0b6c2f2e-1d6f-4a51-9a51-2b7b3c3f2a10/bearbeiten")).toBe(true);
+    expect(isEditorPath("/sport/challenges/neu")).toBe(true);
+    expect(isEditorPath("/sport/challenges/0b6c2f2e-1d6f-4a51-9a51-2b7b3c3f2a10/bearbeiten")).toBe(true);
   });
   it("andere Seiten nicht", () => {
     expect(isEditorPath("/rezepte")).toBe(false);
@@ -15,6 +17,7 @@ describe("isEditorPath", () => {
     expect(isEditorPath("/einstellungen/import")).toBe(false);
     expect(isEditorPath("/sport/plaene")).toBe(false);
     expect(isEditorPath("/sport/plaene/0b6c2f2e-1d6f-4a51-9a51-2b7b3c3f2a10")).toBe(false);
+    expect(isEditorPath("/sport/challenges/0b6c2f2e-1d6f-4a51-9a51-2b7b3c3f2a10")).toBe(false);
   });
 });
 

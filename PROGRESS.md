@@ -1348,6 +1348,92 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Challenges, Rangliste, Trainings-Posts (ab 03.11.2026)
+
+Plan vom 03.11.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und OK:
+
+- **C1 – Challenges** (dieser Stand): Entdecken mit Tabs, Challenges anlegen mit allen Regeln, Detailseite,
+  Mitmachen, Abhaken/Eintragen, Statistik und Rangliste je Challenge, Teilnehmerzahl
+- **C2 – Gesamtrangliste:** Punkte über alle Challenges (Dieser Monat / Gesamt), in den Einstellungen ausblendbar,
+  aktive Challenges auch in Habits „Heute“ und als Widget auf der Startseite
+- **C3 – Trainings posten (wie Strava):** Feed im Entdecken, „Training teilen“ nach dem Training und im Verlauf mit
+  Text und automatischer Zusammenfassung (Dauer, Übungen, Volumen, Bestwerte), Kudos, Kommentare, „Nachmachen“;
+  Datenexport/Löschen
+
+Entscheidungen des Nutzers (03.11.2026): **Alle** dürfen Challenges anlegen (Admins bearbeiten/löschen alle); Start
+beim Anlegen wählbar (gemeinsamer Termin oder ab Beitritt); Gesamtrangliste nach **Punkten**, nur wer mitmacht;
+Posts mit Kudos, Kommentaren und „Nachmachen“ (ohne Foto). **Joker und verpasste Tage entscheidet, wer die Challenge
+anlegt**, auch ganz ohne Strafe („Locker“).
+
+#### Phase C1: Challenges (03.11.2026)
+
+**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+
+- **Regeln** (alles beim Anlegen einstellbar, Logik in `domain/challenges.ts`, 18 Tests):
+  - Was zählt: Abhaken · Menge pro Tag (Tagesziel + Einheit) · Gesamtmenge im Zeitraum · Trainings (automatisch aus
+    beendeten Trainings: an Tagen trainieren oder Anzahl insgesamt)
+  - Wie oft: jeden Tag oder x Tage pro Woche (Wochen ab dem eigenen Start, Dauer dann in ganzen Wochen)
+  - Dauer 1–366 Tage; Start gemeinsam (Termin, optional Einstieg bis x Tage nach Start) oder ab Beitritt
+  - Verpasste Tage: **Streng** (Joker, danach ausgeschieden) · **Serie zählt** (Joker retten die Serie, sonst beginnt
+    sie neu) · **Locker** (keine Folgen, keine Joker, kein Serienbonus). Verpasst ist ein Tag erst, wenn er sich nicht
+    mehr nachtragen lässt.
+  - Geschafft: alle Tage/Wochen (Joker zählen mit) oder „mindestens X von Y“ (nicht bei Streng); Gesamtmenge: Ziel
+    erreicht. Nachtragen: nur am selben Tag bis 7 Tage zurück.
+  - **Punkte:** 10 je erfülltem Tag (bei „pro Woche“ höchstens x je Woche), +20 je volle Woche am Stück (nur Streng und
+    Serie zählt; Joker-Tage halten die Serie), +50 fürs Schaffen. Gesamtmenge: bis zu 10 × Dauer nach Anteil, +50.
+    Nach dem Ausscheiden keine Punkte mehr.
+  - Rangliste je Challenge: nach Punkten (Ausgeschiedene unten), bei Gesamtmenge nach Menge; Gleichstand = gleicher
+    Platz.
+- **Migration** `…20261103090000_challenges` (additiv): `challenges`, `challenge_participants`,
+  `challenge_entries`, `private.berlin_today()`, Sperre der Regeln per Trigger, sobald andere mitmachen (Name,
+  Beschreibung, Symbol, Farbe bleiben frei), Starttag beim Beitritt per Trigger (fester Termin bzw. heute),
+  Einstiegsfrist, Eintragen nur im eigenen Zeitraum und Nachtrag-Fenster (RLS über `private.challenge_day_open`),
+  Abhaken nur mit Wert 1, Löschen durch Ersteller nur ohne andere Teilnehmer (Admins immer),
+  `challenge_workout_days` (nur Anzahl beendeter Trainings je Tag, nur für Teilnehmer). Alle Eingeloggten lesen alles
+  (Ranglisten). Ersteller-Account gelöscht: Challenge bleibt (`set null`).
+- **Migration eingespielt** am 03.11.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers). Per SQL
+  mit zwei normalen Konten und dem Admin geprüft (zurückgerollt, danach 0 Zeilen in allen drei Tabellen): Beitritt
+  setzt den Starttag; Abhaken heute geht, Wert 2 bei Abhaken und Tage in der Zukunft abgelehnt (42501); Start in der
+  Vergangenheit und Abhaken mit Einheit abgelehnt (23514); Regeln ändern allein geht, nach Beitritt eines anderen
+  gesperrt (42501), Titel weiter änderbar; fremde Challenge ändern 0 Zeilen; für andere eintragen und Starttag ändern
+  abgelehnt (42501); Löschen mit anderen Teilnehmern 0 Zeilen, als Admin geht es; Austreten löscht die Einträge;
+  Eintrag bei Trainings-Challenge abgelehnt; `challenge_workout_days` liefert Daten; anon liest nichts und darf die
+  Funktion nicht aufrufen. Security-Advisor: neu nur der erwartete Hinweis, dass Eingeloggte
+  `challenge_workout_days` aufrufen dürfen (wie bei den anderen RPC-Funktionen).
+- **Entdecken** (`/sport/entdecken`, Layout mit Tabs „Challenges | Pläne“; Feed und Rangliste kommen mit C3/C2):
+  `/sport/entdecken` leitet auf `/sport/entdecken/challenges`; öffentliche Pläne jetzt unter
+  `/sport/entdecken/plaene` (Zurück-Link der Planseite angepasst).
+- **Challenges-Tab:** „Neue Challenge“, Meine Challenges (Status, Serie, Punkte, Fortschrittsbalken, Teilnehmerzahl,
+  heute abhaken bzw. „Eintragen“ direkt auf der Karte), Mitmachen (Kurzregel, Start, Teilnehmer, von wem),
+  zugeklappt „Vorbei oder Einstieg vorbei“.
+- **Challenge-Seite** `/sport/challenges/[id]`: Kopf mit Symbol, Kurzregel, Phase, Teilnehmerzahl, Menü (Bearbeiten,
+  Austreten, Löschen mit Rückfrage), Beschreibung, „Mitmachen“-Karte mit Starthinweis, **Dein Fortschritt**
+  (Status, Kennzahlen Fortschritt/Serie/Joker/Punkte, Kästchen je Tag mit Legende, Tag antippen → ändern im
+  Nachtrag-Fenster), **Rangliste** (Krone/Medaillen, „du“ markiert), **Regel-Karte** in Klartext, **Statistik**
+  (Teilnehmer, dabei, geschafft, ausgeschieden bzw. nicht geschafft, heute erledigt, zusammen geschafft, Erfüllt pro
+  Tag als Balken).
+- **Editor** `/sport/challenges/neu` und `…/bearbeiten` (ohne Navigation, Speicherleiste unten): Vorlagen
+  (Liegestütze, kein Alkohol, 3× pro Woche trainieren, Schritte, Wasser, 100 km laufen, ohne Süßes, Lesen), Name,
+  Beschreibung, Symbol (20) und Farbe, alle Regeln wie oben, „Ich mache selbst mit“, unten die Regel-Karte als
+  Vorschau („So sehen es die anderen“). Gesperrte Regeln werden ausgegraut mit Erklärung.
+- **Eintragen:** Abhaken per rundem Knopf; Mengen per Sheet (Feld, Schnellknöpfe passend zum Ziel, „Tagesziel“,
+  Löschen); Komma oder Punkt als Dezimaltrennzeichen.
+- Datenexport: `challenges_angelegt`, `challenge_teilnahmen`, `challenge_eintraege`; `DATENVERARBEITUNG.md` ergänzt.
+- Geprüft: 534 Tests, Typecheck, Lint, Build grün. Über eine temporäre Vorschauseite mit Beispieldaten (gelöscht)
+  bei 375 px hell und am Desktop dunkel: Liste, Fortschritt mit Kästchen, Rangliste, Regel-Karten, Statistik, Editor
+  mit Vorlage, Eintragen-Sheet; kein seitliches Scrollen, keine Konsolenfehler. **Nicht geprüft:** alles mit Login
+  (Anlegen, Mitmachen, Eintragen mit echter Datenbank), Trainings-Challenge mit echten Trainings.
+
+**Wie der Nutzer C1 testet** (LAN-Server, PC und Handy):
+
+1. Sport → Entdecken: Tabs „Challenges“ und „Pläne“; die Pläne sind wie bisher da.
+2. „Neue Challenge“ → Vorlage „30 Tage Liegestütze“, Start „Gemeinsam“ auf heute, anlegen. Auf der Challenge-Seite:
+   heute eintragen (z. B. 30, dann +25), Kästchen und Punkte ändern sich.
+3. Zweite Challenge „30 Tage kein Alkohol“ mit „Ab Beitritt“: auf der Karte im Tab direkt abhaken.
+4. Mit einem zweiten Konto mitmachen: Teilnehmerzahl und Rangliste; danach beim ersten Konto „Bearbeiten“ → Regeln
+   gesperrt, Name änderbar; „Löschen“ geht nicht mehr (nur Admin).
+5. Trainings-Challenge („3× pro Woche trainieren“, ab Beitritt), dann ein Training beenden → Tag zählt.
+
 ### Lexikon (02.11.2026)
 
 **Live** seit 02.11.2026: Push `7d6115d` → Deployment `dpl_3F4Y4jes5F13i6Bxi8vbzTRAfdhP` (`production`, `fra1`,

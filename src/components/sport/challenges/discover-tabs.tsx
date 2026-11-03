@@ -1,0 +1,37 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { isActivePath } from "@/components/layout/nav-items";
+import { cn } from "@/lib/utils";
+
+// Feed und Rangliste kommen in den nächsten Phasen dazu.
+const TABS = [
+  { href: "/sport/entdecken/challenges", label: "Challenges" },
+  { href: "/sport/entdecken/plaene", label: "Pläne" },
+];
+
+/** Tabs von „Entdecken“ mit Unterstrich (wie Habits und Getränke). */
+export function DiscoverTabs() {
+  const pathname = usePathname();
+  return (
+    <nav className="-mx-4 mb-5 flex overflow-x-auto border-b px-4 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden" aria-label="Entdecken">
+      {TABS.map(({ href, label }) => {
+        const active = isActivePath(pathname, href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "relative flex min-h-12 flex-1 items-center justify-center px-2.5 text-[0.95rem] font-medium whitespace-nowrap text-muted-foreground transition hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              active && "font-semibold text-foreground after:absolute after:inset-x-1 after:-bottom-px after:h-[3px] after:rounded-full after:bg-primary",
+            )}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}

@@ -17,6 +17,163 @@ export type Database = {
   }
   public: {
     Tables: {
+      challenges: {
+        Row: {
+          backfill_days: number
+          color: string
+          created_at: string
+          created_by: string | null
+          daily_target: number | null
+          days_per_week: number | null
+          description: string | null
+          duration_days: number
+          frequency: string
+          icon: string
+          id: string
+          jokers: number
+          late_join_days: number
+          metric: string
+          min_periods: number | null
+          missed_rule: string
+          source: string
+          start_mode: string
+          starts_on: string | null
+          title: string
+          total_target: number | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          backfill_days?: number
+          color: string
+          created_at?: string
+          created_by?: string | null
+          daily_target?: number | null
+          days_per_week?: number | null
+          description?: string | null
+          duration_days: number
+          frequency?: string
+          icon: string
+          id?: string
+          jokers?: number
+          late_join_days?: number
+          metric: string
+          min_periods?: number | null
+          missed_rule?: string
+          source?: string
+          start_mode: string
+          starts_on?: string | null
+          title: string
+          total_target?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          backfill_days?: number
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          daily_target?: number | null
+          days_per_week?: number | null
+          description?: string | null
+          duration_days?: number
+          frequency?: string
+          icon?: string
+          id?: string
+          jokers?: number
+          late_join_days?: number
+          metric?: string
+          min_periods?: number | null
+          missed_rule?: string
+          source?: string
+          start_mode?: string
+          starts_on?: string | null
+          title?: string
+          total_target?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenges_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_participants: {
+        Row: {
+          challenge_id: string
+          joined_at: string
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          joined_at?: string
+          start_date?: string
+          user_id?: string
+        }
+        Update: {
+          challenge_id?: string
+          joined_at?: string
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_participants_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "challenge_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      challenge_entries: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          day: string
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          day: string
+          updated_at?: string
+          user_id?: string
+          value: number
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          day?: string
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_entries_challenge_id_user_id_fkey"
+            columns: ["challenge_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "challenge_participants"
+            referencedColumns: ["challenge_id", "user_id"]
+          },
+        ]
+      }
       lexicon_categories: {
         Row: {
           color: string
@@ -1835,6 +1992,14 @@ export type Database = {
       }
     }
     Functions: {
+      challenge_workout_days: {
+        Args: { p_challenge_id: string }
+        Returns: {
+          day: string
+          user_id: string
+          workouts: number
+        }[]
+      }
       drink_days: {
         Args: { p_from: string; p_to: string }
         Returns: {

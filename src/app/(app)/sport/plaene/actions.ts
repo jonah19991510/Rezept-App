@@ -128,7 +128,7 @@ export async function setPlanPublicAction(planId: string, isPublic: boolean): Pr
     .select("id");
   if (error || !data?.length) return { ok: false, message: "Die Sichtbarkeit konnte nicht geändert werden." };
   revalidatePlans(planId);
-  revalidatePath("/sport/entdecken");
+  revalidatePath("/sport/entdecken", "layout");
   return { ok: true };
 }
 
@@ -144,6 +144,6 @@ export async function forkPlanAction(planId: string): Promise<{ ok: false; messa
     return { ok: false, message: "Der Plan konnte nicht übernommen werden." };
   }
   revalidatePlans();
-  revalidatePath("/sport/entdecken");
+  revalidatePath("/sport/entdecken", "layout");
   redirect(`/sport/plaene/${newId}?uebernommen=1`);
 }
