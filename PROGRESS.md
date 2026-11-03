@@ -1511,7 +1511,8 @@ Konto Kommentar löschen, Text ändern, „Nicht mehr teilen“.
 
 #### Nachtrag 03.11.2026: Challenge-Art „Wer schafft mehr?“ (Wettkampf)
 
-**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+**Live** seit 03.11.2026: vom Nutzer am LAN-Server getestet, Push `34377e7` → Deployment
+`dpl_A3ejENR21iLp9rZPkMxCN2eyVQPS` (`production`, `source: git`, „READY“; per Vercel-Connector geprüft).
 
 Wunsch des Nutzers: eine Challenge, bei der gewinnt, wer mehr schafft (z. B. 10 gegen 20 Liegestütze → die 20 sind
 Platz 1).
