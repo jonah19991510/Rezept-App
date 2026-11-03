@@ -1367,7 +1367,9 @@ anlegt**, auch ganz ohne Strafe („Locker“).
 
 #### Phase C1: Challenges (03.11.2026)
 
-**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+**Live** seit 03.11.2026: vom Nutzer am LAN-Server getestet, Push `8323c8b` → Deployment
+`dpl_3FzfNciTWAxLEGvpWu1T1Yia1WJa` (`production`, `source: git`, „READY“; per Vercel-Connector geprüft). Nächster
+Schritt: C2 (Gesamtrangliste) nach OK des Nutzers.
 
 - **Regeln** (alles beim Anlegen einstellbar, Logik in `domain/challenges.ts`, 18 Tests):
   - Was zählt: Abhaken · Menge pro Tag (Tagesziel + Einheit) · Gesamtmenge im Zeitraum · Trainings (automatisch aus
