@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
-// App-Icon (Topf aus lucide „CookingPot“, wie im Logo) in Terrakotta mit cremefarbenem Strich.
+// App-Icon (Topf aus lucide „CookingPot“, wie im Logo, mit Pulslinie für Training/Gesundheit)
+// in Terrakotta mit cremefarbenem Strich.
 // Wird beim Bauen als PNG erzeugt: Favicon, Apple-Touch-Icon und die Icons im Web-App-Manifest.
 
 export const BRAND_TERRACOTTA = "#c45e3d"; // oklch(0.6 0.14 38) = --primary
@@ -12,6 +13,7 @@ const POT_PATHS = [
   "M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8",
   "m4 8 16-4",
   "m8.86 6.78-.45-1.81a2 2 0 0 1 1.45-2.43l1.94-.48a2 2 0 0 1 2.43 1.46l.45 1.8",
+  "M6.5 17h2.5l1.2-2 2.3 4.5 1.3-2.5h3.7",
 ];
 
 /**
