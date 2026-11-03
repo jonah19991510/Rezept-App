@@ -1571,6 +1571,28 @@ dann am 1. Dezember neu); Statistik der Vormonate; Dauer frei eingeben (bisher n
   temporäre Vorschauseite (gelöscht) bei 375 px. **Nicht geprüft:** mit Login und echten Daten, Rundenwechsel am
   Monatsanfang (erst am 1.12. live zu sehen).
 
+#### Nachtrag 03.11.2026: private Challenges
+
+**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+
+Wunsch des Nutzers: bei jeder Challenge wählen, ob öffentlich oder privat; private sehen andere nicht, ihre Punkte
+zählen nicht für die Gesamtrangliste.
+
+- **Editor:** Bereich „Sichtbarkeit“ direkt unter Name/Beschreibung: Öffentlich (Standard) | Privat, je mit Erklärung.
+  Machen schon andere mit, bleibt „Privat“ gesperrt (sonst verschwände die Challenge für sie).
+- **Anzeige:** Label „Privat“ (Schloss) auf den Karten und im Kopf der Challenge-Seite, statt Teilnehmerzahl „nur für
+  dich“; Hinweis auf der Seite. „So gibt es Punkte“: private zählen nicht.
+- **Gesamtrangliste** rechnet nur öffentliche Challenges (`getLeaderboard`).
+- **Migration** `…20261103235000_challenge_private` (Spalte `is_public`, Standard öffentlich; Lese-Policies für
+  Challenges, Teilnahmen und Einträge über `private.challenge_visible`; Beitritt nur bei sichtbaren;
+  `challenges_private_guard`; `challenge_workout_days` nur für sichtbare) am 03.11.2026 von Claude eingespielt (mit
+  Freigabe). Per SQL geprüft (zurückgerollt, danach keine Testdaten): Ersteller sieht seine private Challenge; ein
+  anderes Konto sieht weder Challenge noch Teilnahmen, Einträge oder Trainings-Zahlen und kann nicht beitreten
+  (42501); auch der Admin sieht fremde private nicht; öffentlich → privat mit anderen Teilnehmern abgelehnt (42501,
+  mit verständlicher Meldung); privat → öffentlich geht. Security-Advisor ohne neue Hinweise.
+- Geprüft: 551 Tests, Typecheck, Lint, Build grün; Editor-Bereich „Sichtbarkeit“ über eine temporäre Vorschauseite
+  (gelöscht) bei 375 px. **Nicht geprüft:** mit Login und echten Daten.
+
 ### Lexikon (02.11.2026)
 
 **Live** seit 02.11.2026: Push `7d6115d` → Deployment `dpl_3F4Y4jes5F13i6Bxi8vbzTRAfdhP` (`production`, `fra1`,

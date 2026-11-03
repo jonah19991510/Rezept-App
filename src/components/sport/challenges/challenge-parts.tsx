@@ -13,6 +13,7 @@ import {
   Footprints,
   Heart,
   History,
+  Lock,
   Moon,
   ShieldAlert,
   Smartphone,
@@ -112,6 +113,16 @@ const STATUS_TONE: Record<ParticipationStatus, string> = {
 /** Kleines Status-Label der eigenen Teilnahme. */
 export function StatusPill({ status, children }: { status: ParticipationStatus; children: React.ReactNode }) {
   return <span className={cn("inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", STATUS_TONE[status])}>{children}</span>;
+}
+
+/** Label „Privat“ (nur für dich sichtbar). */
+export function PrivateBadge() {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+      <Lock className="size-3" aria-hidden />
+      Privat
+    </span>
+  );
 }
 
 /** Wann die Challenge läuft: „Startet in 3 Tagen“, „Tag 5 von 30“, „Vorbei“, „Start jederzeit“. */

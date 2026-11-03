@@ -45,6 +45,8 @@ export type Challenge = ChallengeRules & {
   createdBy: string | null;
   creatorName: string;
   createdAt: string;
+  /** privat: nur für die Person sichtbar, die sie angelegt hat; zählt nicht für die Gesamtrangliste */
+  isPublic: boolean;
 };
 
 export type Participant = { userId: string; name: string; startDate: string; joinedAt: string };

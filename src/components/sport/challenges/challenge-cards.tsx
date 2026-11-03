@@ -15,7 +15,7 @@ import {
 } from "@/lib/domain/challenges";
 import type { ChallengeListItem } from "@/lib/server/challenges";
 import { cn } from "@/lib/utils";
-import { ChallengeIcon, phaseLabel, ProgressBar, StatusPill } from "./challenge-parts";
+import { ChallengeIcon, phaseLabel, PrivateBadge, ProgressBar, StatusPill } from "./challenge-parts";
 import { DayAction } from "./entry-controls";
 
 const cardClass = "relative rounded-3xl border bg-card p-4 transition-colors hover:border-primary/40 md:p-5";
@@ -135,6 +135,7 @@ function MyChallengeCard({ item, today }: { item: ChallengeListItem; today: stri
           </h3>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             <StatusPill status={p.status}>{statusLabel(p)}</StatusPill>
+            {c.isPublic ? null : <PrivateBadge />}
             {item.roundLabel ? <span>{item.roundLabel}</span> : null}
             {c.metric === "most" ? <span className="tabular-nums">{progressLabel(c, p)}</span> : null}
             {hasStreak(c) && p.streak > 0 ? (
@@ -156,7 +157,7 @@ function MyChallengeCard({ item, today }: { item: ChallengeListItem; today: stri
         <ProgressBar share={progressShare(c, p)} color={c.color} label={`Fortschritt ${c.title}`} />
         <p className="flex justify-between gap-3 text-sm text-muted-foreground tabular-nums">
           <span>{progressLabel(c, p)}</span>
-          <ParticipantCount n={item.participantCount} />
+          {c.isPublic ? <ParticipantCount n={item.participantCount} /> : <span>nur für dich</span>}
         </p>
       </div>
     </li>
@@ -183,7 +184,7 @@ function ChallengeCard({ item, today }: { item: ChallengeListItem; today: string
       {c.description ? <p className="mt-2 line-clamp-2 text-sm">{c.description}</p> : null}
       <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
         <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", phase.kind === "over" ? "bg-muted" : "bg-sport-soft text-sport")}>{phaseLabel(phase)}</span>
-        <ParticipantCount n={item.participantCount} />
+        {c.isPublic ? <ParticipantCount n={item.participantCount} /> : <PrivateBadge />}
         <span className="truncate">{item.isOwn ? "von dir" : `von ${c.creatorName}`}</span>
       </p>
     </li>

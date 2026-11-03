@@ -150,6 +150,7 @@ export type Database = {
           frequency: string
           icon: string
           id: string
+          is_public: boolean
           jokers: number
           late_join_days: number
           metric: string
@@ -177,6 +178,7 @@ export type Database = {
           frequency?: string
           icon: string
           id?: string
+          is_public?: boolean
           jokers?: number
           late_join_days?: number
           metric: string
@@ -204,6 +206,7 @@ export type Database = {
           frequency?: string
           icon?: string
           id?: string
+          is_public?: boolean
           jokers?: number
           late_join_days?: number
           metric?: string

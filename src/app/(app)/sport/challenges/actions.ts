@@ -30,9 +30,10 @@ export async function saveChallengeAction(challengeId: string | null, input: Cha
   if (challengeId && !idSchema.safeParse(challengeId).success) return { ok: false, message: "Ungültige Challenge." };
   const parsed = challengeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, fieldErrors: flattenIssues(parsed.error) };
-  const { title, description, icon, color, join, rules } = parsed.data;
+  const { title, description, icon, color, isPublic, join, rules } = parsed.data;
   const row = {
     title,
+    is_public: isPublic,
     description,
     icon,
     color,
@@ -64,7 +65,8 @@ export async function saveChallengeAction(challengeId: string | null, input: Cha
       return { ok: false, fieldErrors: { startsOn: ["Der Start darf nicht in der Vergangenheit liegen."] } };
     }
     const { data, error } = await supabase.from("challenges").update(row).eq("id", challengeId).select("id");
-    if (error?.code === "42501") return { ok: false, message: "Es machen schon andere mit, die Regeln lassen sich nicht mehr ändern." };
+    // Die Sperren der Datenbank (Regeln, privat werden) melden sich mit verständlichem Text
+    if (error?.code === "42501") return { ok: false, message: error.message || "Es machen schon andere mit, das lässt sich nicht mehr ändern." };
     if (error) return { ok: false, message: "Die Challenge konnte nicht gespeichert werden." };
     if (!data.length) return { ok: false, message: "Du darfst diese Challenge nicht bearbeiten." };
     revalidateChallenges(challengeId);

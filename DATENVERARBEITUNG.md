@@ -66,7 +66,7 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `habit_checks` | an welchem Tag eine Gewohnheit wie oft erledigt wurde | Habit Tracker (02.11.2026) | nur Nutzer selbst |
 | `training_schedule` | Trainings-Wochenplan: Wochentag, Tageszeit, Uhrzeit, Titel, Art, Dauer, Notiz | Habit Tracker (02.11.2026) | nur Nutzer selbst |
 | `lexicon_entries` (Spalte `created_by`, + `lexicon_entry_categories`) | selbst geschriebene Lexikon-Einträge: Begriff, Fakten, Texte, Tabellen, Stichworte, Quelle, öffentlich ja/nein | Lexikon (02.11.2026) | öffentliche Einträge alle Eingeloggten, Entwürfe nur Ersteller und Admins; schreiben vorerst nur Admins; `created_by` wird beim Löschen des Accounts auf leer gesetzt (Einträge bleiben) |
-| `challenges` (Spalte `created_by`) | selbst angelegte Challenges: Name, Beschreibung, Symbol, Farbe, Regeln | Challenges (03.11.2026) | alle Eingeloggten lesen; ändern Ersteller und Admins; `created_by` wird beim Löschen des Accounts auf leer gesetzt (die Challenge bleibt für die anderen) |
+| `challenges` (Spalte `created_by`) | selbst angelegte Challenges: Name, Beschreibung, Symbol, Farbe, Regeln, öffentlich/privat | Challenges (03.11.2026) | öffentliche: alle Eingeloggten lesen, private: nur wer sie angelegt hat; ändern Ersteller und Admins; `created_by` wird beim Löschen des Accounts auf leer gesetzt (die Challenge bleibt für die anderen) |
 | `workout_posts` | geteilte Trainings: eigener Text und Zusammenfassung (Titel, Dauer, Übungen mit bestem Satz, Sätze, Volumen, Strecke, neue Bestwerte), Trainingszeitpunkt | Feed C3 (03.11.2026) | alle Eingeloggten; ändern/löschen selbst (Admins löschen); Training gelöscht = Post weg; Cascade am Profil |
 | `post_kudos` | wer welchen Post angefeuert hat | Feed C3 (03.11.2026) | alle Eingeloggten; nur selbst geben/zurücknehmen; Cascade |
 | `post_comments` | Kommentare unter Posts | Feed C3 (03.11.2026) | alle Eingeloggten; löschen: Schreiber, Post-Autor, Admins; Cascade |
@@ -148,6 +148,9 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **03.11.2026, private Challenges:** Spalte `challenges.is_public`. Private Challenges samt Teilnahme und Einträgen
+  sieht nur, wer sie angelegt hat (RLS), sie zählen nicht für die Gesamtrangliste. Öffentlich → privat nur, solange
+  niemand sonst mitmacht. Bestehende bleiben öffentlich. Keine neuen Dienstleister.
 - **03.11.2026, Trainings teilen (Phase C3):** Neue Tabellen `workout_posts`, `post_kudos` und `post_comments`. Ein
   Training wird nur geteilt, wenn man es selbst ausdrücklich teilt; gespeichert wird dann eine feste Zusammenfassung
   (die Trainings selbst bleiben privat). Alle Eingeloggten sehen Posts, Kudos (mit Anzeigenamen) und Kommentare.

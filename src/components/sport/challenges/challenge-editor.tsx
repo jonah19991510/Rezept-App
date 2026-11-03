@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
-import { CalendarCheck, Check, Dumbbell, Hash, Lock, Medal, Minus, Plus, Repeat, Ruler, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Check, Dumbbell, Globe, Hash, Lock, Medal, Minus, Plus, Repeat, Ruler, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { saveChallengeAction } from "@/app/(app)/sport/challenges/actions";
 import { FormMessage } from "@/components/forms/form-message";
@@ -62,6 +62,7 @@ type Form = {
   backfillDays: number;
   period: ChallengePeriod;
   repeats: boolean;
+  isPublic: boolean;
   join: boolean;
 };
 
@@ -111,6 +112,7 @@ function formFrom(c: Challenge | null, today: string): Form {
       backfillDays: 1,
       period: "days",
       repeats: false,
+      isPublic: true,
       join: true,
     };
   }
@@ -138,6 +140,7 @@ function formFrom(c: Challenge | null, today: string): Form {
     backfillDays: c.backfillDays,
     period: c.period,
     repeats: c.repeats,
+    isPublic: c.isPublic,
     join: false,
   };
 }
@@ -274,6 +277,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
         backfillDays: rules.backfillDays,
         period: rules.period,
         repeats: rules.repeats,
+        isPublic: form.isPublic,
         join: !challenge && form.join,
       });
       if (!result.ok) {
@@ -350,6 +354,40 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
           />
         </div>
       </div>
+
+      <Section title="Sichtbarkeit">
+        <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Sichtbarkeit">
+          {[
+            { value: true, label: "Öffentlich", hint: "Alle sehen sie unter Entdecken und können mitmachen. Punkte zählen für die Gesamtrangliste.", icon: Globe },
+            { value: false, label: "Privat", hint: "Nur du siehst sie. Die Punkte zählen nicht für die Gesamtrangliste.", icon: Lock },
+          ].map((o) => {
+            const on = form.isPublic === o.value;
+            // Machen schon andere mit, kann sie nicht mehr privat werden (sie verschwände für die anderen)
+            const disabled = !o.value && locked && challenge?.isPublic;
+            return (
+              <button
+                key={o.label}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                disabled={Boolean(disabled)}
+                onClick={() => patch({ isPublic: o.value })}
+                className={cn(
+                  "flex items-start gap-3 rounded-2xl border p-3 text-left transition focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50",
+                  on ? "border-primary bg-primary/10" : "bg-card hover:bg-muted",
+                )}
+              >
+                <o.icon className={cn("mt-0.5 size-5 shrink-0", on ? "text-primary" : "text-muted-foreground")} aria-hidden />
+                <span>
+                  <span className="block font-semibold">{o.label}</span>
+                  <span className="block text-sm text-muted-foreground">{o.hint}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {locked && challenge?.isPublic ? <p className="mt-2 px-0.5 text-sm text-muted-foreground">Es machen schon andere mit, deshalb bleibt sie öffentlich.</p> : null}
+      </Section>
 
       <Section title="Symbol und Farbe">
         <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-10 sm:gap-2" role="radiogroup" aria-label="Symbol">

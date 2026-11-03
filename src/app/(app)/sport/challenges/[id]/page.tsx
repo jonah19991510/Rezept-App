@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, History, Repeat, Users } from "lucide-react";
 import { ChallengeBoard, ChallengeStatsCard } from "@/components/sport/challenges/challenge-board";
 import { ChallengeMenu, JoinButton } from "@/components/sport/challenges/challenge-actions";
-import { ChallengeIcon, phaseLabel, RuleCard, StatusPill } from "@/components/sport/challenges/challenge-parts";
+import { ChallengeIcon, phaseLabel, PrivateBadge, RuleCard, StatusPill } from "@/components/sport/challenges/challenge-parts";
 import { MyProgress } from "@/components/sport/challenges/my-progress";
 import { chipClass } from "@/components/recipes/chip-select";
 import { requireUser } from "@/lib/auth";
@@ -73,6 +73,7 @@ export default async function ChallengePage({ params, searchParams }: PageProps<
               <span className="rounded-full bg-sport-soft px-2.5 py-0.5 text-xs font-semibold text-sport">
                 {c.repeats && phase.kind === "running" ? `${roundLabel(c, roundAt(c, phase.round))} · Tag ${phase.day} von ${phase.of}` : phaseLabel(phase)}
               </span>
+              {c.isPublic ? null : <PrivateBadge />}
               {c.repeats ? (
                 <span className="inline-flex items-center gap-1">
                   <Repeat className="size-4" aria-hidden />
@@ -96,6 +97,9 @@ export default async function ChallengePage({ params, searchParams }: PageProps<
           />
         </div>
         {c.description ? <p className="mt-4 whitespace-pre-line">{c.description}</p> : null}
+        {c.isPublic ? null : (
+          <p className="mt-3 text-sm text-muted-foreground">Private Challenge: nur du siehst sie, die Punkte zählen nicht für die Gesamtrangliste.</p>
+        )}
       </div>
 
       {joinable ? <JoinButton challengeId={c.id} title={c.title} startText={startText} /> : null}

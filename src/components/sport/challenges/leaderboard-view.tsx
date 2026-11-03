@@ -130,6 +130,7 @@ export function LeaderboardView({ month, total, monthLabel, meHidden }: { month:
             <span className="font-semibold tabular-nums">+{POINTS.place.join(" / +")}</span> für Platz 1 bis 3 am Ende eines Wettkampfs („Wer schafft mehr?“ mit gemeinsamem Start)
           </li>
           <li className="text-muted-foreground">Bei Gesamtmengen gibt es die Tagespunkte anteilig zum Fortschritt, beim Wettkampf für jeden Tag mit Eintrag.</li>
+          <li className="text-muted-foreground">Private Challenges zählen nicht für die Gesamtrangliste.</li>
         </ul>
       </section>
 

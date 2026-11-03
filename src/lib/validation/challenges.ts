@@ -39,6 +39,8 @@ export const challengeInputSchema = z
     period: z.enum(["days", "month", "year"]),
     /** nach dem Ende neu starten */
     repeats: z.boolean(),
+    /** privat: nur für dich sichtbar, zählt nicht für die Gesamtrangliste */
+    isPublic: z.boolean(),
     /** beim Anlegen: selbst mitmachen */
     join: z.boolean(),
   })
@@ -91,7 +93,7 @@ export const challengeInputSchema = z
       period: v.period,
       repeats: v.repeats,
     };
-    return { title: v.title, description: v.description, icon: v.icon, color: v.color, join: v.join, rules };
+    return { title: v.title, description: v.description, icon: v.icon, color: v.color, isPublic: v.isPublic, join: v.join, rules };
   });
 export type ChallengeInput = z.input<typeof challengeInputSchema>;
 
