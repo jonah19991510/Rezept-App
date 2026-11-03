@@ -3,7 +3,14 @@ import {
   canJoin,
   challengePhase,
   challengeStats,
+  currentRoundFor,
   globalLeaderboard,
+  participationIn,
+  progressInRound,
+  roundAt,
+  roundIndexOn,
+  roundLabel,
+  roundsUntil,
   goalLabel,
   monthRange,
   participantProgress,
@@ -37,6 +44,8 @@ const rules = (patch: Partial<ChallengeRules> = {}): ChallengeRules => ({
   jokers: 0,
   minPeriods: null,
   backfillDays: 1,
+  period: "days",
+  repeats: false,
   ...patch,
 });
 
@@ -256,11 +265,11 @@ describe("Punkte mit Datum und Gesamtrangliste", () => {
     const p = (values: DayValues) => participantProgress(r, START, values, day(9));
     const rows = globalLeaderboard(
       [
-        { userId: "a", name: "Anna", hidden: false, progress: p(checked(0, 1)) },
-        { userId: "a", name: "Anna", hidden: false, progress: p(checked(0)) },
-        { userId: "b", name: "Ben", hidden: false, progress: p(checked(0, 1, 2)) },
-        { userId: "c", name: "Clara", hidden: true, progress: p(checked(0, 1, 2, 3)) },
-        { userId: "me", name: "Ich", hidden: true, progress: p(checked(0)) },
+        { challengeId: "c1", userId: "a", name: "Anna", hidden: false, progress: p(checked(0, 1)) },
+        { challengeId: "c2", userId: "a", name: "Anna", hidden: false, progress: p(checked(0)) },
+        { challengeId: "c1", userId: "b", name: "Ben", hidden: false, progress: p(checked(0, 1, 2)) },
+        { challengeId: "c1", userId: "c", name: "Clara", hidden: true, progress: p(checked(0, 1, 2, 3)) },
+        { challengeId: "c1", userId: "me", name: "Ich", hidden: true, progress: p(checked(0)) },
       ],
       "me",
       null,
@@ -271,7 +280,7 @@ describe("Punkte mit Datum und Gesamtrangliste", () => {
       ["me", 10, 3, 1],
     ]);
     // Nur Punkte vom 3.11. an
-    const later = globalLeaderboard([{ userId: "b", name: "Ben", hidden: false, progress: p(checked(0, 1, 2)) }], "x", { from: day(1), to: day(30) });
+    const later = globalLeaderboard([{ challengeId: "c1", userId: "b", name: "Ben", hidden: false, progress: p(checked(0, 1, 2)) }], "x", { from: day(1), to: day(30) });
     expect(later[0].points).toBe(20);
   });
 });
@@ -317,5 +326,55 @@ describe("Wettkampf „Wer schafft mehr?“", () => {
     const lines = ruleLines(race);
     expect(lines.map((l) => l.key)).toEqual(["goal", "time", "done", "backfill", "points"]);
     expect(lines.find((l) => l.key === "points")?.text).toBe("10 je Tag mit Eintrag, am Ende +50 / +30 / +20 für Platz 1 bis 3.");
+  });
+});
+
+describe("Runden: bis Monats-/Jahresende und Wiederholung", () => {
+  // Start Mi, 18.11.2026
+  const month = rules({ period: "month", startsOn: "2026-11-18", durationDays: 13, repeats: true });
+
+  it("erste Runde bis Monatsende, danach ganze Monate", () => {
+    expect(roundAt(month, 0)).toEqual({ index: 0, from: "2026-11-18", to: "2026-11-30", days: 13 });
+    expect(roundAt(month, 1)).toEqual({ index: 1, from: "2026-12-01", to: "2026-12-31", days: 31 });
+    expect(roundAt(month, 3)).toMatchObject({ from: "2027-02-01", to: "2027-02-28", days: 28 });
+    expect(roundIndexOn(month, "2026-11-30")).toBe(0);
+    expect(roundIndexOn(month, "2027-01-15")).toBe(2);
+    expect(roundsUntil(month, "2027-01-15").map((r) => roundLabel(month, r))).toEqual(["November 2026", "Dezember 2026", "Januar 2027"]);
+    // Ohne Wiederholung bleibt es bei einer Runde
+    expect(roundIndexOn({ ...month, repeats: false }, "2027-01-15")).toBe(0);
+  });
+
+  it("bis Jahresende und Runden aus Tagen", () => {
+    const year = rules({ period: "year", startsOn: "2026-11-18", repeats: true });
+    expect(roundAt(year, 0)).toMatchObject({ from: "2026-11-18", to: "2026-12-31", days: 44 });
+    expect(roundAt(year, 1)).toMatchObject({ from: "2027-01-01", to: "2027-12-31", days: 365 });
+    const days = rules({ durationDays: 10, repeats: true });
+    expect(roundAt(days, 2)).toMatchObject({ from: day(20), to: day(29) });
+    expect(roundIndexOn(days, day(25))).toBe(2);
+    expect(roundLabel(days, roundAt(days, 2))).toBe("Runde 3 (22.11.–1.12.)");
+  });
+
+  it("Phase, Einstieg und Texte", () => {
+    expect(challengePhase(month, "2026-12-05")).toMatchObject({ kind: "running", day: 5, of: 31, round: 1, repeats: true });
+    expect(challengePhase({ ...month, repeats: false }, "2026-12-05")).toEqual({ kind: "over", endedOn: "2026-11-30" });
+    expect(canJoin(month, "2027-05-20")).toBe(true);
+    expect(ruleSummary(month)).toBe("Jeden Tag abhaken · jeden Monat neu");
+    expect(ruleLines(month).find((l) => l.key === "time")?.text).toContain("danach beginnt am 1. jedes Monats eine neue.");
+  });
+
+  it("Teilnahme je Runde: wer später einsteigt, zählt erst ab seiner Runde", () => {
+    const r1 = roundAt(month, 1);
+    expect(participationIn(month, "2026-11-18", r1)?.rules).toMatchObject({ startsOn: "2026-12-01", durationDays: 31, period: "days", repeats: false });
+    expect(participationIn(month, "2027-01-01", r1)).toBeNull();
+    expect(currentRoundFor(month, "2027-01-01", "2026-12-20").index).toBe(2);
+    const people = [
+      { id: "a", start: "2026-11-18" },
+      { id: "b", start: "2026-12-01" },
+    ];
+    const values = new Map([["2026-11-20", 1]]);
+    const nov = progressInRound(month, people, roundAt(month, 0), (p) => (p.id === "a" ? values : new Map()), "2026-12-10");
+    expect(nov.map((x) => x.person.id)).toEqual(["a"]);
+    expect(nov[0].progress).toMatchObject({ from: "2026-11-18", to: "2026-11-30", metDays: 1 });
+    expect(progressInRound(month, people, roundAt(month, 1), () => new Map(), "2026-12-10")).toHaveLength(2);
   });
 });

@@ -1533,6 +1533,42 @@ Platz 1).
 - Geprüft: 547 Tests (4 neue zum Wettkampf), Typecheck, Lint, Build grün; Fortschritt, Rangliste, Regel-Karte und
   Editor über eine temporäre Vorschauseite (gelöscht) bei 375 px. **Nicht geprüft:** mit Login und echten Daten.
 
+#### Nachtrag 03.11.2026: Bis Monats-/Jahresende, Wiederholen, freie Dauer
+
+**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+
+Wünsche des Nutzers: Challenge bis Ende des Monats oder Jahres; nach Ablauf neu starten (z. B. bis Ende November,
+dann am 1. Dezember neu); Statistik der Vormonate; Dauer frei eingeben (bisher nur Auswahl bis 90 Tage).
+
+- **„Wie lange?“** im Editor: Tage | Monatsende | Jahresende. Tage: Chips wie bisher plus Feld zum Eintippen (1–366,
+  bei „pro Woche“ Wochen bis 52). Monats-/Jahresende: Hinweis „Vom … bis … (n Tage)“ ab dem Starttag.
+- **„Danach neu starten“** (Schalter): nach dem Ende beginnt die nächste Runde (Monat: am 1. des nächsten Monats,
+  Jahr: am 1. Januar, Tage: sofort mit gleicher Dauer). **Wer mitmacht, ist automatisch in jeder Runde dabei**
+  (Entscheidung von Claude, beim Test ansprechen). Einsteigen geht jederzeit; nach dem Einstiegsfenster der laufenden
+  Runde zählt man ab der nächsten.
+- **Einschränkungen** (Entscheidung von Claude, per Migration abgesichert): Monat/Jahr und Wiederholen nur mit
+  gemeinsamem Start; „x Tage pro Woche“ und „mindestens X von Y“ nur bei einer festen Anzahl Tage (Monate sind
+  verschieden lang; für Monate gibt es Joker bzw. „Locker“).
+- **Runden** (`domain/challenges.ts`: `roundAt`, `roundIndexOn`, `roundsUntil`, `participationIn`,
+  `progressInRound`, `roundLabel`; 4 neue Tests): jede Runde wird wie eine eigene Challenge gewertet (Fortschritt,
+  Punkte, Platzbonus beim Wettkampf). Die Gesamtrangliste zählt die Punkte aller Runden; „Challenges“ zählt Runden
+  derselben Challenge einmal.
+- **Challenge-Seite:** Runden als Chips („November 2026“, „Dezember 2026 läuft“), `?runde=` zeigt eine frühere Runde
+  mit Rangliste, Statistik und eigenem Ergebnis. Karte **„Frühere Runden“**: je Runde Teilnehmer, wie viele es
+  geschafft haben bzw. Platz 1, das eigene Ergebnis (geschafft/nicht, Tage oder Menge, Punkte bzw. Platz) und
+  „x von y geschafft“ insgesamt. Kopf: „November 2026 · Tag 3 von 30“, „wiederholt sich“. Hinweis, wenn man erst ab
+  der nächsten Runde zählt. Karten in der Liste zeigen den Rundennamen.
+- **Regel-Karte** erklärt Monat/Jahr, Wiederholung und Einstieg in Klartext; Kurzfassung „… · jeden Monat neu“.
+- **Migration** `…20261103230000_challenge_rounds` (Spalten `period_kind`, `repeats`; Regeln; `private.challenge_last_day`;
+  Sperre, Beitritt, Eintragen und `challenge_workout_days` angepasst) am 03.11.2026 von Claude eingespielt (mit
+  Freigabe). Per SQL geprüft (zurückgerollt, danach keine Testdaten, Trigger wieder an): Monats-Wiederholung ab heute,
+  Eintrag ok; „pro Woche“ mit Monat und „ab Beitritt“ mit Wiederholen abgelehnt (23514); Beitritt nach dem
+  Einstiegsfenster startet mit der nächsten Runde (Tage- und Monatsrunden); Eintrag vor dem eigenen Start und nach
+  Monatsende (ohne Wiederholung) abgelehnt (42501); Februar endet am 28. Security-Advisor ohne neue Hinweise.
+- Geprüft: 551 Tests, Typecheck, Lint, Build grün; Editor (Monatsende, Wiederholen, 120 Tage eintippen) über eine
+  temporäre Vorschauseite (gelöscht) bei 375 px. **Nicht geprüft:** mit Login und echten Daten, Rundenwechsel am
+  Monatsanfang (erst am 1.12. live zu sehen).
+
 ### Lexikon (02.11.2026)
 
 **Live** seit 02.11.2026: Push `7d6115d` → Deployment `dpl_3F4Y4jes5F13i6Bxi8vbzTRAfdhP` (`production`, `fra1`,

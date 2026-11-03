@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
-import { CalendarCheck, Check, Dumbbell, Hash, Lock, Medal, Minus, Plus, Ruler, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Check, Dumbbell, Hash, Lock, Medal, Minus, Plus, Repeat, Ruler, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { saveChallengeAction } from "@/app/(app)/sport/challenges/actions";
 import { FormMessage } from "@/components/forms/form-message";
@@ -16,11 +16,14 @@ import {
   CHALLENGE_ICONS,
   CHALLENGE_PRESETS,
   MISSED_RULES,
+  dateLabel,
   periodCount,
+  roundAt,
   ruleLines,
   ruleSummary,
   type Challenge,
   type ChallengeMetric,
+  type ChallengePeriod,
   type ChallengePreset,
   type ChallengeRules,
   type MissedRule,
@@ -57,6 +60,8 @@ type Form = {
   minMode: "all" | "min";
   minPeriods: number;
   backfillDays: number;
+  period: ChallengePeriod;
+  repeats: boolean;
   join: boolean;
 };
 
@@ -104,6 +109,8 @@ function formFrom(c: Challenge | null, today: string): Form {
       minMode: "all",
       minPeriods: 25,
       backfillDays: 1,
+      period: "days",
+      repeats: false,
       join: true,
     };
   }
@@ -129,6 +136,8 @@ function formFrom(c: Challenge | null, today: string): Form {
     minMode: c.minPeriods == null ? "all" : "min",
     minPeriods: c.minPeriods ?? Math.max(1, periods - 5),
     backfillDays: c.backfillDays,
+    period: c.period,
+    repeats: c.repeats,
     join: false,
   };
 }
@@ -140,8 +149,19 @@ function toRules(f: Form): ChallengeRules & { valid: boolean } {
   const total = metric === "total";
   // Gesamtmenge und Wettkampf: ohne Rhythmus, verpasste Tage und „mindestens X von Y“
   const open = total || metric === "most";
-  const weekly = !open && f.frequency === "weekly";
-  const durationDays = weekly ? Math.max(7, Math.round(f.durationDays / 7) * 7) : f.durationDays;
+  const calendar = f.period !== "days";
+  const validStart = /^\d{4}-\d{2}-\d{2}$/.test(f.startsOn);
+  // „x Tage pro Woche“ nur bei einer festen Anzahl Tage
+  const weekly = !open && !calendar && f.frequency === "weekly";
+  const durationDays = calendar
+    ? validStart
+      ? roundAt({ startsOn: f.startsOn, durationDays: 1, period: f.period }, 0).days
+      : 30
+    : weekly
+      ? Math.max(7, Math.round(f.durationDays / 7) * 7)
+      : f.durationDays;
+  // Monat/Jahr und Wiederholen nur mit gemeinsamem Start
+  const startMode = calendar || f.repeats ? "fixed" : f.startMode;
   const periods = weekly ? durationDays / 7 : durationDays;
   const missedRule = open ? "relaxed" : f.missedRule;
   const dailyTarget = metric === "daily" ? parseAmount(f.dailyTarget) : null;
@@ -156,18 +176,20 @@ function toRules(f: Form): ChallengeRules & { valid: boolean } {
     frequency: weekly ? "weekly" : "daily",
     daysPerWeek: weekly ? f.daysPerWeek : null,
     durationDays,
-    startMode: f.startMode,
-    startsOn: f.startMode === "fixed" ? f.startsOn : null,
-    lateJoinDays: f.startMode === "fixed" ? Math.min(f.lateJoinDays, durationDays - 1) : 0,
+    startMode,
+    startsOn: startMode === "fixed" ? f.startsOn : null,
+    lateJoinDays: startMode === "fixed" ? Math.min(f.lateJoinDays, Math.max(0, durationDays - 1)) : 0,
     missedRule,
     jokers: missedRule === "relaxed" ? 0 : Math.min(f.jokers, periods),
-    minPeriods: open || missedRule === "strict" || f.minMode === "all" ? null : Math.min(f.minPeriods, periods),
+    minPeriods: open || calendar || missedRule === "strict" || f.minMode === "all" ? null : Math.min(f.minPeriods, periods),
     backfillDays: f.backfillDays,
+    period: f.period,
+    repeats: f.repeats,
     valid:
       (metric !== "daily" || (dailyTarget != null && dailyTarget > 0)) &&
       (!total || (totalTarget != null && totalTarget > 0)) &&
       (workouts || metric === "check" || unit != null) &&
-      (f.startMode === "join" || /^\d{4}-\d{2}-\d{2}$/.test(f.startsOn)),
+      (startMode === "join" || validStart),
   };
 }
 
@@ -217,6 +239,8 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
       jokers: p.jokers ?? 0,
       minMode: p.minPeriods ? "min" : "all",
       minPeriods: p.minPeriods ?? 25,
+      period: "days",
+      repeats: false,
     });
   }
 
@@ -248,6 +272,8 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
         jokers: rules.jokers,
         minPeriods: rules.minPeriods,
         backfillDays: rules.backfillDays,
+        period: rules.period,
+        repeats: rules.repeats,
         join: !challenge && form.join,
       });
       if (!result.ok) {
@@ -458,7 +484,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
           ) : null}
         </Section>
 
-        {rules.metric === "check" || rules.metric === "daily" ? (
+        {(rules.metric === "check" || rules.metric === "daily") && form.period === "days" ? (
           <Section title="Wie oft?">
             <RadioSegments
               label="Wie oft"
@@ -478,41 +504,83 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
         ) : null}
 
         <Section title="Wie lange?" aside={weeklyUnit ? `${rules.durationDays} Tage` : undefined}>
-          <div className="flex flex-wrap gap-2">
-            {(weeklyUnit ? WEEK_DURATIONS.map((w) => w * 7) : DAY_DURATIONS).map((d) => (
-              <button key={d} type="button" aria-pressed={rules.durationDays === d} onClick={() => patch({ durationDays: d })} className={chipClass(rules.durationDays === d)}>
-                {weeklyUnit ? `${d / 7} Wochen` : `${d} Tage`}
-              </button>
-            ))}
-          </div>
-          <div className="mt-3">
-            {weeklyUnit ? (
-              <Stepper label="Wochen" value={rules.durationDays / 7} min={1} max={52} onChange={(w) => patch({ durationDays: w * 7 })} unit={rules.durationDays === 7 ? "Woche" : "Wochen"} />
-            ) : (
-              <Stepper label="Tage" value={rules.durationDays} min={1} max={366} onChange={(durationDays) => patch({ durationDays })} unit={rules.durationDays === 1 ? "Tag" : "Tage"} />
-            )}
-          </div>
+          <RadioSegments
+            label="Wie lange"
+            value={form.period}
+            onChange={(period) => patch({ period, ...(period !== "days" ? { frequency: "daily" as const, minMode: "all" as const } : {}) })}
+            options={[
+              { value: "days", label: "Tage" },
+              { value: "month", label: "Monatsende" },
+              { value: "year", label: "Jahresende" },
+            ]}
+          />
+          {form.period === "days" ? (
+            <>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(weeklyUnit ? WEEK_DURATIONS.map((w) => w * 7) : DAY_DURATIONS).map((d) => (
+                  <button key={d} type="button" aria-pressed={rules.durationDays === d} onClick={() => patch({ durationDays: d })} className={chipClass(rules.durationDays === d)}>
+                    {weeklyUnit ? `${d / 7} Wochen` : `${d} Tage`}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3">
+                {weeklyUnit ? (
+                  <DurationInput id="challenge-weeks" value={rules.durationDays / 7} max={52} onChange={(w) => patch({ durationDays: w * 7 })} unit={rules.durationDays === 7 ? "Woche" : "Wochen"} />
+                ) : (
+                  <DurationInput id="challenge-days" value={rules.durationDays} max={366} onChange={(durationDays) => patch({ durationDays })} unit={rules.durationDays === 1 ? "Tag" : "Tage"} />
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="mt-3 rounded-2xl bg-muted/60 p-3 text-sm">
+              {/^\d{4}-\d{2}-\d{2}$/.test(form.startsOn)
+                ? `Vom ${dateLabel(form.startsOn)} bis ${dateLabel(roundAt(rules, 0).to)} (${rules.durationDays} ${rules.durationDays === 1 ? "Tag" : "Tage"}).`
+                : "Bitte unten einen Starttag wählen."}
+            </p>
+          )}
           {err("durationDays") ? <p className="mt-2 text-sm text-destructive">{err("durationDays")}</p> : null}
+
+          <label className="mt-3 flex min-h-14 items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-2">
+            <span className="flex items-start gap-3">
+              <Repeat className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden />
+              <span>
+                <span className="block font-medium">Danach neu starten</span>
+                <span className="block text-sm text-muted-foreground">
+                  {form.period === "month"
+                    ? "Am 1. des nächsten Monats beginnt eine neue Runde, und so weiter."
+                    : form.period === "year"
+                      ? "Am 1. Januar beginnt eine neue Runde, und so weiter."
+                      : "Nach dem letzten Tag beginnt sofort die nächste Runde mit gleicher Dauer."}{" "}
+                  Wer mitmacht, ist automatisch wieder dabei; frühere Runden stehen in der Statistik.
+                </span>
+              </span>
+            </span>
+            <Switch checked={form.repeats} onCheckedChange={(repeats) => patch({ repeats })} />
+          </label>
         </Section>
 
         <Section title="Start">
-          <RadioSegments
-            label="Start"
-            value={form.startMode}
-            onChange={(startMode) => patch({ startMode })}
-            options={[
-              { value: "fixed", label: "Gemeinsam" },
-              { value: "join", label: "Ab Beitritt" },
-            ]}
-          />
+          {form.period === "days" && !form.repeats ? (
+            <RadioSegments
+              label="Start"
+              value={form.startMode}
+              onChange={(startMode) => patch({ startMode })}
+              options={[
+                { value: "fixed", label: "Gemeinsam" },
+                { value: "join", label: "Ab Beitritt" },
+              ]}
+            />
+          ) : null}
           <p className="mt-2 px-0.5 text-sm text-muted-foreground">
-            {form.startMode === "fixed"
+            {form.period !== "days" || form.repeats
+              ? "Alle starten gemeinsam (bei Monats-/Jahresende und Wiederholung gibt es nur den gemeinsamen Start)."
+              : rules.startMode === "fixed"
               ? rules.metric === "most"
                 ? "Alle starten am selben Tag und haben dasselbe Ende. Nur so gibt es am Ende Punkte für Platz 1 bis 3."
                 : "Alle starten am selben Tag. Das ist fair für die Rangliste."
               : "Jeder startet, wenn er beitritt, und hat dann seine eigenen Tage. Einsteigen geht jederzeit."}
           </p>
-          {form.startMode === "fixed" ? (
+          {rules.startMode === "fixed" ? (
             <div className="mt-3 space-y-3">
               <div className="flex items-center gap-3">
                 <label htmlFor="challenge-start" className="w-24 shrink-0 text-sm font-medium">
@@ -537,7 +605,17 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
                   min={0}
                   max={Math.max(0, rules.durationDays - 1)}
                   onChange={(lateJoinDays) => patch({ lateJoinDays })}
-                  unit={form.lateJoinDays === 0 ? "nur bis zum Start" : form.lateJoinDays === 1 ? "Tag nach Start" : "Tage nach Start"}
+                  unit={
+                    form.repeats
+                      ? form.lateJoinDays === 0
+                        ? "sonst ab der nächsten Runde"
+                        : `${form.lateJoinDays === 1 ? "Tag" : "Tage"} nach Rundenstart, sonst ab der nächsten`
+                      : form.lateJoinDays === 0
+                        ? "nur bis zum Start"
+                        : form.lateJoinDays === 1
+                          ? "Tag nach Start"
+                          : "Tage nach Start"
+                  }
                 />
               </div>
             </div>
@@ -588,7 +666,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
           </Section>
         ) : null}
 
-        {(rules.metric === "check" || rules.metric === "daily") && form.missedRule !== "strict" ? (
+        {(rules.metric === "check" || rules.metric === "daily") && form.missedRule !== "strict" && form.period === "days" ? (
           <Section title="Geschafft, wenn …">
             <RadioSegments
               label="Geschafft, wenn"
@@ -676,6 +754,48 @@ function AmountField({ id, label, value, onChange, unit, error }: { id: string; 
         {unit ? <span className="shrink-0 text-sm text-muted-foreground">{unit}</span> : null}
       </div>
       {error || invalid ? <p className="text-sm text-destructive">{error ?? "Bitte eine Zahl eingeben."}</p> : null}
+    </div>
+  );
+}
+
+/** Dauer frei eingeben (Tage bzw. Wochen), mit Minus/Plus. Leeres Feld behält den letzten gültigen Wert. */
+function DurationInput({ id, value, max, onChange, unit }: { id: string; value: number; max: number; onChange: (v: number) => void; unit: string }) {
+  const [text, setText] = useState(String(value));
+  const [synced, setSynced] = useState(value);
+  if (value !== synced) {
+    setSynced(value);
+    setText(String(value));
+  }
+  const set = (n: number) => {
+    const next = Math.min(max, Math.max(1, n));
+    setText(String(next));
+    onChange(next);
+  };
+  return (
+    <div className="flex items-center gap-2" role="group" aria-label="Dauer">
+      <Button type="button" variant="outline" size="icon-lg" className="rounded-full" onClick={() => set(value - 1)} disabled={value <= 1} aria-label="Weniger">
+        <Minus aria-hidden />
+      </Button>
+      <Input
+        id={id}
+        inputMode="numeric"
+        value={text}
+        onChange={(e) => {
+          const raw = e.target.value.replace(/\D/g, "").slice(0, 3);
+          setText(raw);
+          const n = Number(raw);
+          if (raw && n >= 1) onChange(Math.min(max, n));
+        }}
+        onBlur={() => setText(String(value))}
+        aria-label={`Dauer in ${unit}`}
+        className="h-12 w-20 text-center text-lg font-semibold tabular-nums"
+      />
+      <Button type="button" variant="outline" size="icon-lg" className="rounded-full" onClick={() => set(value + 1)} disabled={value >= max} aria-label="Mehr">
+        <Plus aria-hidden />
+      </Button>
+      <span className="min-w-0 text-sm text-muted-foreground">
+        {unit} <span className="opacity-70">(höchstens {max})</span>
+      </span>
     </div>
   );
 }

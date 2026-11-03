@@ -155,6 +155,8 @@ export type Database = {
           metric: string
           min_periods: number | null
           missed_rule: string
+          period_kind: string
+          repeats: boolean
           source: string
           start_mode: string
           starts_on: string | null
@@ -180,6 +182,8 @@ export type Database = {
           metric: string
           min_periods?: number | null
           missed_rule?: string
+          period_kind?: string
+          repeats?: boolean
           source?: string
           start_mode: string
           starts_on?: string | null
@@ -205,6 +209,8 @@ export type Database = {
           metric?: string
           min_periods?: number | null
           missed_rule?: string
+          period_kind?: string
+          repeats?: boolean
           source?: string
           start_mode?: string
           starts_on?: string | null

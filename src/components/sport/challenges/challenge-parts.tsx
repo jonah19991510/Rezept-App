@@ -120,7 +120,7 @@ export function phaseLabel(phase: ChallengePhase): string {
     case "upcoming":
       return phase.daysUntil === 1 ? "Startet morgen" : phase.daysUntil === 0 ? "Startet heute" : `Startet am ${dateLabel(phase.startsOn)}`;
     case "running":
-      return `Läuft · Tag ${phase.day} von ${phase.of}`;
+      return `Läuft · Tag ${phase.day} von ${phase.of}${phase.repeats ? " · wiederholt sich" : ""}`;
     case "over":
       return `Vorbei seit ${dateLabel(phase.endedOn)}`;
     default:

@@ -135,6 +135,7 @@ function MyChallengeCard({ item, today }: { item: ChallengeListItem; today: stri
           </h3>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             <StatusPill status={p.status}>{statusLabel(p)}</StatusPill>
+            {item.roundLabel ? <span>{item.roundLabel}</span> : null}
             {c.metric === "most" ? <span className="tabular-nums">{progressLabel(c, p)}</span> : null}
             {hasStreak(c) && p.streak > 0 ? (
               <span className="inline-flex items-center gap-0.5 tabular-nums">

@@ -11,6 +11,8 @@ export type ChallengeSource = "manual" | "workouts";
 export type ChallengeFrequency = "daily" | "weekly";
 export type StartMode = "fixed" | "join";
 export type MissedRule = "strict" | "streak" | "relaxed";
+/** days: feste Anzahl Tage · month: bis Ende des Monats · year: bis Ende des Jahres */
+export type ChallengePeriod = "days" | "month" | "year";
 
 /** Alles, was festlegt, wie eine Challenge gewertet wird (gesperrt, sobald andere mitmachen). */
 export type ChallengeRules = {
@@ -29,6 +31,9 @@ export type ChallengeRules = {
   jokers: number;
   minPeriods: number | null;
   backfillDays: number;
+  period: ChallengePeriod;
+  /** nach dem Ende beginnt am nächsten Tag die nächste Runde (nur mit gemeinsamem Start) */
+  repeats: boolean;
 };
 
 export type Challenge = ChallengeRules & {
@@ -161,22 +166,105 @@ export function isDayOpen(day: string, today: string, backfillDays: number): boo
 /** Status der Challenge selbst (nicht der Teilnahme). */
 export type ChallengePhase =
   | { kind: "upcoming"; startsOn: string; daysUntil: number }
-  | { kind: "running"; day: number; of: number; endsOn: string }
+  | { kind: "running"; day: number; of: number; endsOn: string; round: number; repeats: boolean }
   | { kind: "over"; endedOn: string }
   | { kind: "open" };
 
-export function challengePhase(r: Pick<ChallengeRules, "startMode" | "startsOn" | "durationDays">, today: string): ChallengePhase {
+type RoundRules = Pick<ChallengeRules, "startMode" | "startsOn" | "durationDays" | "period" | "repeats">;
+
+export function challengePhase(r: RoundRules, today: string): ChallengePhase {
   if (r.startMode === "join" || !r.startsOn) return { kind: "open" };
-  const end = addDays(r.startsOn, r.durationDays - 1);
   if (today < r.startsOn) return { kind: "upcoming", startsOn: r.startsOn, daysUntil: daysBetween(today, r.startsOn) };
-  if (today > end) return { kind: "over", endedOn: end };
-  return { kind: "running", day: daysBetween(r.startsOn, today) + 1, of: r.durationDays, endsOn: end };
+  const index = roundIndexOn(r, today);
+  const round = roundAt(r, index);
+  if (today > round.to) return { kind: "over", endedOn: round.to };
+  return { kind: "running", day: daysBetween(round.from, today) + 1, of: round.days, endsOn: round.to, round: index, repeats: r.repeats };
 }
 
-/** Kann man (noch) mitmachen? Fester Start: bis zum Start plus „späterer Einstieg“. */
-export function canJoin(r: Pick<ChallengeRules, "startMode" | "startsOn" | "lateJoinDays">, today: string): boolean {
-  if (r.startMode === "join" || !r.startsOn) return true;
+/** Kann man (noch) mitmachen? Wiederholung: immer. Fester Start: bis zum Start plus „späterer Einstieg“. */
+export function canJoin(r: Pick<ChallengeRules, "startMode" | "startsOn" | "lateJoinDays" | "repeats">, today: string): boolean {
+  if (r.startMode === "join" || !r.startsOn || r.repeats) return true;
   return today <= addDays(r.startsOn, r.lateJoinDays);
+}
+
+// ---------------------------------------------------------------------------
+// Runden (bis Monats-/Jahresende, Wiederholung)
+// ---------------------------------------------------------------------------
+
+export type Round = { index: number; from: string; to: string; days: number };
+
+const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+
+/** Erster Tag des Monats, `months` Monate nach dem von `iso`. */
+function monthStart(iso: string, months = 0): string {
+  const [y, m] = iso.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + months, 1));
+  return d.toISOString().slice(0, 10);
+}
+
+function monthEnd(iso: string): string {
+  return addDays(monthStart(iso, 1), -1);
+}
+
+function yearEnd(iso: string): string {
+  return `${iso.slice(0, 4)}-12-31`;
+}
+
+/** Runde Nummer `index` (0 = erste) einer Challenge mit gemeinsamem Start. Die erste beginnt am Starttag. */
+export function roundAt(r: Pick<ChallengeRules, "startsOn" | "durationDays" | "period">, index: number): Round {
+  const start = r.startsOn ?? "1970-01-01";
+  let from: string;
+  let to: string;
+  if (r.period === "month") {
+    from = index === 0 ? start : monthStart(start, index);
+    to = monthEnd(from);
+  } else if (r.period === "year") {
+    from = index === 0 ? start : `${Number(start.slice(0, 4)) + index}-01-01`;
+    to = yearEnd(from);
+  } else {
+    from = addDays(start, index * r.durationDays);
+    to = addDays(from, r.durationDays - 1);
+  }
+  return { index, from, to, days: daysBetween(from, to) + 1 };
+}
+
+/** Nummer der Runde, die `date` enthält (vor dem Start und ohne Wiederholung: 0). */
+export function roundIndexOn(r: Pick<ChallengeRules, "startsOn" | "durationDays" | "period" | "repeats">, date: string): number {
+  if (!r.repeats || !r.startsOn || date <= r.startsOn) return 0;
+  const start = r.startsOn;
+  if (r.period === "month") return (Number(date.slice(0, 4)) - Number(start.slice(0, 4))) * 12 + Number(date.slice(5, 7)) - Number(start.slice(5, 7));
+  if (r.period === "year") return Number(date.slice(0, 4)) - Number(start.slice(0, 4));
+  return Math.floor(daysBetween(start, date) / r.durationDays);
+}
+
+/** Alle Runden vom Start bis zu der, die `today` enthält (ohne Wiederholung genau eine). */
+export function roundsUntil(r: Pick<ChallengeRules, "startsOn" | "durationDays" | "period" | "repeats">, today: string): Round[] {
+  const last = roundIndexOn(r, today);
+  return Array.from({ length: last + 1 }, (_, i) => roundAt(r, i));
+}
+
+/**
+ * Regeln und Starttag einer Teilnahme in einer Runde. „Ab Beitritt“: eigener Zeitraum (Runde egal). Gemeinsamer
+ * Start: die Runde; null, wenn man erst ab einer späteren Runde dabei ist.
+ */
+export function participationIn<R extends ChallengeRules>(r: R, participantStart: string, round: Round): { rules: R; start: string } | null {
+  if (r.startMode === "join") return { rules: r, start: participantStart };
+  if (participantStart > round.from) return null;
+  // Eine Runde ist für sich ein fester Zeitraum ohne weitere Runden
+  return { rules: { ...r, startsOn: round.from, durationDays: round.days, period: "days", repeats: false }, start: round.from };
+}
+
+/** Runde, die für eine Teilnahme gerade zählt: die laufende, bzw. die erste eigene, wenn man erst später dabei ist. */
+export function currentRoundFor(r: ChallengeRules, participantStart: string, today: string): Round {
+  return roundAt(r, roundIndexOn(r, participantStart > today ? participantStart : today));
+}
+
+/** „November 2026“, „2026“, „Runde 3 (1.12.–30.12.)“ */
+export function roundLabel(r: Pick<ChallengeRules, "period" | "repeats">, round: Round): string {
+  const dm = (iso: string) => `${Number(iso.slice(8))}.${Number(iso.slice(5, 7))}.`;
+  if (r.period === "month") return `${MONTH_NAMES[Number(round.from.slice(5, 7)) - 1]} ${round.from.slice(0, 4)}`;
+  if (r.period === "year") return round.from.slice(0, 4);
+  return r.repeats ? `Runde ${round.index + 1} (${dm(round.from)}–${dm(round.to)})` : `${dm(round.from)}–${dm(round.to)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -557,9 +645,12 @@ export function periodsLabel(n: number, frequency: ChallengeFrequency): string {
   return frequency === "weekly" ? `${n} ${n === 1 ? "Woche" : "Wochen"}` : `${n} ${n === 1 ? "Tag" : "Tage"}`;
 }
 
-/** „30 Tage“ bzw. „4 Wochen“ */
-export function durationLabel(r: Pick<ChallengeRules, "frequency" | "durationDays">): string {
-  return r.frequency === "weekly" ? periodsLabel(Math.floor(r.durationDays / 7), "weekly") : periodsLabel(r.durationDays, "daily");
+/** „30 Tage“, „4 Wochen“, „bis Monatsende“, „jeden Monat“, „30 Tage, wiederholt“ */
+export function durationLabel(r: Pick<ChallengeRules, "frequency" | "durationDays" | "period" | "repeats">): string {
+  if (r.period === "month") return r.repeats ? "jeden Monat neu" : "bis Monatsende";
+  if (r.period === "year") return r.repeats ? "jedes Jahr neu" : "bis Jahresende";
+  const base = r.frequency === "weekly" ? periodsLabel(Math.floor(r.durationDays / 7), "weekly") : periodsLabel(r.durationDays, "daily");
+  return r.repeats ? `${base}, wiederholt` : base;
 }
 
 /** „Mo, 1.12.“ */
@@ -621,11 +712,30 @@ export function ruleLines(r: ChallengeRules): RuleLine[] {
   // Dauer und Start
   let time = durationLabel(r);
   if (r.startMode === "fixed" && r.startsOn) {
-    time += `, Start am ${dateLabel(r.startsOn)} für alle (Ende am ${dateLabel(addDays(r.startsOn, r.durationDays - 1))}).`;
-    time +=
-      r.lateJoinDays > 0
-        ? ` Einstieg bis ${r.lateJoinDays === 1 ? "1 Tag" : `${r.lateJoinDays} Tage`} nach dem Start möglich; Tage davor zählen als nicht erfüllt.`
-        : " Mitmachen nur bis zum Start.";
+    const first = roundAt(r, 0);
+    const late = r.lateJoinDays === 1 ? "1 Tag" : `${r.lateJoinDays} Tage`;
+    if (r.period === "month" || r.period === "year") {
+      const unit = r.period === "month" ? "Monats" : "Jahres";
+      time = r.repeats
+        ? `Jeden ${r.period === "month" ? "Monat" : "Jahr"} neu: Die erste Runde läuft vom ${dateLabel(first.from)} bis ${dateLabel(first.to)}, danach beginnt am 1. jedes ${unit} eine neue.`
+        : `Vom ${dateLabel(first.from)} bis zum Ende des ${unit} (${dateLabel(first.to)}), für alle gleich.`;
+    } else if (r.repeats) {
+      time = `${periodsLabel(r.durationDays, "daily")} je Runde, die erste ab ${dateLabel(first.from)}; danach beginnt sofort die nächste.`;
+    } else {
+      time += `, Start am ${dateLabel(r.startsOn)} für alle (Ende am ${dateLabel(first.to)}).`;
+    }
+    if (r.repeats) {
+      time += " Wer mitmacht, ist in jeder Runde automatisch wieder dabei. Ergebnisse früherer Runden bleiben in der Statistik.";
+      time +=
+        r.lateJoinDays > 0
+          ? ` Einsteigen geht jederzeit; nach den ersten ${late} einer Runde zählt man ab der nächsten.`
+          : " Einsteigen geht jederzeit; läuft eine Runde schon, zählt man ab der nächsten.";
+    } else {
+      time +=
+        r.lateJoinDays > 0
+          ? ` Einstieg bis ${late} nach dem Start möglich; Tage davor zählen als nicht erfüllt.`
+          : " Mitmachen nur bis zum Start.";
+    }
   } else {
     time += ", Start ab deinem Beitritt. Jeder kann jederzeit einsteigen.";
   }
@@ -660,13 +770,15 @@ export function ruleLines(r: ChallengeRules): RuleLine[] {
           ? "Am Ende steht vorn, wer insgesamt am meisten hat. Gleiche Menge = gleicher Platz."
           : "Die Rangliste vergleicht die Menge in den eigenen Tagen; ein gemeinsames Ende gibt es nicht.",
     });
-  } else if (r.metric === "total") done = `Sobald ${amount(r.totalTarget ?? 0)} ${unitOf(r, r.totalTarget ?? 0)} zusammen sind.`;
+  } else if (r.metric === "total") done = `Sobald ${amount(r.totalTarget ?? 0)} ${unitOf(r, r.totalTarget ?? 0)} zusammen sind${r.repeats ? " (je Runde neu)" : ""}.`;
   else {
     const need = requiredPeriods(r);
     done =
-      need >= total
-        ? `Wenn alle ${periodsLabel(total, r.frequency)} erfüllt sind`
-        : `Mit mindestens ${need} von ${total} ${r.frequency === "weekly" ? "Wochen" : "Tagen"}`;
+      r.period !== "days"
+        ? `Wenn alle Tage ${r.repeats ? "der Runde" : r.period === "month" ? "bis Monatsende" : "bis Jahresende"} erfüllt sind`
+        : need >= total
+          ? `Wenn alle ${periodsLabel(total, r.frequency)} erfüllt sind${r.repeats ? " (je Runde)" : ""}`
+          : `Mit mindestens ${need} von ${total} ${r.frequency === "weekly" ? "Wochen" : "Tagen"}${r.repeats ? " je Runde" : ""}`;
     done += jokers ? " (Joker zählen mit)." : ".";
   }
   if (r.metric !== "most") lines.push({ key: "done", title: "Geschafft", text: done });
@@ -683,8 +795,12 @@ export function ruleLines(r: ChallengeRules): RuleLine[] {
   let points: string;
   if (r.metric === "most") {
     points = `${POINTS.day} je Tag mit Eintrag`;
-    points += hasPlaceBonus(r) ? `, am Ende +${POINTS.place.join(" / +")} für Platz 1 bis 3.` : ".";
-  } else if (r.metric === "total") points = `Bis zu ${formatNumber(POINTS.day * r.durationDays)} Punkte je nach Fortschritt, +${POINTS.completion} fürs Schaffen.`;
+    points += hasPlaceBonus(r) ? `, am Ende ${r.repeats ? "jeder Runde " : ""}+${POINTS.place.join(" / +")} für Platz 1 bis 3.` : ".";
+  } else if (r.metric === "total")
+    points =
+      r.period === "days"
+        ? `Bis zu ${formatNumber(POINTS.day * r.durationDays)} Punkte je nach Fortschritt, +${POINTS.completion} fürs Schaffen.`
+        : `Bis zu ${POINTS.day} je Tag der Runde, je nach Fortschritt; +${POINTS.completion} fürs Schaffen.`;
   else {
     points = `${POINTS.day} je erfülltem Tag`;
     if (r.frequency === "weekly") points += ` (höchstens ${r.daysPerWeek} je Woche)`;
@@ -736,7 +852,8 @@ export function progressShare(r: ChallengeRules, p: Progress): number {
 // Gesamtrangliste (alle Challenges)
 // ---------------------------------------------------------------------------
 
-export type Participation = { userId: string; name: string; hidden: boolean; progress: Progress };
+/** Eine Teilnahme an einer Challenge (bei Wiederholung je Runde eine). */
+export type Participation = { challengeId: string; userId: string; name: string; hidden: boolean; progress: Progress };
 
 export type LeaderRow = {
   userId: string;
@@ -767,12 +884,15 @@ export function monthRange(today: string): { from: string; to: string } {
  */
 export function globalLeaderboard(participations: Participation[], meId: string, range: { from: string; to: string } | null): LeaderRow[] {
   const byUser = new Map<string, Omit<LeaderRow, "rank">>();
+  const seen = new Set<string>();
   for (const p of participations) {
     if (p.hidden && p.userId !== meId) continue;
     if (range && (p.progress.to < range.from || p.progress.from > range.to)) continue;
     const row = byUser.get(p.userId) ?? { userId: p.userId, name: p.name, isMe: p.userId === meId, hidden: p.hidden, points: 0, challenges: 0, completed: 0, bestStreak: 0 };
     row.points += range ? pointsBetween(p.progress, range.from, range.to) : p.progress.points.total;
-    row.challenges++;
+    // Runden derselben Challenge zählen als eine
+    if (!seen.has(`${p.userId}|${p.challengeId}`)) row.challenges++;
+    seen.add(`${p.userId}|${p.challengeId}`);
     const done = p.progress.completedOn;
     if (done && (!range || (done >= range.from && done <= range.to))) row.completed++;
     row.bestStreak = Math.max(row.bestStreak, p.progress.bestStreak);
@@ -784,4 +904,27 @@ export function globalLeaderboard(participations: Participation[], meId: string,
     if (i === 0 || row.points !== sorted[i - 1].points) rank = i + 1;
     return { ...row, rank };
   });
+}
+
+/**
+ * Fortschritt aller Teilnehmer in einer Runde (Platzbonus eingerechnet). Wer erst ab einer späteren Runde dabei ist,
+ * fehlt. „Ab Beitritt“: jeder in seinem eigenen Zeitraum.
+ */
+export function progressInRound<P extends { start: string }>(
+  r: ChallengeRules,
+  people: P[],
+  round: Round,
+  valuesOf: (person: P) => DayValues,
+  today: string,
+): { person: P; rules: ChallengeRules; progress: Progress }[] {
+  const inRound = people.flatMap((person) => {
+    const p = participationIn(r, person.start, round);
+    return p ? [{ person, rules: p.rules, start: p.start }] : [];
+  });
+  const progresses = withPlaceBonus(
+    inRound[0]?.rules ?? r,
+    inRound.map((x) => participantProgress(x.rules, x.start, valuesOf(x.person), today)),
+    today,
+  );
+  return inRound.map((x, i) => ({ person: x.person, rules: x.rules, progress: progresses[i] }));
 }

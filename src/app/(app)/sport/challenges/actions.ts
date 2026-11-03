@@ -51,6 +51,8 @@ export async function saveChallengeAction(challengeId: string | null, input: Cha
     jokers: rules.jokers,
     min_periods: rules.minPeriods,
     backfill_days: rules.backfillDays,
+    period_kind: rules.period,
+    repeats: rules.repeats,
   };
 
   const supabase = await createClient();

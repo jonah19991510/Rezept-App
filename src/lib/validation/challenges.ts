@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CHALLENGE_ICONS, type ChallengeIcon, type ChallengeRules } from "@/lib/domain/challenges";
+import { CHALLENGE_ICONS, roundAt, type ChallengeIcon, type ChallengeRules } from "@/lib/domain/challenges";
 import { DRINK_COLOR_KEYS, type DrinkColor } from "@/lib/domain/drinks";
 
 // Challenges: Eingaben beim Anlegen/Bearbeiten und beim Eintragen.
@@ -35,6 +35,10 @@ export const challengeInputSchema = z
     jokers: z.number().int().min(0).max(30, "Höchstens 30 Joker."),
     minPeriods: z.number().int().min(1).nullable(),
     backfillDays: z.number().int().min(0).max(7),
+    /** days: feste Anzahl Tage · month/year: bis Monats-/Jahresende */
+    period: z.enum(["days", "month", "year"]),
+    /** nach dem Ende neu starten */
+    repeats: z.boolean(),
     /** beim Anlegen: selbst mitmachen */
     join: z.boolean(),
   })
@@ -49,6 +53,7 @@ export const challengeInputSchema = z
       if (v.durationDays % 7 !== 0) issue("durationDays", "Bei „pro Woche“ in ganzen Wochen.");
     }
     if (v.startMode === "fixed" && !v.startsOn) issue("startsOn", "Bitte einen Starttermin wählen.");
+    if ((v.period !== "days" || v.repeats) && v.startMode !== "fixed") issue("startMode", "Bis Monats-/Jahresende und Wiederholen gehen nur mit gemeinsamem Start.");
     if (v.minPeriods != null && (v.metric === "check" || v.metric === "daily") && v.missedRule !== "strict") {
       const periods = v.frequency === "weekly" ? Math.floor(v.durationDays / 7) : v.durationDays;
       if (v.minPeriods > periods) issue("minPeriods", `Höchstens ${periods}.`);
@@ -59,9 +64,13 @@ export const challengeInputSchema = z
     const total = v.metric === "total";
     // Gesamtmenge und Wettkampf: ohne Rhythmus, verpasste Tage und „mindestens X von Y“
     const open = total || v.metric === "most";
-    const weekly = !open && v.frequency === "weekly";
+    const calendar = v.period !== "days";
+    // „x Tage pro Woche“ nur bei einer festen Anzahl Tage
+    const weekly = !open && !calendar && v.frequency === "weekly";
+    // Monat/Jahr: Länge der ersten Runde (nur zur Anzeige)
+    const durationDays = calendar && v.startsOn ? roundAt({ startsOn: v.startsOn, durationDays: 1, period: v.period }, 0).days : v.durationDays;
     const missedRule = open ? "relaxed" : v.missedRule;
-    const periods = weekly ? Math.floor(v.durationDays / 7) : v.durationDays;
+    const periods = weekly ? Math.floor(durationDays / 7) : durationDays;
     const rules: ChallengeRules = {
       metric: v.metric,
       source: v.source,
@@ -70,15 +79,17 @@ export const challengeInputSchema = z
       totalTarget: total ? v.totalTarget : null,
       frequency: weekly ? "weekly" : "daily",
       daysPerWeek: weekly ? v.daysPerWeek : null,
-      durationDays: v.durationDays,
+      durationDays,
       startMode: v.startMode,
       startsOn: v.startMode === "fixed" ? v.startsOn : null,
-      lateJoinDays: v.startMode === "fixed" ? Math.min(v.lateJoinDays, v.durationDays - 1) : 0,
+      lateJoinDays: v.startMode === "fixed" ? Math.min(v.lateJoinDays, Math.max(0, durationDays - 1)) : 0,
       missedRule,
       jokers: missedRule === "relaxed" ? 0 : Math.min(v.jokers, periods),
       // „Mindestens alle“ ist dasselbe wie „alle“
-      minPeriods: open || missedRule === "strict" || v.minPeriods == null || v.minPeriods >= periods ? null : v.minPeriods,
+      minPeriods: open || calendar || missedRule === "strict" || v.minPeriods == null || v.minPeriods >= periods ? null : v.minPeriods,
       backfillDays: v.backfillDays,
+      period: v.period,
+      repeats: v.repeats,
     };
     return { title: v.title, description: v.description, icon: v.icon, color: v.color, join: v.join, rules };
   });
