@@ -140,7 +140,7 @@ function AmountSheet({
   const [input, setInput] = useState(value > 0 ? amount(value) : "");
   const unit = unitOf(challenge);
   const daily = challenge.metric === "daily";
-  const target = daily ? (challenge.dailyTarget ?? 0) : (challenge.totalTarget ?? 0) / Math.max(1, challenge.durationDays);
+  const target = daily ? (challenge.dailyTarget ?? 0) : challenge.metric === "most" ? Math.max(value, 10) : (challenge.totalTarget ?? 0) / Math.max(1, challenge.durationDays);
   const parsed = parseAmount(input);
   const current = parsed ?? 0;
 
@@ -159,7 +159,13 @@ function AmountSheet({
       open={open}
       onOpenChange={(o) => (o ? setOpen(true) : close())}
       title={`${unit} am ${dateLabel(date)}`}
-      description={daily ? `Tagesziel: ${amount(challenge.dailyTarget ?? 0)} ${unit}` : `Ziel insgesamt: ${amount(challenge.totalTarget ?? 0)} ${unit}`}
+      description={
+        daily
+          ? `Tagesziel: ${amount(challenge.dailyTarget ?? 0)} ${unit}`
+          : challenge.metric === "most"
+            ? "Zählt zu deiner Gesamtmenge im Wettkampf."
+            : `Ziel insgesamt: ${amount(challenge.totalTarget ?? 0)} ${unit}`
+      }
       footer={
         <>
           {value > 0 ? (

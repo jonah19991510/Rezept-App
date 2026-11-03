@@ -1509,6 +1509,29 @@ Foto zum Post (bewusst weggelassen).
 Feed zeigt den Post; mit dem zweiten Konto Kudos geben, kommentieren, „Nachmachen“ (öffnet den neuen Plan); beim ersten
 Konto Kommentar löschen, Text ändern, „Nicht mehr teilen“.
 
+#### Nachtrag 03.11.2026: Challenge-Art „Wer schafft mehr?“ (Wettkampf)
+
+**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+
+Wunsch des Nutzers: eine Challenge, bei der gewinnt, wer mehr schafft (z. B. 10 gegen 20 Liegestütze → die 20 sind
+Platz 1).
+
+- **Regeln** (`metric = 'most'`): jeder trägt seine Menge je Tag ein (Einheit frei, z. B. Liegestütze) bzw. Trainings
+  zählen automatisch („Wer trainiert am häufigsten?“). Kein Ziel, kein Rhythmus, keine Joker, kein „geschafft“.
+  **Rangliste nach der Gesamtmenge** im Zeitraum (gleiche Menge = gleicher Platz), Zeile zeigt „heute X“.
+- **Punkte:** 10 je Tag mit Eintrag; bei gemeinsamem Start nach dem Ende **+50 / +30 / +20 für Platz 1–3**
+  (`withPlaceBonus`, am letzten Tag gebucht, zählt in Gesamt- und Monatsrangliste). Bei „ab Beitritt“ gibt es kein
+  gemeinsames Ende und keinen Platzbonus (steht so in der Regel-Karte).
+- **Editor:** fünfte Art „Wer schafft mehr?“ (über die ganze Breite), Feld „Was wird gezählt?“; bei Trainings dritte
+  Option „Wer am meisten?“. Vorlagen „Wer schafft die meisten Liegestütze?“ (7 Tage) und „Schritte-Wettkampf“.
+- **Anzeige:** Dein Fortschritt mit Gesamt, Platz, bester Tag, Tage mit Eintrag, Punkte; Statistik mit Ø pro Person
+  und bestem Tag (wer, wann); Status nach dem Ende „Beendet“; „So gibt es Punkte“ um den Platzbonus ergänzt.
+- **Migration** `…20261103210000_challenge_most` (nur Regeln erweitert) am 03.11.2026 von Claude eingespielt (mit
+  Freigabe). Per SQL geprüft (zurückgerollt): Wettkampf mit Eintrag 20 und Trainings-Wettkampf anlegbar; ohne Einheit,
+  mit Ziel oder mit Jokern abgelehnt (23514).
+- Geprüft: 547 Tests (4 neue zum Wettkampf), Typecheck, Lint, Build grün; Fortschritt, Rangliste, Regel-Karte und
+  Editor über eine temporäre Vorschauseite (gelöscht) bei 375 px. **Nicht geprüft:** mit Login und echten Daten.
+
 ### Lexikon (02.11.2026)
 
 **Live** seit 02.11.2026: Push `7d6115d` → Deployment `dpl_3F4Y4jes5F13i6Bxi8vbzTRAfdhP` (`production`, `fra1`,

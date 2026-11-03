@@ -12,9 +12,10 @@ import {
   type Participation,
   type Progress,
   type StartMode,
+  withPlaceBonus,
 } from "@/lib/domain/challenges";
 import { authorName } from "@/lib/domain/community";
-import { todayInBerlin } from "@/lib/domain/week";
+import { addDays, todayInBerlin } from "@/lib/domain/week";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -100,9 +101,11 @@ export async function getChallenges(userId: string): Promise<ChallengeListItem[]
 
   const counts = new Map<string, number>();
   const myStart = new Map<string, string>();
+  const starts = new Map<string, { userId: string; start: string }[]>();
   for (const p of participants.data) {
     counts.set(p.challenge_id, (counts.get(p.challenge_id) ?? 0) + 1);
     if (p.user_id === userId) myStart.set(p.challenge_id, p.start_date);
+    starts.set(p.challenge_id, [...(starts.get(p.challenge_id) ?? []), { userId: p.user_id, start: p.start_date }]);
   }
   const today = todayInBerlin();
   const list = (challenges.data as ChallengeRow[]).map(toChallenge);
@@ -110,6 +113,13 @@ export async function getChallenges(userId: string): Promise<ChallengeListItem[]
     list.map(async (c) => {
       const start = myStart.get(c.id);
       if (!start) return null;
+      // Beendeter Wettkampf: Platzbonus braucht alle Teilnehmer
+      if (c.metric === "most" && c.startMode === "fixed" && c.startsOn && today > addDays(c.startsOn, c.durationDays - 1)) {
+        const all = await dayValues(c);
+        const people = starts.get(c.id) ?? [];
+        const progresses = withPlaceBonus(c, people.map((p) => participantProgress(c, p.start, all.get(p.userId) ?? new Map(), today)), today);
+        return progresses[people.findIndex((p) => p.userId === userId)];
+      }
       const values = (await dayValues(c, userId)).get(userId) ?? new Map();
       return participantProgress(c, start, values, today);
     }),
@@ -150,14 +160,19 @@ export async function getChallengeDetail(id: string, userId: string): Promise<Ch
   const c = toChallenge(challenge.data as ChallengeRow);
   const values = await dayValues(c);
   const today = todayInBerlin();
+  const progresses = withPlaceBonus(
+    c,
+    participants.data.map((p) => participantProgress(c, p.start_date, values.get(p.user_id) ?? new Map(), today)),
+    today,
+  );
   const board = rankBoard(
     c,
-    participants.data.map((p) => ({
+    participants.data.map((p, i) => ({
       userId: p.user_id,
       name: authorName(p.profiles?.display_name),
       isMe: p.user_id === userId,
       joinedAt: p.joined_at,
-      progress: participantProgress(c, p.start_date, values.get(p.user_id) ?? new Map(), today),
+      progress: progresses[i],
     })),
   );
   return {
@@ -208,7 +223,6 @@ export async function getLeaderboard(userId: string): Promise<Leaderboard> {
   if (participants.error) throw new Error(`Teilnehmer konnten nicht geladen werden (${participants.error.code})`);
 
   const list = (challenges.data as ChallengeRow[]).map(toChallenge);
-  const byId = new Map(list.map((c) => [c.id, c]));
   // Einträge aller selbst eingetragenen Challenges auf einmal, Trainings je Challenge
   const values = new Map<string, Map<string, DayValues>>();
   for (let page = 0; ; page++) {
@@ -233,15 +247,22 @@ export async function getLeaderboard(userId: string): Promise<Leaderboard> {
 
   const today = todayInBerlin();
   const participations: Participation[] = [];
-  for (const p of participants.data) {
-    const c = byId.get(p.challenge_id);
-    if (!c) continue;
-    participations.push({
-      userId: p.user_id,
-      name: authorName(p.profiles?.display_name),
-      hidden: p.profiles?.hide_from_leaderboard ?? false,
-      progress: participantProgress(c, p.start_date, values.get(c.id)?.get(p.user_id) ?? new Map(), today),
-    });
+  // Je Challenge rechnen, damit der Platzbonus (Wettkampf) alle Teilnehmer kennt
+  for (const c of list) {
+    const people = participants.data.filter((p) => p.challenge_id === c.id);
+    const progresses = withPlaceBonus(
+      c,
+      people.map((p) => participantProgress(c, p.start_date, values.get(c.id)?.get(p.user_id) ?? new Map(), today)),
+      today,
+    );
+    people.forEach((p, i) =>
+      participations.push({
+        userId: p.user_id,
+        name: authorName(p.profiles?.display_name),
+        hidden: p.profiles?.hide_from_leaderboard ?? false,
+        progress: progresses[i],
+      }),
+    );
   }
   return { participations, meHidden: me.data?.hide_from_leaderboard ?? false };
 }

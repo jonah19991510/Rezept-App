@@ -86,10 +86,10 @@ export default async function ChallengePage({ params }: PageProps<"/sport/challe
         </p>
       ) : null}
 
-      {me ? <MyProgress challenge={c} progress={me.progress} values={myValues} today={today} /> : null}
+      {me ? <MyProgress challenge={c} progress={me.progress} values={myValues} today={today} rank={me.rank} /> : null}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
-        <ChallengeBoard rules={c} board={board} />
+        <ChallengeBoard rules={c} board={board} today={today} />
         <div className="space-y-6">
           <RuleCard lines={ruleLines(c)} />
           {board.length ? <ChallengeStatsCard rules={c} stats={stats} color={c.color} today={today} /> : null}

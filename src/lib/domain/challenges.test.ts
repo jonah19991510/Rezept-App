@@ -13,6 +13,7 @@ import {
   ruleLines,
   ruleSummary,
   type ChallengeRules,
+  withPlaceBonus,
   type DayValues,
 } from "./challenges";
 import { addDays } from "./week";
@@ -86,7 +87,7 @@ describe("participantProgress: täglich abhaken", () => {
     const p = participantProgress(r, START, all, day(13));
     expect(p.jokersUsed).toBe(1);
     expect(p.streak).toBe(14);
-    expect(p.points).toEqual({ days: 130, streak: 40, completion: 50, total: 220 });
+    expect(p.points).toEqual({ days: 130, streak: 40, completion: 50, place: 0, total: 220 });
     expect(p.status).toBe("completed");
     expect(p.completedOn).toBe(day(13));
   });
@@ -137,7 +138,7 @@ describe("participantProgress: Mengen", () => {
     expect(half.status).toBe("active");
     const done = participantProgress(r, START, new Map([[day(0), 60], [day(2), 45]]), day(3));
     expect(done.completedOn).toBe(day(2));
-    expect(done.points).toEqual({ days: 100, streak: 0, completion: 50, total: 150 });
+    expect(done.points).toEqual({ days: 100, streak: 0, completion: 50, place: 0, total: 150 });
     expect(progressLabel(r, done)).toBe("105 von 100 km");
   });
 });
@@ -272,5 +273,49 @@ describe("Punkte mit Datum und Gesamtrangliste", () => {
     // Nur Punkte vom 3.11. an
     const later = globalLeaderboard([{ userId: "b", name: "Ben", hidden: false, progress: p(checked(0, 1, 2)) }], "x", { from: day(1), to: day(30) });
     expect(later[0].points).toBe(20);
+  });
+});
+
+describe("Wettkampf „Wer schafft mehr?“", () => {
+  const race = rules({ metric: "most", unit: "Liegestütze", durationDays: 3, missedRule: "relaxed" });
+  const v = (...a: number[]) => new Map(a.map((n, i) => [day(i), n] as [string, number]).filter(([, n]) => n > 0));
+
+  it("zählt Menge, Tage mit Eintrag und Punkte je Tag, ohne „geschafft“", () => {
+    const p = participantProgress(race, START, v(10, 0, 25), day(2));
+    expect(p.sum).toBe(35);
+    expect(p.bestDay).toBe(25);
+    expect(p.metDays).toBe(2);
+    expect(p.points.total).toBe(20);
+    expect(p.status).toBe("active");
+    expect(p.completedOn).toBeNull();
+    expect(participantProgress(race, START, v(10), day(5)).status).toBe("finished");
+  });
+
+  it("Rangliste nach Menge: 20 vor 10", () => {
+    const row = (userId: string, values: DayValues) => ({ userId, name: userId, isMe: false, joinedAt: userId, progress: participantProgress(race, START, values, day(0)) });
+    const board = rankBoard(race, [row("a", v(10)), row("b", v(20))]);
+    expect(board.map((r) => [r.userId, r.rank])).toEqual([
+      ["b", 1],
+      ["a", 2],
+    ]);
+  });
+
+  it("Platzbonus nach dem Ende, gleiche Menge = gleicher Platz, ohne Eintrag nichts", () => {
+    const after = day(5);
+    const ps = [v(30), v(20), v(20), v(5), v()].map((x) => participantProgress(race, START, x, after));
+    const withBonus = withPlaceBonus(race, ps, after);
+    expect(withBonus.map((p) => p.points.place)).toEqual([50, 30, 30, 0, 0]);
+    expect(withBonus[0].pointLog.at(-1)).toEqual([day(2), 50]);
+    // Läuft noch oder „ab Beitritt“: kein Bonus
+    expect(withPlaceBonus(race, ps, day(2))[0].points.place).toBe(0);
+    expect(withPlaceBonus({ ...race, startMode: "join" }, ps, after)[0].points.place).toBe(0);
+  });
+
+  it("Texte", () => {
+    expect(goalLabel(race)).toBe("Wer schafft die meisten Liegestütze?");
+    expect(goalLabel({ ...race, source: "workouts", unit: null })).toBe("Wer trainiert am häufigsten?");
+    const lines = ruleLines(race);
+    expect(lines.map((l) => l.key)).toEqual(["goal", "time", "done", "backfill", "points"]);
+    expect(lines.find((l) => l.key === "points")?.text).toBe("10 je Tag mit Eintrag, am Ende +50 / +30 / +20 für Platz 1 bis 3.");
   });
 });

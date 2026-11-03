@@ -106,6 +106,7 @@ const STATUS_TONE: Record<ParticipationStatus, string> = {
   completed: "bg-sage/15 text-sage",
   failed: "bg-destructive/10 text-destructive",
   ended: "bg-muted text-muted-foreground",
+  finished: "bg-muted text-muted-foreground",
 };
 
 /** Kleines Status-Label der eigenen Teilnahme. */

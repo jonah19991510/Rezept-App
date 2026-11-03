@@ -21,7 +21,7 @@ import { DayAction } from "./entry-controls";
 const cardClass = "relative rounded-3xl border bg-card p-4 transition-colors hover:border-primary/40 md:p-5";
 const linkClass = "after:absolute after:inset-0 after:rounded-3xl focus-visible:outline-none";
 
-const STATUS_ORDER: Record<ParticipationStatus, number> = { active: 0, upcoming: 1, completed: 2, ended: 3, failed: 4 };
+const STATUS_ORDER: Record<ParticipationStatus, number> = { active: 0, upcoming: 1, completed: 2, finished: 3, ended: 3, failed: 4 };
 
 /**
  * Tab „Challenges“: oben die eigenen (mit heutigem Abhaken bzw. Eintragen), darunter alle, bei denen man noch
@@ -135,6 +135,7 @@ function MyChallengeCard({ item, today }: { item: ChallengeListItem; today: stri
           </h3>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             <StatusPill status={p.status}>{statusLabel(p)}</StatusPill>
+            {c.metric === "most" ? <span className="tabular-nums">{progressLabel(c, p)}</span> : null}
             {hasStreak(c) && p.streak > 0 ? (
               <span className="inline-flex items-center gap-0.5 tabular-nums">
                 <Flame className="size-3.5 text-orange-500" aria-hidden />

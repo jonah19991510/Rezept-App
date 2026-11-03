@@ -20,7 +20,7 @@ export const challengeInputSchema = z
     description: optionalText(2000),
     icon: z.enum(CHALLENGE_ICONS as unknown as [ChallengeIcon, ...ChallengeIcon[]]),
     color: z.enum(DRINK_COLOR_KEYS as [DrinkColor, ...DrinkColor[]]),
-    metric: z.enum(["check", "daily", "total"]),
+    metric: z.enum(["check", "daily", "total", "most"]),
     source: z.enum(["manual", "workouts"]),
     unit: optionalText(24),
     dailyTarget: amount(100000),
@@ -44,12 +44,12 @@ export const challengeInputSchema = z
     if (v.metric === "daily" && v.dailyTarget == null) issue("dailyTarget", "Bitte ein Tagesziel eingeben.");
     if (v.metric === "total" && v.totalTarget == null) issue("totalTarget", "Bitte ein Gesamtziel eingeben.");
     if (v.metric !== "check" && v.source === "manual" && !v.unit) issue("unit", "Bitte eine Einheit eingeben, z. B. Liegestütze.");
-    if (v.frequency === "weekly" && v.metric !== "total") {
+    if (v.frequency === "weekly" && (v.metric === "check" || v.metric === "daily")) {
       if (v.daysPerWeek == null) issue("daysPerWeek", "Wie viele Tage pro Woche?");
       if (v.durationDays % 7 !== 0) issue("durationDays", "Bei „pro Woche“ in ganzen Wochen.");
     }
     if (v.startMode === "fixed" && !v.startsOn) issue("startsOn", "Bitte einen Starttermin wählen.");
-    if (v.minPeriods != null && v.metric !== "total" && v.missedRule !== "strict") {
+    if (v.minPeriods != null && (v.metric === "check" || v.metric === "daily") && v.missedRule !== "strict") {
       const periods = v.frequency === "weekly" ? Math.floor(v.durationDays / 7) : v.durationDays;
       if (v.minPeriods > periods) issue("minPeriods", `Höchstens ${periods}.`);
     }
@@ -57,8 +57,10 @@ export const challengeInputSchema = z
   .transform((v) => {
     // Nur die Felder behalten, die zur gewählten Art passen (wie es die Datenbank verlangt)
     const total = v.metric === "total";
-    const weekly = !total && v.frequency === "weekly";
-    const missedRule = total ? "relaxed" : v.missedRule;
+    // Gesamtmenge und Wettkampf: ohne Rhythmus, verpasste Tage und „mindestens X von Y“
+    const open = total || v.metric === "most";
+    const weekly = !open && v.frequency === "weekly";
+    const missedRule = open ? "relaxed" : v.missedRule;
     const periods = weekly ? Math.floor(v.durationDays / 7) : v.durationDays;
     const rules: ChallengeRules = {
       metric: v.metric,
@@ -75,7 +77,7 @@ export const challengeInputSchema = z
       missedRule,
       jokers: missedRule === "relaxed" ? 0 : Math.min(v.jokers, periods),
       // „Mindestens alle“ ist dasselbe wie „alle“
-      minPeriods: total || missedRule === "strict" || v.minPeriods == null || v.minPeriods >= periods ? null : v.minPeriods,
+      minPeriods: open || missedRule === "strict" || v.minPeriods == null || v.minPeriods >= periods ? null : v.minPeriods,
       backfillDays: v.backfillDays,
     };
     return { title: v.title, description: v.description, icon: v.icon, color: v.color, join: v.join, rules };

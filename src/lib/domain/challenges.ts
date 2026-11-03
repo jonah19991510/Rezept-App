@@ -5,7 +5,8 @@
 import { formatNumber } from "@/lib/format";
 import { addDays, daysBetween, weekdayShort } from "./week";
 
-export type ChallengeMetric = "check" | "daily" | "total";
+/** check: abhaken · daily: Tagesziel · total: Gesamtziel · most: Wettkampf, wer am meisten schafft */
+export type ChallengeMetric = "check" | "daily" | "total" | "most";
 export type ChallengeSource = "manual" | "workouts";
 export type ChallengeFrequency = "daily" | "weekly";
 export type StartMode = "fixed" | "join";
@@ -57,6 +58,8 @@ export const POINTS = {
   streakWeek: 20,
   /** fürs Schaffen */
   completion: 50,
+  /** „Wer schafft mehr?“ mit gemeinsamem Start: Platz 1, 2, 3 am Ende */
+  place: [50, 30, 20],
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -99,6 +102,8 @@ export const CHALLENGE_PRESETS: ChallengePreset[] = [
   { name: "Wasser", title: "Jeden Tag 2 Liter Wasser", icon: "droplet", color: "hellblau", metric: "daily", dailyTarget: 2, unit: "Liter", durationDays: 30, missedRule: "relaxed" },
   { name: "Laufen", title: "100 km laufen", icon: "footprints", color: "blau", metric: "total", totalTarget: 100, unit: "km", durationDays: 30 },
   { name: "Ohne Süßes", title: "21 Tage ohne Süßes", icon: "candy-off", color: "pink", metric: "check", durationDays: 21, missedRule: "strict", jokers: 1 },
+  { name: "Liegestütz-Duell", title: "Wer schafft die meisten Liegestütze?", icon: "trophy", color: "orange", metric: "most", unit: "Liegestütze", durationDays: 7 },
+  { name: "Schritte-Wettkampf", title: "Schritte-Wettkampf", icon: "footprints", color: "tuerkis", metric: "most", unit: "Schritte", durationDays: 30 },
   { name: "Lesen", title: "Jeden Tag lesen", icon: "book-open", color: "braun", metric: "daily", dailyTarget: 10, unit: "Seiten", durationDays: 30, missedRule: "relaxed", minPeriods: 25 },
 ];
 
@@ -122,14 +127,24 @@ export function requiredPeriods(r: Pick<ChallengeRules, "frequency" | "durationD
   return r.missedRule === "strict" ? all : Math.min(all, r.minPeriods ?? all);
 }
 
+/** Gibt es Regeln je Tag (Rhythmus, verpasste Tage, „geschafft“)? Nicht bei Gesamtmenge und Wettkampf. */
+export function hasDayRules(r: Pick<ChallengeRules, "metric">): boolean {
+  return r.metric !== "total" && r.metric !== "most";
+}
+
 /** Joker gibt es nur bei „Streng“ und „Serie zählt“. */
 export function jokersOf(r: Pick<ChallengeRules, "missedRule" | "jokers" | "metric">): number {
-  return r.metric === "total" || r.missedRule === "relaxed" ? 0 : r.jokers;
+  return !hasDayRules(r) || r.missedRule === "relaxed" ? 0 : r.jokers;
 }
 
 /** Zählt die Serie (und damit der Serienbonus)? */
 export function hasStreak(r: Pick<ChallengeRules, "missedRule" | "metric">): boolean {
-  return r.metric !== "total" && r.missedRule !== "relaxed";
+  return hasDayRules(r) && r.missedRule !== "relaxed";
+}
+
+/** Gibt es am Ende Punkte für die Plätze 1–3? Nur beim Wettkampf mit gemeinsamem Start (gemeinsames Ende). */
+export function hasPlaceBonus(r: Pick<ChallengeRules, "metric" | "startMode">): boolean {
+  return r.metric === "most" && r.startMode === "fixed";
 }
 
 /** Ist ein Tageswert „erfüllt“? */
@@ -174,7 +189,8 @@ export type CellState = "met" | "partial" | "joker" | "missed" | "open" | "futur
 export type DayCell = { date: string; state: CellState; value: number };
 export type PeriodCell = { index: number; from: string; to: string; state: CellState; metDays: number };
 
-export type ParticipationStatus = "upcoming" | "active" | "completed" | "failed" | "ended";
+/** ended: vorbei, nicht geschafft · finished: Wettkampf vorbei (da gibt es kein „geschafft“) */
+export type ParticipationStatus = "upcoming" | "active" | "completed" | "failed" | "ended" | "finished";
 
 export type Progress = {
   status: ParticipationStatus;
@@ -199,10 +215,12 @@ export type Progress = {
   bestStreak: number;
   /** Summe aller Tageswerte im Zeitraum (Menge bzw. Trainings) */
   sum: number;
+  /** größter Tageswert */
+  bestDay: number;
   metDays: number;
   completedOn: string | null;
   failedOn: string | null;
-  points: { days: number; streak: number; completion: number; total: number };
+  points: { days: number; streak: number; completion: number; place: number; total: number };
   /** Wann welche Punkte dazukamen (für „Dieser Monat“) */
   pointLog: [date: string, points: number][];
 };
@@ -214,13 +232,14 @@ export type Progress = {
  */
 export function participantProgress(r: ChallengeRules, startDate: string, values: DayValues, today: string): Progress {
   const { from, to } = windowOf(startDate, r);
-  const periodTotal = r.metric === "total" ? 1 : periodCount(r);
-  const required = r.metric === "total" ? 1 : requiredPeriods(r);
+  const periodTotal = r.metric === "total" ? 1 : r.metric === "most" ? r.durationDays : periodCount(r);
+  const required = r.metric === "total" ? 1 : r.metric === "most" ? 0 : requiredPeriods(r);
   const jokers = jokersOf(r);
   const dayNumber = today < from ? 0 : today > to ? r.durationDays : daysBetween(from, today) + 1;
 
   const days: DayCell[] = [];
   let sum = 0;
+  let bestDay = 0;
   let metDays = 0;
   for (let i = 0; i < r.durationDays; i++) {
     const date = addDays(from, i);
@@ -230,6 +249,7 @@ export function participantProgress(r: ChallengeRules, startDate: string, values
       continue;
     }
     sum += value;
+    bestDay = Math.max(bestDay, value);
     const met = dayMet(r, value);
     if (met) metDays++;
     const open = isDayOpen(date, today, r.backfillDays);
@@ -238,8 +258,40 @@ export function participantProgress(r: ChallengeRules, startDate: string, values
     else if (value > 0) state = "partial";
     else if (open) state = "open";
     // Bei Wochen und Gesamtmenge ist ein einzelner leerer Tag nicht „verpasst“ (das entscheidet die Woche)
-    else state = r.metric === "total" || r.frequency === "weekly" ? "empty" : "missed";
+    else state = !hasDayRules(r) || r.frequency === "weekly" ? "empty" : "missed";
     days.push({ date, state, value });
+  }
+
+  if (r.metric === "most") {
+    // Wettkampf: Punkte für jeden Tag mit Eintrag, kein „geschafft“; Platzbonus erst mit `withPlaceBonus`
+    const pointLog: [string, number][] = days.filter((d) => d.state === "met").map((d) => [d.date, POINTS.day]);
+    const pointsDays = pointLog.length * POINTS.day;
+    return {
+      status: today < from ? "upcoming" : today > to ? "finished" : "active",
+      dayNumber,
+      durationDays: r.durationDays,
+      from,
+      to,
+      days,
+      periods: [],
+      periodTotal,
+      required,
+      metPeriods: metDays,
+      jokersUsed: 0,
+      jokersLeft: 0,
+      missedPeriods: 0,
+      covered: metDays,
+      reachable: true,
+      streak: 0,
+      bestStreak: 0,
+      sum,
+      bestDay,
+      metDays,
+      completedOn: null,
+      failedOn: null,
+      points: { days: pointsDays, streak: 0, completion: 0, place: 0, total: pointsDays },
+      pointLog,
+    };
   }
 
   if (r.metric === "total") {
@@ -285,10 +337,11 @@ export function participantProgress(r: ChallengeRules, startDate: string, values
       streak: 0,
       bestStreak: 0,
       sum,
+      bestDay,
       metDays,
       completedOn,
       failedOn: null,
-      points: { days: pointsDays, streak: 0, completion, total: pointsDays + completion },
+      points: { days: pointsDays, streak: 0, completion, place: 0, total: pointsDays + completion },
       pointLog,
     };
   }
@@ -379,12 +432,30 @@ export function participantProgress(r: ChallengeRules, startDate: string, values
     streak,
     bestStreak,
     sum,
+    bestDay,
     metDays,
     completedOn,
     failedOn,
-    points: { days: pointsDays, streak: streakBonus, completion, total: pointsDays + streakBonus + completion },
+    points: { days: pointsDays, streak: streakBonus, completion, place: 0, total: pointsDays + streakBonus + completion },
     pointLog,
   };
+}
+
+/**
+ * Platzbonus beim Wettkampf mit gemeinsamem Start: Ist er vorbei, bekommen Platz 1–3 (nach Menge, gleiche Menge =
+ * gleicher Platz, nur mit Eintrag) Punkte am letzten Tag. Sonst bleibt alles, wie es ist.
+ */
+export function withPlaceBonus(r: Pick<ChallengeRules, "metric" | "startMode" | "startsOn" | "durationDays">, progresses: Progress[], today: string): Progress[] {
+  if (!hasPlaceBonus(r) || !r.startsOn) return progresses;
+  const end = addDays(r.startsOn, r.durationDays - 1);
+  if (today <= end) return progresses;
+  return progresses.map((p) => {
+    if (p.sum <= 0) return p;
+    const place = progresses.filter((o) => o.sum > p.sum).length + 1;
+    const bonus = POINTS.place[place - 1] ?? 0;
+    if (!bonus) return p;
+    return { ...p, points: { ...p.points, place: bonus, total: p.points.total + bonus }, pointLog: [...p.pointLog, [end, bonus]] };
+  });
 }
 
 /** Punkte, die zwischen `from` und `to` (einschließlich) dazukamen. */
@@ -399,12 +470,12 @@ export function pointsBetween(p: Pick<Progress, "pointLog">, from: string, to: s
 export type BoardRow = { userId: string; name: string; isMe: boolean; joinedAt: string; progress: Progress; rank: number };
 
 /**
- * Rangliste einer Challenge. Gesamtmenge: nach Menge. Sonst nach Punkten, dann erfüllten Zeiträumen, dann Menge;
+ * Rangliste einer Challenge. Gesamtmenge und Wettkampf: nach Menge. Sonst nach Punkten, dann erfüllten Zeiträumen, dann Menge;
  * Ausgeschiedene stehen unten. Gleichstand = gleicher Platz.
  */
 export function rankBoard(r: Pick<ChallengeRules, "metric">, rows: Omit<BoardRow, "rank">[]): BoardRow[] {
   const key = (row: Omit<BoardRow, "rank">) =>
-    r.metric === "total"
+    !hasDayRules(r)
       ? [row.progress.sum, row.progress.points.total]
       : [row.progress.status === "failed" ? 0 : 1, row.progress.points.total, row.progress.covered, row.progress.sum];
   const sorted = [...rows].sort((a, b) => {
@@ -434,18 +505,22 @@ export type ChallengeStats = {
   sum: number;
   /** Anteil erfüllt je Tag (fester Start: ganzer bisheriger Zeitraum, sonst die letzten 30 Tage) */
   rates: DayRate[];
+  /** größter Tageswert aller Teilnehmer (Mengen) */
+  bestDay: { value: number; date: string; name: string } | null;
 };
 
-export function challengeStats(r: ChallengeRules, board: Pick<BoardRow, "progress">[], today: string): ChallengeStats {
-  const byStatus: Record<ParticipationStatus, number> = { upcoming: 0, active: 0, completed: 0, failed: 0, ended: 0 };
+export function challengeStats(r: ChallengeRules, board: (Pick<BoardRow, "progress"> & { name?: string })[], today: string): ChallengeStats {
+  const byStatus: Record<ParticipationStatus, number> = { upcoming: 0, active: 0, completed: 0, failed: 0, ended: 0, finished: 0 };
+  let bestDay: ChallengeStats["bestDay"] = null;
   let sum = 0;
   const todayCount = { met: 0, due: 0 };
   const perDay = new Map<string, DayRate>();
-  for (const { progress } of board) {
+  for (const { progress, name } of board) {
     byStatus[progress.status]++;
     sum += progress.sum;
     for (const d of progress.days) {
       if (d.state === "future") continue;
+      if (d.value > (bestDay?.value ?? 0)) bestDay = { value: d.value, date: d.date, name: name ?? "" };
       const rate = perDay.get(d.date) ?? { date: d.date, met: 0, due: 0 };
       rate.due++;
       if (d.state === "met") rate.met++;
@@ -461,7 +536,7 @@ export function challengeStats(r: ChallengeRules, board: Pick<BoardRow, "progres
   const last = phase.kind === "over" ? phase.endedOn : today;
   const rates: DayRate[] = [];
   for (let d = first; d <= last; d = addDays(d, 1)) rates.push(perDay.get(d) ?? { date: d, met: 0, due: 0 });
-  return { participants: board.length, byStatus, today: todayCount, sum, rates };
+  return { participants: board.length, byStatus, today: todayCount, sum, rates, bestDay };
 }
 
 // ---------------------------------------------------------------------------
@@ -497,6 +572,7 @@ export function dateLabel(iso: string): string {
 export function goalLabel(r: ChallengeRules): string {
   const weekly = r.frequency === "weekly" ? `An ${r.daysPerWeek} ${r.daysPerWeek === 1 ? "Tag" : "Tagen"} pro Woche` : "Jeden Tag";
   if (r.metric === "total") return `Insgesamt ${amount(r.totalTarget ?? 0)} ${unitOf(r, r.totalTarget ?? 0)}`;
+  if (r.metric === "most") return r.source === "workouts" ? "Wer trainiert am häufigsten?" : `Wer schafft die meisten ${unitOf(r)}?`;
   if (r.source === "workouts") return r.frequency === "weekly" ? `${weekly} trainieren` : "Jeden Tag ein Training";
   if (r.metric === "daily") return `${weekly} ${amount(r.dailyTarget ?? 0)} ${unitOf(r)}`;
   return r.frequency === "weekly" ? `${weekly} abhaken` : "Jeden Tag abhaken";
@@ -525,7 +601,12 @@ export function ruleLines(r: ChallengeRules): RuleLine[] {
 
   // Was zählt
   let goal: string;
-  if (r.metric === "total") {
+  if (r.metric === "most") {
+    goal =
+      r.source === "workouts"
+        ? "Jedes beendete Training zählt automatisch. Es gewinnt, wer am Ende die meisten Trainings hat."
+        : `Trag jeden Tag ein, wie viele ${unitOf(r)} du geschafft hast. Es gewinnt, wer am Ende insgesamt die meisten hat.`;
+  } else if (r.metric === "total") {
     goal = `${goalLabel(r)} sammeln. Wann und wie viel pro Tag, ist egal.`;
   } else if (r.source === "workouts") {
     goal = r.frequency === "weekly" ? `${goalLabel(r)}.` : "An jedem Tag mindestens ein Training.";
@@ -534,7 +615,7 @@ export function ruleLines(r: ChallengeRules): RuleLine[] {
   } else {
     goal = r.frequency === "weekly" ? `${goalLabel(r)}, wenn du es geschafft hast.` : "Jeden Tag abhaken, wenn du es geschafft hast.";
   }
-  if (r.source === "workouts") goal += " Zählt automatisch aus deinen beendeten Trainings.";
+  if (r.source === "workouts" && r.metric !== "most") goal += " Zählt automatisch aus deinen beendeten Trainings.";
   lines.push({ key: "goal", title: "Was zählt", text: goal });
 
   // Dauer und Start
@@ -551,7 +632,7 @@ export function ruleLines(r: ChallengeRules): RuleLine[] {
   lines.push({ key: "time", title: "Dauer", text: time });
 
   // Verpasste Tage
-  if (r.metric !== "total") {
+  if (hasDayRules(r)) {
     const jokerText = jokers === 0 ? "" : `${jokers} Joker (${jokers === 1 ? `1 ${unitWord}` : `${jokers} ${unitPlural}`} ohne Folgen)`;
     let missed: string;
     if (r.missedRule === "strict") {
@@ -568,9 +649,18 @@ export function ruleLines(r: ChallengeRules): RuleLine[] {
     lines.push({ key: "missed", title: "Verpasste " + unitPlural, text: missed });
   }
 
-  // Geschafft
-  let done: string;
-  if (r.metric === "total") done = `Sobald ${amount(r.totalTarget ?? 0)} ${unitOf(r, r.totalTarget ?? 0)} zusammen sind.`;
+  // Geschafft bzw. wer gewinnt
+  let done = "";
+  if (r.metric === "most") {
+    lines.push({
+      key: "done",
+      title: "Wer gewinnt",
+      text:
+        r.startMode === "fixed"
+          ? "Am Ende steht vorn, wer insgesamt am meisten hat. Gleiche Menge = gleicher Platz."
+          : "Die Rangliste vergleicht die Menge in den eigenen Tagen; ein gemeinsames Ende gibt es nicht.",
+    });
+  } else if (r.metric === "total") done = `Sobald ${amount(r.totalTarget ?? 0)} ${unitOf(r, r.totalTarget ?? 0)} zusammen sind.`;
   else {
     const need = requiredPeriods(r);
     done =
@@ -579,7 +669,7 @@ export function ruleLines(r: ChallengeRules): RuleLine[] {
         : `Mit mindestens ${need} von ${total} ${r.frequency === "weekly" ? "Wochen" : "Tagen"}`;
     done += jokers ? " (Joker zählen mit)." : ".";
   }
-  lines.push({ key: "done", title: "Geschafft", text: done });
+  if (r.metric !== "most") lines.push({ key: "done", title: "Geschafft", text: done });
 
   // Nachtragen
   let backfill: string;
@@ -591,7 +681,10 @@ export function ruleLines(r: ChallengeRules): RuleLine[] {
 
   // Punkte
   let points: string;
-  if (r.metric === "total") points = `Bis zu ${formatNumber(POINTS.day * r.durationDays)} Punkte je nach Fortschritt, +${POINTS.completion} fürs Schaffen.`;
+  if (r.metric === "most") {
+    points = `${POINTS.day} je Tag mit Eintrag`;
+    points += hasPlaceBonus(r) ? `, am Ende +${POINTS.place.join(" / +")} für Platz 1 bis 3.` : ".";
+  } else if (r.metric === "total") points = `Bis zu ${formatNumber(POINTS.day * r.durationDays)} Punkte je nach Fortschritt, +${POINTS.completion} fürs Schaffen.`;
   else {
     points = `${POINTS.day} je erfülltem Tag`;
     if (r.frequency === "weekly") points += ` (höchstens ${r.daysPerWeek} je Woche)`;
@@ -614,6 +707,8 @@ export function statusLabel(p: Progress): string {
       return "Ausgeschieden";
     case "ended":
       return "Nicht geschafft";
+    case "finished":
+      return "Beendet";
     default:
       return `Tag ${p.dayNumber} von ${p.durationDays}`;
   }
@@ -621,13 +716,18 @@ export function statusLabel(p: Progress): string {
 
 /** Fortschritt als Text: „12 von 30 Tagen“ bzw. „640 von 1.000 Liegestütze“. */
 export function progressLabel(r: ChallengeRules, p: Progress): string {
+  if (r.metric === "most") return `${amount(p.sum)} ${unitOf(r, p.sum)}`;
   if (r.metric === "total") return `${amount(p.sum)} von ${amount(r.totalTarget ?? 0)} ${unitOf(r, r.totalTarget ?? 0)}`;
   const unit = r.frequency === "weekly" ? (p.periodTotal === 1 ? "Woche" : "Wochen") : p.periodTotal === 1 ? "Tag" : "Tagen";
   return `${p.covered} von ${p.periodTotal} ${unit}`;
 }
 
-/** Anteil für Fortschrittsbalken (0–1): Gesamtmenge nach Menge, sonst gerettete Zeiträume gegen die nötigen. */
+/**
+ * Anteil für Fortschrittsbalken (0–1): Gesamtmenge nach Menge, Wettkampf nach vergangenen Tagen, sonst gerettete
+ * Zeiträume gegen die nötigen.
+ */
 export function progressShare(r: ChallengeRules, p: Progress): number {
+  if (r.metric === "most") return Math.min(1, p.dayNumber / Math.max(1, p.durationDays));
   if (r.metric === "total") return Math.min(1, p.sum / (r.totalTarget ?? Infinity));
   return Math.min(1, p.covered / Math.max(1, p.required));
 }

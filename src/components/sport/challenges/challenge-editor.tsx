@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
-import { CalendarCheck, Check, Dumbbell, Hash, Lock, Minus, Plus, Ruler, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Check, Dumbbell, Hash, Lock, Medal, Minus, Plus, Ruler, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { saveChallengeAction } from "@/app/(app)/sport/challenges/actions";
 import { FormMessage } from "@/components/forms/form-message";
@@ -33,7 +33,7 @@ import { CHALLENGE_ICON_LABELS, CHALLENGE_ICON_MAP, RuleCard } from "./challenge
 import { parseAmount } from "./entry-controls";
 
 /** Was zählt – so, wie man es beim Anlegen auswählt (Trainings sind eine eigene Art). */
-type Kind = "check" | "daily" | "total" | "workouts";
+type Kind = "check" | "daily" | "total" | "most" | "workouts";
 
 type Form = {
   title: string;
@@ -41,8 +41,8 @@ type Form = {
   icon: ChallengeIconKey;
   color: DrinkColor;
   kind: Kind;
-  /** Trainings: an Tagen (check) oder Anzahl insgesamt (total) */
-  workoutMode: "check" | "total";
+  /** Trainings: an Tagen (check), Anzahl insgesamt (total) oder wer am meisten trainiert (most) */
+  workoutMode: "check" | "total" | "most";
   unit: string;
   dailyTarget: string;
   totalTarget: string;
@@ -65,6 +65,7 @@ const KINDS: { value: Kind; label: string; hint: string; icon: LucideIcon }[] = 
   { value: "daily", label: "Menge pro Tag", hint: "Tagesziel, z. B. 50 Liegestütze", icon: Ruler },
   { value: "total", label: "Gesamtmenge", hint: "Für den ganzen Zeitraum, z. B. 100 km", icon: Hash },
   { value: "workouts", label: "Trainings", hint: "Zählt automatisch aus deinen Trainings", icon: Dumbbell },
+  { value: "most", label: "Wer schafft mehr?", hint: "Wettkampf ohne Ziel: Platz 1 hat am Ende die größte Menge, z. B. die meisten Liegestütze", icon: Medal },
 ];
 
 const UNIT_SUGGESTIONS = ["Liegestütze", "Kniebeugen", "Schritte", "km", "Minuten", "Liter", "Seiten", "Wiederholungen"];
@@ -113,7 +114,7 @@ function formFrom(c: Challenge | null, today: string): Form {
     icon: (CHALLENGE_ICONS as readonly string[]).includes(c.icon) ? (c.icon as ChallengeIconKey) : "trophy",
     color: (DRINK_COLOR_KEYS as string[]).includes(c.color) ? (c.color as DrinkColor) : "orange",
     kind: c.source === "workouts" ? "workouts" : c.metric,
-    workoutMode: c.metric === "total" ? "total" : "check",
+    workoutMode: c.metric === "total" || c.metric === "most" ? c.metric : "check",
     unit: c.unit ?? "",
     dailyTarget: amountText(c.dailyTarget),
     totalTarget: amountText(c.totalTarget),
@@ -137,10 +138,12 @@ function toRules(f: Form): ChallengeRules & { valid: boolean } {
   const workouts = f.kind === "workouts";
   const metric: ChallengeMetric = workouts ? f.workoutMode : (f.kind as ChallengeMetric);
   const total = metric === "total";
-  const weekly = !total && f.frequency === "weekly";
+  // Gesamtmenge und Wettkampf: ohne Rhythmus, verpasste Tage und „mindestens X von Y“
+  const open = total || metric === "most";
+  const weekly = !open && f.frequency === "weekly";
   const durationDays = weekly ? Math.max(7, Math.round(f.durationDays / 7) * 7) : f.durationDays;
   const periods = weekly ? durationDays / 7 : durationDays;
-  const missedRule = total ? "relaxed" : f.missedRule;
+  const missedRule = open ? "relaxed" : f.missedRule;
   const dailyTarget = metric === "daily" ? parseAmount(f.dailyTarget) : null;
   const totalTarget = total ? parseAmount(f.totalTarget) : null;
   const unit = !workouts && metric !== "check" ? f.unit.trim() || null : null;
@@ -158,7 +161,7 @@ function toRules(f: Form): ChallengeRules & { valid: boolean } {
     lateJoinDays: f.startMode === "fixed" ? Math.min(f.lateJoinDays, durationDays - 1) : 0,
     missedRule,
     jokers: missedRule === "relaxed" ? 0 : Math.min(f.jokers, periods),
-    minPeriods: total || missedRule === "strict" || f.minMode === "all" ? null : Math.min(f.minPeriods, periods),
+    minPeriods: open || missedRule === "strict" || f.minMode === "all" ? null : Math.min(f.minPeriods, periods),
     backfillDays: f.backfillDays,
     valid:
       (metric !== "daily" || (dailyTarget != null && dailyTarget > 0)) &&
@@ -203,7 +206,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
       icon: p.icon,
       color: p.color as DrinkColor,
       kind: p.source === "workouts" ? "workouts" : (p.metric ?? "check"),
-      workoutMode: p.metric === "total" ? "total" : "check",
+      workoutMode: p.metric === "total" || p.metric === "most" ? p.metric : "check",
       unit: p.unit ?? "",
       dailyTarget: amountText(p.dailyTarget),
       totalTarget: amountText(p.totalTarget),
@@ -394,6 +397,8 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
                   className={cn(
                     "flex min-h-24 flex-col items-start gap-1 rounded-2xl border p-3 text-left transition focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
                     on ? "border-primary bg-primary/10" : "bg-card hover:bg-muted",
+                    // Der Wettkampf steht allein in der letzten Zeile
+                    k.value === "most" && "col-span-2",
                   )}
                 >
                   <k.icon className={cn("size-5", on ? "text-primary" : "text-muted-foreground")} aria-hidden />
@@ -411,8 +416,9 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
                 value={form.workoutMode}
                 onChange={(workoutMode) => patch({ workoutMode })}
                 options={[
-                  { value: "check", label: "An Tagen trainieren" },
-                  { value: "total", label: "Anzahl insgesamt" },
+                  { value: "check", label: "An Tagen" },
+                  { value: "total", label: "Anzahl" },
+                  { value: "most", label: "Wer am meisten?" },
                 ]}
               />
               {form.workoutMode === "total" ? (
@@ -421,9 +427,10 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
             </div>
           ) : null}
 
-          {form.kind === "daily" || form.kind === "total" ? (
+          {form.kind === "daily" || form.kind === "total" || form.kind === "most" ? (
             <div className="mt-3 space-y-3">
-              <div className="grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)] gap-3">
+              <div className={cn("grid gap-3", form.kind !== "most" && "grid-cols-[minmax(0,8rem)_minmax(0,1fr)]")}>
+                {form.kind === "most" ? null : (
                 <AmountField
                   id="challenge-target"
                   label={form.kind === "daily" ? "Tagesziel" : "Gesamtziel"}
@@ -431,9 +438,10 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
                   onChange={(v) => patch(form.kind === "daily" ? { dailyTarget: v } : { totalTarget: v })}
                   error={err(form.kind === "daily" ? "dailyTarget" : "totalTarget")}
                 />
+                )}
                 <div className="grid min-w-0 gap-1.5">
                   <label htmlFor="challenge-unit" className="text-sm font-medium">
-                    Einheit
+                    {form.kind === "most" ? "Was wird gezählt?" : "Einheit"}
                   </label>
                   <Input id="challenge-unit" value={form.unit} maxLength={24} onChange={(e) => patch({ unit: e.target.value })} placeholder="z. B. Liegestütze" className="h-12 text-base" aria-invalid={Boolean(err("unit")) || undefined} />
                 </div>
@@ -450,7 +458,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
           ) : null}
         </Section>
 
-        {rules.metric !== "total" ? (
+        {rules.metric === "check" || rules.metric === "daily" ? (
           <Section title="Wie oft?">
             <RadioSegments
               label="Wie oft"
@@ -499,7 +507,9 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
           />
           <p className="mt-2 px-0.5 text-sm text-muted-foreground">
             {form.startMode === "fixed"
-              ? "Alle starten am selben Tag. Das ist fair für die Rangliste."
+              ? rules.metric === "most"
+                ? "Alle starten am selben Tag und haben dasselbe Ende. Nur so gibt es am Ende Punkte für Platz 1 bis 3."
+                : "Alle starten am selben Tag. Das ist fair für die Rangliste."
               : "Jeder startet, wenn er beitritt, und hat dann seine eigenen Tage. Einsteigen geht jederzeit."}
           </p>
           {form.startMode === "fixed" ? (
@@ -534,7 +544,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
           ) : null}
         </Section>
 
-        {rules.metric !== "total" ? (
+        {rules.metric === "check" || rules.metric === "daily" ? (
           <Section title={weeklyUnit ? "Verpasste Wochen" : "Verpasste Tage"}>
             <div className="grid gap-2" role="radiogroup" aria-label="Verpasste Tage">
               {MISSED_RULES.map((m) => {
@@ -578,7 +588,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
           </Section>
         ) : null}
 
-        {rules.metric !== "total" && form.missedRule !== "strict" ? (
+        {(rules.metric === "check" || rules.metric === "daily") && form.missedRule !== "strict" ? (
           <Section title="Geschafft, wenn …">
             <RadioSegments
               label="Geschafft, wenn"

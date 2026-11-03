@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Flame, Shield, Sparkles, Target } from "lucide-react";
+import { CalendarCheck, Flame, Medal, Shield, Sparkles, Target, TrendingUp } from "lucide-react";
 import {
   amount,
   dateLabel,
@@ -34,7 +34,20 @@ const CELL_LABEL: Record<CellState, string> = {
  * Eigener Fortschritt: Status, Kennzahlen (Fortschritt, Serie, Joker, Punkte), heute eintragen und ein Kästchen je Tag.
  * Antippen eines Tages zeigt ihn unten; Tage im Nachtrag-Fenster lassen sich dort ändern.
  */
-export function MyProgress({ challenge, progress: p, values, today }: { challenge: EntryChallenge; progress: Progress; values: Record<string, number>; today: string }) {
+export function MyProgress({
+  challenge,
+  progress: p,
+  values,
+  today,
+  rank,
+}: {
+  challenge: EntryChallenge;
+  progress: Progress;
+  values: Record<string, number>;
+  today: string;
+  /** Platz in der Rangliste (Wettkampf) */
+  rank?: number;
+}) {
   const inWindow = today >= p.from && today <= p.to;
   const [selected, setSelected] = useState<string>(inWindow ? today : p.days.findLast((d) => d.state !== "future")?.date ?? p.from);
   const cell = p.days.find((d) => d.date === selected);
@@ -43,12 +56,22 @@ export function MyProgress({ challenge, progress: p, values, today }: { challeng
   const jokers = jokersOf(challenge);
   const streak = hasStreak(challenge);
 
-  const kpis = [
+  const race = challenge.metric === "most";
+  const kpis = race
+    ? [
+        { icon: Target, label: "Gesamt", value: progressLabel(challenge, p) },
+        { icon: Medal, label: "Platz", value: rank && p.sum > 0 ? `${rank}.` : "–" },
+        { icon: TrendingUp, label: "Bester Tag", value: p.bestDay ? `${amount(p.bestDay)} ${unitOf(challenge, p.bestDay)}` : "–" },
+        { icon: CalendarCheck, label: "Tage mit Eintrag", value: `${p.metDays} von ${p.durationDays}` },
+        { icon: Sparkles, label: "Punkte", value: String(p.points.total), hint: pointsHint(p) },
+      ]
+    : [
     { icon: Target, label: "Fortschritt", value: progressLabel(challenge, p) },
     streak ? { icon: Flame, label: "Serie", value: `${p.streak} ${challenge.frequency === "weekly" ? (p.streak === 1 ? "Woche" : "Wochen") : p.streak === 1 ? "Tag" : "Tage"}`, hint: p.bestStreak > p.streak ? `Beste: ${p.bestStreak}` : undefined } : null,
     jokers ? { icon: Shield, label: "Joker übrig", value: `${p.jokersLeft} von ${jokers}` } : null,
     { icon: Sparkles, label: "Punkte", value: String(p.points.total), hint: pointsHint(p) },
-  ].filter((k): k is NonNullable<typeof k> => k != null);
+  ];
+  const tiles = kpis.filter((k): k is NonNullable<typeof k> => k != null);
 
   return (
     <section className="space-y-4 rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="dein-fortschritt">
@@ -64,8 +87,8 @@ export function MyProgress({ challenge, progress: p, values, today }: { challeng
       {p.status === "completed" && p.completedOn ? <p className="text-sm font-medium text-sage">Geschafft am {dateLabel(p.completedOn)}. Stark!</p> : null}
       {p.status === "failed" && p.failedOn ? <p className="text-sm text-destructive">Ausgeschieden am {dateLabel(p.failedOn)}: ohne Joker verpasst.</p> : null}
 
-      <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {kpis.map((k) => (
+      <dl className={cn("grid grid-cols-2 gap-2", tiles.length === 5 ? "sm:grid-cols-5" : "sm:grid-cols-4")}>
+        {tiles.map((k) => (
           <div key={k.label} className="rounded-2xl bg-muted/60 p-3">
             <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <k.icon className="size-3.5" aria-hidden />
@@ -79,7 +102,7 @@ export function MyProgress({ challenge, progress: p, values, today }: { challeng
 
       <div>
         <p className="mb-2 text-sm font-semibold text-muted-foreground">
-          {challenge.frequency === "weekly" ? "Jede Zeile ist eine Woche" : "Jeder Tag ein Kästchen"}
+          {challenge.frequency === "weekly" ? "Jede Zeile ist eine Woche" : race ? "Jeder Tag ein Kästchen, antippen zeigt die Menge" : "Jeder Tag ein Kästchen"}
         </p>
         <ol className="grid grid-cols-7 gap-1.5" aria-label="Tage der Challenge">
           {p.days.map((d, i) => {
@@ -116,7 +139,7 @@ export function MyProgress({ challenge, progress: p, values, today }: { challeng
             );
           })}
         </ol>
-        <Legend color={c} jokers={jokers > 0} />
+        <Legend color={c} jokers={jokers > 0} missed={challenge.metric === "check" || challenge.metric === "daily"} race={race} />
       </div>
 
       {cell ? (
@@ -147,11 +170,16 @@ export function MyProgress({ challenge, progress: p, values, today }: { challeng
 }
 
 function pointsHint(p: Progress): string | undefined {
-  const parts = [p.points.days ? `${p.points.days} Tage` : null, p.points.streak ? `${p.points.streak} Serie` : null, p.points.completion ? `${p.points.completion} geschafft` : null].filter(Boolean);
+  const parts = [
+    p.points.days ? `${p.points.days} Tage` : null,
+    p.points.streak ? `${p.points.streak} Serie` : null,
+    p.points.completion ? `${p.points.completion} geschafft` : null,
+    p.points.place ? `${p.points.place} Platz` : null,
+  ].filter(Boolean);
   return parts.length > 1 ? parts.join(" + ") : undefined;
 }
 
-function Legend({ color, jokers }: { color: string; jokers: boolean }) {
+function Legend({ color, jokers, missed, race }: { color: string; jokers: boolean; missed: boolean; race: boolean }) {
   const item = (label: string, cls: string, style?: React.CSSProperties) => (
     <span className="inline-flex items-center gap-1.5">
       <span className={cn("size-3 rounded", cls)} style={style} aria-hidden />
@@ -160,10 +188,10 @@ function Legend({ color, jokers }: { color: string; jokers: boolean }) {
   );
   return (
     <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-hidden>
-      {item("erfüllt", "", { background: color })}
+      {item(race ? "mit Eintrag" : "erfüllt", "", { background: color })}
       {item("offen", "bg-muted")}
       {jokers ? item("Joker", "", { background: `repeating-linear-gradient(135deg, color-mix(in srgb, ${color} 35%, var(--card)) 0 3px, var(--card) 3px 6px)` }) : null}
-      {item("verpasst", "bg-destructive/20")}
+      {missed ? item("verpasst", "bg-destructive/20") : null}
     </p>
   );
 }
