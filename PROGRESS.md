@@ -1348,6 +1348,17 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### App-Icon: Topf mit Puls (03.11.2026)
+
+**Live** seit 03.11.2026: Push `d08c626` → Deployment `dpl_4kUX2iYqaLvFSmSPFH7WZ8g9L6Qh` (`production`, `source: git`,
+„READY“; per Vercel-Connector geprüft, `/apple-icon` live identisch mit lokal erzeugtem).
+
+Wunsch des Nutzers: Icon passender zur jetzt breiteren App (Rezepte, Training, Gesundheit). Aus Entwürfen (Apfel +
+Puls, Topf + Puls, Herz + Blatt, Gabel + Hantel) gewählt: der bisherige Topf mit Pulslinie im Topfkörper
+(`src/lib/app-icon.tsx`, gilt für Favicon, Apple-Icon und Manifest-Icons). iPhone übernimmt es erst nach Löschen und
+neu „Zum Home-Bildschirm“. Offen: neuer App-Name (Vorschläge: Topform, Kraftküche, Satt & Stark, Puls & Pfanne,
+Fit & Satt); bis dahin bleibt „Rezeptbuch“.
+
 ### Challenges, Rangliste, Trainings-Posts (ab 03.11.2026)
 
 Plan vom 03.11.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und OK:
