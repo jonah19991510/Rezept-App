@@ -83,7 +83,8 @@ export default async function HomePage() {
 
   return (
     <>
-      <header className="mt-3 mb-6 flex flex-col-reverse">
+      {/* data-home: Das App-Layout spart unten keinen Platz für die (hier fehlende) untere Navigation aus */}
+      <header data-home className="mt-3 mb-6 flex flex-col-reverse">
         <h1 className="text-4xl leading-tight font-semibold md:text-5xl">
           {greeting(hour)}
           {firstName ? `, ${firstName}` : ""}

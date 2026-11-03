@@ -8,8 +8,9 @@ import { navItemsFor, isActiveItem, isEditorPath } from "./nav-items";
 import { useArea } from "./use-area";
 
 /**
- * Schwebende Navigation am unteren Rand, nur auf dem Handy, in jedem Bereich (auf der Startseite: Start, Ernährung,
- * Sport). Inaktive Punkte zeigen nur ihr Symbol, der aktive dazu seinen Namen in einer hellen Pille.
+ * Schwebende Navigation am unteren Rand, nur auf dem Handy, in jedem Bereich außer auf der Startseite selbst (deren
+ * gemeinsame Seiten wie Einstellungen: Start, Ernährung, Sport). Inaktive Punkte zeigen nur ihr Symbol, der aktive
+ * dazu seinen Namen in einer hellen Pille.
  */
 export function BottomNav() {
   const pathname = usePathname();
@@ -18,8 +19,8 @@ export function BottomNav() {
   // geantwortet hat. Gilt nur, solange wir noch auf der Seite sind, von der aus getippt wurde.
   const [tapped, setTapped] = useState<{ href: string; from: string } | null>(null);
   const target = tapped?.from === pathname ? tapped.href : null;
-  // Im Rezept- und Plan-Editor ersetzt die Speicherleiste die Navigation
-  if (isEditorPath(pathname)) return null;
+  // Im Rezept- und Plan-Editor ersetzt die Speicherleiste die Navigation; auf der Startseite führen die Widgets weiter
+  if (isEditorPath(pathname) || pathname === "/") return null;
 
   return (
     <nav

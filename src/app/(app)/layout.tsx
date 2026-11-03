@@ -13,12 +13,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <AreaTheme>
       <div className="min-h-dvh md:flex">
         <Sidebar />
-        <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
+        {/* Unten Platz für die schwebende Navigation (Handy); die Startseite (data-home) hat keine */}
+        <div className="group/app flex min-w-0 flex-1 flex-col overflow-x-clip">
           <AppHeader>
             <UserMenu displayName={user.displayName} isAdmin={user.role === "admin"} />
           </AppHeader>
-          <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-2 pb-28 md:px-8 md:pb-10">{children}</main>
-          <LegalFooter className="pb-24 md:pb-6" />
+          <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-2 pb-28 max-md:group-has-[[data-home]]/app:pb-8 md:px-8 md:pb-10">
+            {children}
+          </main>
+          <LegalFooter className="pb-24 max-md:group-has-[[data-home]]/app:pb-6 md:pb-6" />
         </div>
         <BottomNav />
       </div>
