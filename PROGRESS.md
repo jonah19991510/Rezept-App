@@ -1438,7 +1438,9 @@ Schritt: C2 (Gesamtrangliste) nach OK des Nutzers.
 
 #### Phase C2: Gesamtrangliste, Challenges in Habits und auf der Startseite (03.11.2026)
 
-**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+**Live** seit 03.11.2026: vom Nutzer am LAN-Server getestet, Push `4a7b557` → Deployment
+`dpl_5DJkVMoCF5tP8Q2Ssscn1fxni5ho` (`production`, `source: git`, „READY“; per Vercel-Connector geprüft). Nächster
+Schritt: C3 (Trainings posten) nach OK des Nutzers.
 
 - **Punkte mit Datum:** `participantProgress` liefert jetzt `pointLog` (wann welche Punkte dazukamen): Tagespunkte am
   erfüllten Tag (bei „pro Woche“ die ersten x Tage), Serienbonus am Tag, an dem die Woche voll war, Schaffen am Tag
