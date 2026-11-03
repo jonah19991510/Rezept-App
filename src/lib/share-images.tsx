@@ -90,7 +90,7 @@ function Brand({ scale }: { scale: number }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12 * scale, color: MUTED, fontSize: 22 * scale }}>
       <div style={{ display: "flex", width: 18 * scale, height: 18 * scale, borderRadius: 6 * scale, background: BRAND_TERRACOTTA }} />
-      Rezeptbuch
+      Topform
     </div>
   );
 }

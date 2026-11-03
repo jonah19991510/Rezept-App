@@ -1,6 +1,8 @@
-# Rezeptbuch
+# Topform
 
-Private Web-App für Rezepte, Makronährstoffe, Wochenplan und Einkaufsliste – für Freunde und Familie.
+(Bis 03.11.2026 „Rezeptbuch“; Repo, Vercel-Projekt und Adresse heißen weiter so.)
+
+Private Web-App für Rezepte, Makronährstoffe, Training, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
 **Stand:** Phase 12 (Preise und Kosten pro Portion, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken dazu; davor: Trainingstage mit eigenem Ziel, Lücken-Hinweis, Meal Prep, Reste-Vorschläge, Vorratsschrank, „Was kann ich kochen?“, Vorrat in der Einkaufsliste, Text-Export, Kochmodus mit Timern, Portionen skalieren, Einheiten-Umrechnung, Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),

@@ -24,13 +24,13 @@ export const metadata: Metadata = {
   // Absolute Adressen für Link-Vorschauen (og:image der geteilten Rezeptkarten)
   metadataBase: new URL(process.env.SITE_URL?.trim() || "http://localhost:3000"),
   title: {
-    default: "Rezeptbuch",
-    template: "%s · Rezeptbuch",
+    default: "Topform",
+    template: "%s · Topform",
   },
-  description: "Rezepte, Makros und Wochenplan für Freunde und Familie.",
-  applicationName: "Rezeptbuch",
+  description: "Rezepte, Makros, Training und Wochenplan für Freunde und Familie.",
+  applicationName: "Topform",
   // Als App auf dem iPhone-Homebildschirm: eigener Titel, ohne Browserleiste
-  appleWebApp: { capable: true, title: "Rezeptbuch", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Topform", statusBarStyle: "default" },
   formatDetection: { telephone: false },
   // Keine Indexierung durch Suchmaschinen (zusätzlich X-Robots-Tag-Header und robots.txt)
   robots: {

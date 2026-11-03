@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/r/[token]">): Pro
   return {
     title: recipe.title,
     description,
-    openGraph: { title: recipe.title, description, type: "article", siteName: "Rezeptbuch", locale: "de_DE" },
+    openGraph: { title: recipe.title, description, type: "article", siteName: "Topform", locale: "de_DE" },
     twitter: { card: "summary_large_image", title: recipe.title, description },
   };
 }
@@ -167,7 +167,7 @@ export default async function SharedRecipePage({ params }: PageProps<"/r/[token]
           />
 
           <footer className="flex flex-wrap items-center justify-between gap-2 border-t pt-4 text-xs text-muted-foreground">
-            <span>Geteilt aus dem Rezeptbuch · Stand {formatDate(recipe.updated_at)}</span>
+            <span>Geteilt aus Topform · Stand {formatDate(recipe.updated_at)}</span>
             {recipe.source_url ? <SourceLink url={recipe.source_url} /> : null}
           </footer>
         </div>

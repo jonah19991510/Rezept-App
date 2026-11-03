@@ -1,4 +1,4 @@
-// Service Worker des Rezeptbuchs (Phase 8).
+// Service Worker der App (Phase 8; Cache-Namen noch mit dem früheren Namen „rezeptbuch“).
 // Bewusst schlicht und datensparsam:
 // - Seiten (HTML) werden NIE zwischengespeichert, sie enthalten persönliche Daten. Ohne Netz erscheint
 //   stattdessen die Seite „Du bist offline“.
@@ -9,7 +9,7 @@
 //   sie im Gym auch ohne Netz neu geladen werden kann. Die App löscht sie beim Beenden, Verwerfen und Abmelden; die
 //   Sätze selbst liegen ohnehin im Speicher des Browsers, bis sie hochgeladen sind.
 
-const VERSION = "v2";
+const VERSION = "v3";
 const STATIC_CACHE = `rezeptbuch-static-${VERSION}`;
 const SHELL_CACHE = `rezeptbuch-shell-${VERSION}`;
 const TRAINING_CACHE = "rezeptbuch-training";

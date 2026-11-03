@@ -8,7 +8,7 @@ export function Brand({ href = "/rezepte", className }: { href?: string; classNa
       <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
         <CookingPot className="size-5" aria-hidden />
       </span>
-      <span className="font-heading text-xl font-semibold tracking-tight">Rezeptbuch</span>
+      <span className="font-heading text-xl font-semibold tracking-tight">Topform</span>
     </Link>
   );
 }

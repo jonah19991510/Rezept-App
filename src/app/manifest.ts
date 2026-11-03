@@ -4,9 +4,9 @@ import { BRAND_BACKGROUND, BRAND_TERRACOTTA } from "@/lib/app-icon";
 /** Web-App-Manifest: macht die App auf dem Handy installierbar („Zum Home-Bildschirm“). */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Rezeptbuch",
-    short_name: "Rezeptbuch",
-    description: "Rezepte, Makros, Wochenplan und Einkaufsliste für Freunde und Familie.",
+    name: "Topform",
+    short_name: "Topform",
+    description: "Rezepte, Makros, Training, Wochenplan und Einkaufsliste für Freunde und Familie.",
     lang: "de-DE",
     start_url: "/",
     scope: "/",

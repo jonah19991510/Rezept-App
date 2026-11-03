@@ -14,7 +14,7 @@ export default function SignupPage() {
   return (
     <AuthCard
       title="Account erstellen"
-      description="Leg dir dein eigenes Rezeptbuch an."
+      description="Rezepte, Training und Ziele an einem Ort."
       footer={
         <p>
           Schon registriert?{" "}

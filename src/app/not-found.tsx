@@ -9,7 +9,7 @@ export default function NotFound() {
         <SearchX className="size-8" aria-hidden />
       </span>
       <h1 className="text-3xl font-semibold">Seite nicht gefunden</h1>
-      <p className="max-w-sm text-muted-foreground">Diese Seite gibt es nicht (mehr). Vielleicht hilft der Weg zurück ins Rezeptbuch.</p>
+      <p className="max-w-sm text-muted-foreground">Diese Seite gibt es nicht (mehr). Vielleicht hilft der Weg zurück zu deinen Rezepten.</p>
       <Link href="/rezepte" className={buttonVariants({ size: "lg" })}>
         Zu meinen Rezepten
       </Link>

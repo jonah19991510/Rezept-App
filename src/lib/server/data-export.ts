@@ -132,7 +132,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
 
   return {
     hinweis:
-      "Export aller Daten, die das Rezeptbuch über dich gespeichert hat. Passwörter speichert die App nicht im Klartext (nur Supabase Auth als Hash) und sie sind hier nicht enthalten. Fotos liegen als Dateien im Speicher; hier steht die Liste.",
+      "Export aller Daten, die Topform über dich gespeichert hat. Passwörter speichert die App nicht im Klartext (nur Supabase Auth als Hash) und sie sind hier nicht enthalten. Fotos liegen als Dateien im Speicher; hier steht die Liste.",
     exportiert_am: new Date().toISOString(),
     konto: { id, email: user.email, ...must(profile, "Profil") },
     rezepte: must(recipes, "Rezepte"),
