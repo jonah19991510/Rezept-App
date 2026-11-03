@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { isActivePath } from "@/components/layout/nav-items";
 import { cn } from "@/lib/utils";
 
-// Der Feed kommt mit Phase C3 dazu.
 const TABS = [
+  { href: "/sport/entdecken/feed", label: "Feed" },
   { href: "/sport/entdecken/challenges", label: "Challenges" },
   { href: "/sport/entdecken/rangliste", label: "Rangliste" },
   { href: "/sport/entdecken/plaene", label: "Pläne" },

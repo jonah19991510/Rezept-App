@@ -71,7 +71,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
   const [
     profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
     trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements, habits, habitChecks, schedule, lexicon,
-    ownChallenges, challengeParticipations, challengeEntries,
+    ownChallenges, challengeParticipations, challengeEntries, posts, kudos, comments,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, hide_from_leaderboard, created_at").eq("id", id).maybeSingle(),
     supabase
@@ -124,6 +124,10 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     supabase.from("challenges").select("*").eq("created_by", id).order("created_at"),
     supabase.from("challenge_participants").select("*, challenges!challenge_participants_challenge_id_fkey(title)").eq("user_id", id).order("joined_at"),
     supabase.from("challenge_entries").select("*").eq("user_id", id).order("day"),
+    // Feed: eigene Posts, gegebene Kudos, geschriebene Kommentare
+    supabase.from("workout_posts").select("*").eq("user_id", id).order("trained_at"),
+    supabase.from("post_kudos").select("*").eq("user_id", id).order("created_at"),
+    supabase.from("post_comments").select("*").eq("user_id", id).order("created_at"),
   ]);
 
   return {
@@ -158,6 +162,9 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     challenges_angelegt: must(ownChallenges, "Challenges"),
     challenge_teilnahmen: must(challengeParticipations, "Challenge-Teilnahmen"),
     challenge_eintraege: must(challengeEntries, "Challenge-Einträge"),
+    geteilte_trainings: must(posts, "Geteilte Trainings"),
+    kudos_gegeben: must(kudos, "Kudos"),
+    kommentare: must(comments, "Kommentare"),
   };
 }
 

@@ -1471,6 +1471,41 @@ Schritt: C3 (Trainings posten) nach OK des Nutzers.
 andere (zweites Konto), sieht sich selbst mit „–“; Einstellungen → Rangliste zeigt denselben Schalter; Habits → Heute
 zeigt die Challenges zum Abhaken; Startseite zeigt das Widget „Challenges“ (unter „Startseite anpassen“ ein-/ausblendbar).
 
+#### Phase C3: Trainings teilen, Feed, Kudos, Kommentare, Nachmachen (03.11.2026)
+
+**Stand:** fertig, Migration eingespielt, **nicht gepusht** (wartet auf Test des Nutzers am LAN-Server).
+
+- **Migration** `…20261103180000_workout_posts` (additiv): `workout_posts` (je Training höchstens ein Post, Text,
+  `summary` jsonb, `trained_at`; Training gelöscht = Post weg), `post_kudos` (einmal je Person, nicht beim eigenen
+  Post), `post_comments` (bis 500 Zeichen; löschen: Schreiber, Post-Autor, Admins). Teilen nur eigener, beendeter
+  Trainings (`private.owns_finished_workout`); ändern nur Text und Zusammenfassung (Spaltenrechte). Alle Eingeloggten
+  lesen alles.
+- **Migration eingespielt** am 03.11.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers). Per SQL
+  geprüft (zurückgerollt, danach 0 Zeilen): fremdes Training teilen abgelehnt (42501), zweiter Post zum selben
+  Training abgelehnt (23505), Kudos beim eigenen Post und für andere abgelehnt (42501), Trainingszeit ändern abgelehnt
+  (42501), Text ändern geht; fremden Post ändern/löschen 0 Zeilen; fremden Kommentar löschen 0 Zeilen, als Post-Autor
+  geht es; Post löschen nimmt Kudos und Kommentare mit; anon liest nichts. Security-Advisor ohne neue Hinweise.
+- **Zusammenfassung** (`domain/posts.ts`, 6 Tests): baut der Server beim Teilen aus dem eigenen Training (nicht aus
+  Eingaben des Browsers): Titel, Dauer, Art (Kraft/Ausdauer), Sätze, Volumen, Strecke, je Übung Arbeitssätze, Wdh.-Bereich
+  und bester Satz (höchstes geschätztes 1RM bzw. längste Zeit/Strecke), neue Bestwerte gegenüber allen früheren
+  Trainings (wie in der Statistik). Erneut teilen bzw. Text ändern baut sie neu.
+- **Teilen:** auf der Trainingsseite im Verlauf (`/sport/verlauf/[id]`); direkt nach „Training beenden“ hervorgehoben.
+  Text optional. Geteilt: Kudos/Kommentare, „Im Feed ansehen“, „Text ändern“, „Nicht mehr teilen“ (mit Rückfrage).
+- **Feed** (`/sport/entdecken/feed`, erster Tab; `/sport/entdecken` leitet dorthin; die letzten 50 nach
+  Trainingszeit): Karte mit Person, „Heute, 18:30“, Titel, Text, Kennzahlen, „Neuer Bestwert“, Übungen mit bestem Satz
+  (5, Rest aufklappbar), „Ben und Clara feuern an“; Leiste mit Kudos (sofort sichtbar, beim eigenen Post aus),
+  Kommentieren (am Handy nur Symbol und Zahl), **Nachmachen** (legt einen eigenen Plan mit einem Trainingstag an:
+  Übungen, Sätze, Wdh.-Bereich, Zeit, Aufwärmsätze; öffnet ihn mit „Übernommen“). Kommentare: letzte 2, „Alle x
+  Kommentare“, Feld zum Schreiben. Menü: eigener Post „Text ändern“/„Nicht mehr teilen“, Admins „Post löschen“.
+- Datenexport: `geteilte_trainings`, `kudos_gegeben`, `kommentare`; `DATENVERARBEITUNG.md` ergänzt.
+- Geprüft: 543 Tests, Typecheck, Lint, Build grün. Feed-Karten (fremder und eigener Post), Teilen-Karte über eine
+  temporäre Vorschauseite mit Beispieldaten (gelöscht) bei 375 px: Aktionsleiste war zu breit (behoben), danach kein
+  seitliches Scrollen. **Nicht geprüft:** mit Login und echten Daten (Teilen, Kudos, Kommentare, Nachmachen).
+
+**Wie der Nutzer C3 testet:** ein Training beenden → auf der Trainingsseite „Training teilen“ mit Text → Entdecken →
+Feed zeigt den Post; mit dem zweiten Konto Kudos geben, kommentieren, „Nachmachen“ (öffnet den neuen Plan); beim ersten
+Konto Kommentar löschen, Text ändern, „Nicht mehr teilen“.
+
 ### Lexikon (02.11.2026)
 
 **Live** seit 02.11.2026: Push `7d6115d` → Deployment `dpl_3F4Y4jes5F13i6Bxi8vbzTRAfdhP` (`production`, `fra1`,

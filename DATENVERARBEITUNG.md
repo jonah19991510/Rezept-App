@@ -67,6 +67,9 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `training_schedule` | Trainings-Wochenplan: Wochentag, Tageszeit, Uhrzeit, Titel, Art, Dauer, Notiz | Habit Tracker (02.11.2026) | nur Nutzer selbst |
 | `lexicon_entries` (Spalte `created_by`, + `lexicon_entry_categories`) | selbst geschriebene Lexikon-Einträge: Begriff, Fakten, Texte, Tabellen, Stichworte, Quelle, öffentlich ja/nein | Lexikon (02.11.2026) | öffentliche Einträge alle Eingeloggten, Entwürfe nur Ersteller und Admins; schreiben vorerst nur Admins; `created_by` wird beim Löschen des Accounts auf leer gesetzt (Einträge bleiben) |
 | `challenges` (Spalte `created_by`) | selbst angelegte Challenges: Name, Beschreibung, Symbol, Farbe, Regeln | Challenges (03.11.2026) | alle Eingeloggten lesen; ändern Ersteller und Admins; `created_by` wird beim Löschen des Accounts auf leer gesetzt (die Challenge bleibt für die anderen) |
+| `workout_posts` | geteilte Trainings: eigener Text und Zusammenfassung (Titel, Dauer, Übungen mit bestem Satz, Sätze, Volumen, Strecke, neue Bestwerte), Trainingszeitpunkt | Feed C3 (03.11.2026) | alle Eingeloggten; ändern/löschen selbst (Admins löschen); Training gelöscht = Post weg; Cascade am Profil |
+| `post_kudos` | wer welchen Post angefeuert hat | Feed C3 (03.11.2026) | alle Eingeloggten; nur selbst geben/zurücknehmen; Cascade |
+| `post_comments` | Kommentare unter Posts | Feed C3 (03.11.2026) | alle Eingeloggten; löschen: Schreiber, Post-Autor, Admins; Cascade |
 | `profiles.hide_from_leaderboard` | aus der Gesamtrangliste der Challenges ausgeblendet ja/nein | Challenges C2 (03.11.2026) | alle Eingeloggten lesen (die Rangliste lässt Ausgeblendete weg), ändern nur selbst |
 | `challenge_participants` | bei welcher Challenge man mitmacht, ab welchem Tag, Beitrittszeit | Challenges (03.11.2026) | alle Eingeloggten (Rangliste mit Anzeigenamen); Cascade am Profil |
 | `challenge_entries` | Abhaken bzw. Menge je Challenge und Tag | Challenges (03.11.2026) | alle Eingeloggten (Rangliste, Statistik); schreiben nur selbst im erlaubten Zeitfenster; Cascade über die Teilnahme |
@@ -145,6 +148,13 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **03.11.2026, Trainings teilen (Phase C3):** Neue Tabellen `workout_posts`, `post_kudos` und `post_comments`. Ein
+  Training wird nur geteilt, wenn man es selbst ausdrücklich teilt; gespeichert wird dann eine feste Zusammenfassung
+  (die Trainings selbst bleiben privat). Alle Eingeloggten sehen Posts, Kudos (mit Anzeigenamen) und Kommentare.
+  Löschen des Trainings, „Nicht mehr teilen“ oder Löschen des Accounts entfernt Post, Kudos und Kommentare
+  (Cascade). „Nachmachen“ legt beim Nachmachenden einen normalen eigenen Trainingsplan an. Im Datenexport als
+  `geteilte_trainings`, `kudos_gegeben` und `kommentare`. Trainingsdaten können Gesundheitsdaten sein (Hinweis für die
+  Datenschutzerklärung). Keine neuen Dienstleister.
 - **03.11.2026, Gesamtrangliste (Phase C2):** Spalte `profiles.hide_from_leaderboard` (Standard: nicht ausgeblendet).
   Die Gesamtrangliste unter Entdecken zeigt Anzeigename, Punkte, Anzahl Challenges, geschaffte und beste Serie aller,
   die mitmachen und sich nicht ausgeblendet haben; berechnet aus den schon sichtbaren Challenge-Daten, nichts Neues

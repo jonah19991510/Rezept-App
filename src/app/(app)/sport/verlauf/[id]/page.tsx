@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, PartyPopper, Pencil } from "lucide-react";
+import { ShareWorkout } from "@/components/sport/feed/share-workout";
 import { ApplyToPlan, DeleteWorkout } from "@/components/sport/workout-actions";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { MUSCLE_LABELS } from "@/lib/domain/exercises";
 import { differsFromPlan, formatSet, planDayFromWorkout, resolveSet, summarizeSession, workoutDuration } from "@/lib/domain/workout";
 import { formatDayShort, formatNumber } from "@/lib/format";
+import { getPostForWorkout } from "@/lib/server/posts";
 import { getTrainingPlan } from "@/lib/server/sport";
 import { getWorkoutSession } from "@/lib/server/workouts";
 import { cn } from "@/lib/utils";
@@ -17,7 +19,10 @@ const time = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digi
 
 export const metadata: Metadata = { title: "Training" };
 
-/** Ein Training mit allen Sätzen; direkt nach dem Abschluss (?fertig=1) mit Zusammenfassung und „in den Plan übernehmen“. */
+/**
+ * Ein Training mit allen Sätzen; direkt nach dem Abschluss (?fertig=1) mit Zusammenfassung, „Training teilen“
+ * (hervorgehoben) und „in den Plan übernehmen“.
+ */
 export default async function WorkoutPage({ params, searchParams }: PageProps<"/sport/verlauf/[id]">) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
   if (!UUID.test(id)) notFound();
@@ -26,6 +31,8 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
   if (!session) notFound();
   const justFinished = query.fertig === "1" && session.endedAt != null;
   const summary = summarizeSession(session, new Date());
+  // Fehler (z. B. Tabelle fehlt noch) = wie nicht geteilt
+  const post = session.endedAt ? await getPostForWorkout(session.id).catch(() => null) : null;
 
   // Weicht das Training vom Plan-Tag ab? Dann „übernehmen“ anbieten (nur eigene Pläne)
   let applyDay: string | null = null;
@@ -104,6 +111,8 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
           </div>
         ))}
       </dl>
+
+      {session.endedAt ? <ShareWorkout key={post?.id ?? "neu"} workoutId={session.id} post={post} highlight={justFinished} /> : null}
 
       {applyDay ? (
         <section className="space-y-3 rounded-3xl border border-sport/40 bg-sport-soft/60 p-4 md:p-5" aria-labelledby="plan-uebernehmen">
