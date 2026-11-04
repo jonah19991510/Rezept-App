@@ -1350,6 +1350,9 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Ausdauer: Herzfrequenz und Minuten (04.11.2026)
 
+**Live** seit 04.11.2026: Push `41de8a9` → Deployment `dpl_5gLh2iHY5G8axNvV3184atHmTz8P` (`production`, „READY“; per
+Vercel-Connector geprüft).
+
 Wunsch des Nutzers: optionale Ø Herzfrequenz bei Ausdauerübungen samt Statistik; Dauer im Plan nicht nur in Sekunden.
 
 - **Migration** `…20261104150000_workout_set_heart_rate` am 04.11.2026 von Claude über die Supabase-Verbindung
