@@ -30,6 +30,7 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
   const session = await getWorkoutSession(id, user.id);
   if (!session) notFound();
   const justFinished = query.fertig === "1" && session.endedAt != null;
+  const stats = sessionStats(session, new Date());
   // Fehler (z. B. Tabelle fehlt noch) = wie nicht geteilt
   const post = session.endedAt ? await getPostForWorkout(session.id).catch(() => null) : null;
 
@@ -97,14 +98,21 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
         </Link>
       )}
 
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {sessionStats(session, new Date()).map((s) => (
-          <div key={s.label} className="rounded-3xl border bg-card p-4">
-            <dt className="text-sm text-muted-foreground">{s.label}</dt>
-            <dd className="font-heading text-2xl font-semibold tabular-nums">{s.value}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className="space-y-2">
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-3xl border bg-card p-4">
+              <dt className="text-sm text-muted-foreground">{s.label}</dt>
+              <dd className="font-heading text-2xl font-semibold tabular-nums">{s.value}</dd>
+            </div>
+          ))}
+        </dl>
+        {stats.some((s) => s.label === "Geschwindigkeit" && s.value !== "–") ? (
+          <p className="px-1 text-sm text-muted-foreground">
+            Die Geschwindigkeit wird aus Strecke und Zeit berechnet und kann deshalb von der Einstellung am Gerät abweichen. Fehlt die Strecke, zählt die eingetragene Geschwindigkeit.
+          </p>
+        ) : null}
+      </div>
 
       {session.endedAt ? <ShareWorkout key={post?.id ?? "neu"} workoutId={session.id} post={post} highlight={justFinished} /> : null}
 

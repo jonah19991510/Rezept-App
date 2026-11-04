@@ -214,6 +214,11 @@ describe("sessionStats", () => {
     ]);
   });
 
+  it("rechnet die Geschwindigkeit aus Strecke und Zeit, auch wenn eine andere eingetragen ist", () => {
+    const set = { ...done, speed: "4,4", distance: "3,2", seconds: "45:00" };
+    expect(labels(sessionStats({ ...base, exercises: [entry(cardio, [set])] }, new Date()))).toMatchObject({ Geschwindigkeit: "4,3 km/h", Strecke: "3,2 km", Dauer: "45 Min." });
+  });
+
   it("rechnet mehrere Sätze zusammen und lässt nicht erledigte weg", () => {
     const sets = [
       { ...done, distance: "2", seconds: "10:00", heartRate: "120" },

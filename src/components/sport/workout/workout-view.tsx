@@ -825,6 +825,7 @@ function ExerciseCard({
             );
           })}
         </ul>
+        {cardio ? <p className="mt-1 px-1 text-xs text-muted-foreground">Ohne Eintrag wird die Geschwindigkeit aus Strecke und Zeit berechnet.</p> : null}
         <div className="mt-1 flex gap-2">
           <Button type="button" variant="ghost" className="h-11 flex-1 rounded-2xl" onClick={onAddSet}>
             <Plus aria-hidden />

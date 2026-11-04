@@ -1364,6 +1364,9 @@ Wunsch des Nutzers: optionale Ø Herzfrequenz bei Ausdauerübungen samt Statisti
   Tabelle und Tooltip. Auch im Verlauf des Trainings und in der Sport-Sicherung.
 - **Trainings-Detail** (`sessionStats`): Reine Ausdauertrainings zeigen oben Dauer (eingetragene Zeit der Sätze),
   Geschwindigkeit, Strecke und Ø Herzfrequenz statt Übungen, Sätze und Volumen. Gemischte Trainings bleiben wie bisher.
+- **Tempo, Entscheidung des Nutzers:** Strecke ÷ Zeit hat Vorrang vor der eingetragenen Geschwindigkeit (4,4 km/h am
+  Laufband, 3,2 km und 45 Min. ergeben 4,3 km/h; die Laufband-Anzeige ist wohl nicht ganz genau). Eine Umstellung auf
+  den eingetragenen Wert wurde auf Wunsch zurückgenommen. Hinweise dazu im Training und unter der Zusammenfassung.
 - **Fehler beim ersten Test des Nutzers (behoben):** `workoutPayloadSchema` kannte `avg_heart_rate` nicht und entfernte
   das Feld stillschweigend. Ein Test prüft jetzt, dass die Prüfung jedes Feld von `toSyncPayload` durchlässt. Neue Felder
   also immer auch in `src/lib/validation/workout.ts` eintragen.
