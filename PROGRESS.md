@@ -1350,6 +1350,9 @@ Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
 ### Dehnen und Reha in der Übungsdatenbank (04.11.2026)
 
+**Live** seit 04.11.2026: Push `8648126` → Deployment `dpl_Exwyioeu7LaoFaeT5mT9RStCLvpV` (`production`, „READY“; per
+Vercel-Connector geprüft).
+
 Wunsch des Nutzers: Dehnübungen für alle Muskelgruppen (auch vernachlässigte) und Übungen gegen Beschwerden wie Shin
 Splints.
 
