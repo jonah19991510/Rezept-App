@@ -8,7 +8,8 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import { EQUIPMENT_LABELS, isTimed, MUSCLE_LABELS } from "@/lib/domain/exercises";
 import { durationLabel, REST_CHOICES } from "@/lib/domain/training-plan";
-import type { DraftDay, DraftExercise } from "./plan-model";
+import { isCardioExercise } from "@/lib/domain/workout-stats";
+import { durationFromParts, durationParts, type DraftDay, type DraftExercise } from "./plan-model";
 
 const numberClass = "h-12 text-center text-xl font-semibold tabular-nums";
 
@@ -46,6 +47,8 @@ export function ExerciseSheet({
       .map((s) => ({ value: String(s), label: durationLabel(s).replace(" Min.", " min") })),
   ];
   const err = (k: string) => errors[k]?.[0];
+  const duration = durationParts(draft.targetSeconds);
+  const cardio = isCardioExercise(exercise);
 
   return (
     <EditorSheet
@@ -99,18 +102,31 @@ export function ExerciseSheet({
 
       {timed ? (
         <div>
-          <FieldHeading htmlFor="target-seconds" aside="optional">
-            Dauer pro Satz (Sekunden)
+          <FieldHeading id="target-label" aside="optional">
+            Dauer pro Satz
           </FieldHeading>
-          <Input
-            id="target-seconds"
-            inputMode="numeric"
-            value={draft.targetSeconds}
-            onChange={(e) => onChange({ targetSeconds: e.target.value })}
-            placeholder="z. B. 45"
-            className={numberClass}
-            aria-invalid={Boolean(err("target_seconds")) || undefined}
-          />
+          <div className="flex items-center gap-3" role="group" aria-labelledby="target-label">
+            <Input
+              inputMode="numeric"
+              value={duration.minutes}
+              onChange={(e) => onChange({ targetSeconds: durationFromParts(e.target.value, duration.seconds) })}
+              placeholder={cardio ? "30" : "0"}
+              aria-label="Minuten"
+              className={numberClass}
+              aria-invalid={Boolean(err("target_seconds")) || undefined}
+            />
+            <span className="text-muted-foreground">Min.</span>
+            <Input
+              inputMode="numeric"
+              value={duration.seconds}
+              onChange={(e) => onChange({ targetSeconds: durationFromParts(duration.minutes, e.target.value) })}
+              placeholder={cardio ? "0" : "45"}
+              aria-label="Sekunden"
+              className={numberClass}
+              aria-invalid={Boolean(err("target_seconds")) || undefined}
+            />
+            <span className="text-muted-foreground">Sek.</span>
+          </div>
           {err("target_seconds") ? <p className="mt-1 text-sm text-destructive">{err("target_seconds")}</p> : null}
         </div>
       ) : (

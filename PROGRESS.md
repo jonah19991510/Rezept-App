@@ -1348,6 +1348,31 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Ausdauer: Herzfrequenz und Minuten (04.11.2026)
+
+Wunsch des Nutzers: optionale Ø Herzfrequenz bei Ausdauerübungen samt Statistik; Dauer im Plan nicht nur in Sekunden.
+
+- **Migration** `…20261104150000_workout_set_heart_rate` am 04.11.2026 von Claude über die Supabase-Verbindung
+  eingespielt (mit Freigabe des Nutzers). Per SQL geprüft: Spalte `workout_sets.avg_heart_rate` (30–250), `sync_workout`
+  speichert sie, nur für Eingeloggte ausführbar. `last_exercise_sets` unverändert.
+- **Training:** Feld „Ø Herzfrequenz“ je Satz bei Ausdauer (Muskelgruppe Ausdauer oder Strecke und Zeit), also auch
+  Crosstrainer. Wird nie vom letzten Mal übernommen; außerhalb von 30–250 lässt sich der Satz nicht abhaken.
+- **Statistik** („Übung im Verlauf“): Kachel Ø Herzfrequenz, Diagramm-Auswahl „Herzfrequenz“ (sobald es Werte gibt),
+  Tabelle und Tooltip. Auch im Verlauf des Trainings und in der Sport-Sicherung.
+- **Trainings-Detail** (`sessionStats`): Reine Ausdauertrainings zeigen oben Dauer (eingetragene Zeit der Sätze),
+  Geschwindigkeit, Strecke und Ø Herzfrequenz statt Übungen, Sätze und Volumen. Gemischte Trainings bleiben wie bisher.
+- **Fehler beim ersten Test des Nutzers (behoben):** `workoutPayloadSchema` kannte `avg_heart_rate` nicht und entfernte
+  das Feld stillschweigend. Ein Test prüft jetzt, dass die Prüfung jedes Feld von `toSyncPayload` durchlässt. Neue Felder
+  also immer auch in `src/lib/validation/workout.ts` eintragen.
+- **Bewusst privat:** Die Herzfrequenz steht nie in geteilten Trainings (`formatSet` lässt sie weg, Test in
+  `posts.test.ts`). `DATENVERARBEITUNG.md` ergänzt (Gesundheitsdatum).
+- **Plan:** „Dauer pro Satz“ jetzt mit den Feldern Min. und Sek. (gespeichert weiter in Sekunden).
+- **Training, Strecke und Zeit:** Eine einzelne Zahl im Feld Zeit sind jetzt Minuten („45“ = 45:00, vorher 45 Sekunden).
+  Reine Zeit-Übungen (Plank, Crosstrainer) lesen sie weiter als Sekunden. `setInputs` schreibt Zeiten immer als „0:45“.
+- **Geprüft:** Tests, Typecheck, Lint, Build. Über eine temporäre Vorschauseite (danach gelöscht) bei 375 px: Eingabe im
+  Plan und im Training, Prüfung des Bereichs, Statistik für Laufband und Crosstrainer. Echtes Speichern vom Nutzer lokal
+  getestet (Laufband mit 127 bpm, per SQL in der Datenbank bestätigt).
+
 ### Dehnen und Reha in der Übungsdatenbank (04.11.2026)
 
 **Live** seit 04.11.2026: Push `8648126` → Deployment `dpl_Exwyioeu7LaoFaeT5mT9RStCLvpV` (`production`, „READY“; per

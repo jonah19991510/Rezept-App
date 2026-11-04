@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ExerciseOption } from "@/lib/domain/exercises";
 import { trainingPlanInputSchema } from "@/lib/validation/training-plan";
-import { dayErrors, draftToInput, emptyPlan, exerciseErrors, keyGenerator, newDraftExercise, replaceDraftExercise } from "./plan-model";
+import { dayErrors, draftToInput, durationFromParts, durationParts, emptyPlan, exerciseErrors, keyGenerator, newDraftExercise, replaceDraftExercise } from "./plan-model";
 
 const ID = "0b6c2f2e-1d6f-4a51-9a51-2b7b3c3f2a10";
 const bench: ExerciseOption = {
@@ -16,6 +16,25 @@ const bench: ExerciseOption = {
   own: false,
 };
 const plank: ExerciseOption = { ...bench, id: "1b6c2f2e-1d6f-4a51-9a51-2b7b3c3f2a10", name: "Plank", tracking: "time", equipment: "bodyweight" };
+
+describe("Dauer in Minuten und Sekunden", () => {
+  it("rechnet Minuten in Sekunden um", () => {
+    expect(durationFromParts("45", "")).toBe("2700");
+    expect(durationFromParts("1", "30")).toBe("90");
+    expect(durationFromParts("", "45")).toBe("45");
+    expect(durationFromParts("", "")).toBe("");
+    expect(durationFromParts("0", "0")).toBe("");
+    expect(durationFromParts("4a", "")).toBe("240");
+  });
+
+  it("teilt Sekunden wieder auf die Felder auf", () => {
+    expect(durationParts("2700")).toEqual({ minutes: "45", seconds: "" });
+    expect(durationParts("90")).toEqual({ minutes: "1", seconds: "30" });
+    expect(durationParts("45")).toEqual({ minutes: "", seconds: "45" });
+    expect(durationParts("")).toEqual({ minutes: "", seconds: "" });
+    expect(durationParts("abc")).toEqual({ minutes: "", seconds: "" });
+  });
+});
 
 describe("newDraftExercise", () => {
   it("setzt übliche Vorgaben je nach Erfassung", () => {

@@ -53,7 +53,7 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | `favorites` | Lieblingsrezepte | 2 | nur Nutzer selbst |
 | `ingredients` (Spalte `created_by`) | selbst angelegte Zutaten | 2 | Zutaten sind global für alle lesbar; `created_by` wird beim Löschen auf leer gesetzt |
 | `training_plans` (+ `training_plan_days`, `training_plan_exercises`) | Trainingspläne mit Tagen und Übungen (Sätze, Wiederholungen, Pause, Notiz), „ausgeblendet“; `forked_from_id` für spätere Übernahmen | S1 (26.10.2026) | nur Owner; öffentlich erst mit Phase S4 (Schalter, alle Eingeloggten mit Anzeigename) |
-| `workouts` (+ `workout_exercises`, `workout_sets`) | Trainings: Start/Ende, Plan und Tag, Übungen, Sätze (Gewicht, Wiederholungen, Zeit, Strecke, ab 27.10.2026 Geschwindigkeit), Notizen | S2 (26.10.2026) | nur Nutzer selbst |
+| `workouts` (+ `workout_exercises`, `workout_sets`) | Trainings: Start/Ende, Plan und Tag, Übungen, Sätze (Gewicht, Wiederholungen, Zeit, Strecke, ab 27.10.2026 Geschwindigkeit, ab 04.11.2026 optional Ø Herzfrequenz bei Ausdauer), Notizen | S2 (26.10.2026) | nur Nutzer selbst |
 | Browser (`localStorage`, Schlüssel `training:<id>`) und Cache Storage des Service Workers (`rezeptbuch-training`, Seite `/training/<id>`) | laufendes Training, damit es ohne Netz weitergeht | S2 (26.10.2026) | nur das Gerät; gelöscht beim Beenden, Verwerfen und Abmelden |
 | `drinks` | eigene Getränke (Name, Farbe, Koffein und Zucker pro 100 ml, Wasseranteil, Zutaten bei Mischgetränken) | Getränketracker (27.10.2026) | nur Nutzer selbst |
 | `drink_entries` | was wann getrunken wurde: Zeitpunkt, Menge, Getränkename, Koffein, Zucker, Wasser | Getränketracker (27.10.2026) | nur Nutzer selbst |
@@ -148,6 +148,9 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **04.11.2026, Herzfrequenz:** Neue Spalte `workout_sets.avg_heart_rate` (optional, RLS wie bisher nur der Nutzer). Sie
+  steht im Verlauf, in der Statistik und in der Sport-Sicherung, aber nie in geteilten Trainings. Die Herzfrequenz ist
+  ein Gesundheitsdatum (Hinweis für die Datenschutzerklärung). Keine neuen Dienstleister.
 - **03.11.2026, private Challenges:** Spalte `challenges.is_public`. Private Challenges samt Teilnahme und Einträgen
   sieht nur, wer sie angelegt hat (RLS), sie zählen nicht für die Gesamtrangliste. Öffentlich → privat nur, solange
   niemand sonst mitmacht. Bestehende bleiben öffentlich. Keine neuen Dienstleister.

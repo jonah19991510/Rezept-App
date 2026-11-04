@@ -800,6 +800,7 @@ export type Database = {
       }
       workout_sets: {
         Row: {
+          avg_heart_rate: number | null
           distance_m: number | null
           done: boolean
           done_at: string | null
@@ -813,6 +814,7 @@ export type Database = {
           workout_exercise_id: string
         }
         Insert: {
+          avg_heart_rate?: number | null
           distance_m?: number | null
           done?: boolean
           done_at?: string | null
@@ -826,6 +828,7 @@ export type Database = {
           workout_exercise_id: string
         }
         Update: {
+          avg_heart_rate?: number | null
           distance_m?: number | null
           done?: boolean
           done_at?: string | null

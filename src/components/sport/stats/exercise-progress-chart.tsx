@@ -12,10 +12,10 @@ const kg = (v: number) => `${formatNumber(v, 1)} kg`;
 const shortDate = (iso: string) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}.`;
 
 /** Ausdauer: welche Größe das Diagramm zeigt (eigene Einheiten, daher nicht zusammen auf einer Achse). */
-export type CardioMetric = "distance" | "time" | "speed";
+export type CardioMetric = "distance" | "time" | "speed" | "heartRate";
 
 type Series = {
-  key: "best1RM" | "bestWeightKg" | "maxReps" | "maxSeconds" | "km" | "totalSeconds" | "speedKmh";
+  key: "best1RM" | "bestWeightKg" | "maxReps" | "maxSeconds" | "km" | "totalSeconds" | "speedKmh" | "avgHeartRate";
   label: string;
   color: string;
   format: (v: number) => string;
@@ -23,9 +23,11 @@ type Series = {
 
 const km = (v: number) => `${formatNumber(v, 2)} km`;
 const kmh = (v: number) => `${formatNumber(v, 1)} km/h`;
+const bpm = (v: number) => `${v} bpm`;
 
 /** Welche Linien je Erfassung: Gewicht = geschätztes 1RM und schwerster Satz (beide kg), sonst eine Linie. */
 function seriesFor(tracking: Tracking, metric: CardioMetric): Series[] {
+  if (metric === "heartRate") return [{ key: "avgHeartRate", label: "Ø Herzfrequenz", color: CHART_COLORS[0], format: bpm }];
   if (tracking === "time") return [{ key: "maxSeconds", label: "Längster Satz", color: CHART_COLORS[0], format: mmss }];
   if (tracking === "distance_time") {
     if (metric === "time") return [{ key: "totalSeconds", label: "Zeit", color: CHART_COLORS[0], format: mmss }];
@@ -50,7 +52,7 @@ export function ExerciseProgressChart({
 }: {
   sessions: ExerciseSession[];
   tracking: Tracking;
-  /** nur bei Strecke und Zeit */
+  /** nur bei Ausdauer */
   metric?: CardioMetric;
 }) {
   const router = useRouter();
@@ -58,7 +60,7 @@ export function ExerciseProgressChart({
   const series = seriesFor(tracking, metric);
   // Ausdauer: Strecke eines Trainings = alle Sätze zusammen
   const data = sessions.map((s) => ({ ...s, label: shortDate(s.date), km: s.totalDistanceM != null ? s.totalDistanceM / 1000 : null }));
-  const timeAxis = tracking === "time" || (cardio && metric === "time");
+  const timeAxis = metric !== "heartRate" && (tracking === "time" || (cardio && metric === "time"));
 
   function renderTooltip({ active, payload }: TooltipContentProps) {
     const p = payload?.[0]?.payload as (typeof data)[number] | undefined;
@@ -73,11 +75,13 @@ export function ExerciseProgressChart({
                 { label: "Strecke", value: p.km != null ? km(p.km) : "–", color: metric === "distance" ? CHART_COLORS[0] : undefined },
                 { label: "Zeit", value: p.totalSeconds != null ? mmss(p.totalSeconds) : "–", color: metric === "time" ? CHART_COLORS[0] : undefined },
                 { label: "Ø Tempo", value: p.speedKmh != null ? kmh(p.speedKmh) : "–", color: metric === "speed" ? CHART_COLORS[0] : undefined },
+                ...(p.avgHeartRate != null ? [{ label: "Ø Herzfrequenz", value: bpm(p.avgHeartRate), color: metric === "heartRate" ? CHART_COLORS[0] : undefined }] : []),
               ]
             : series.map((s) => {
                 const v = p[s.key];
                 return { label: s.label, value: v == null ? "–" : s.format(v), color: s.color };
               })),
+          ...(!cardio && metric !== "heartRate" && p.avgHeartRate != null ? [{ label: "Ø Herzfrequenz", value: bpm(p.avgHeartRate) }] : []),
           ...(tracking === "weight_reps" && p.bestWeightReps != null ? [{ label: "Wdh. beim schwersten Satz", value: String(p.bestWeightReps) }] : []),
           ...(p.volumeKg > 0 ? [{ label: "Volumen", value: `${formatNumber(Math.round(p.volumeKg), 0)} kg` }] : []),
           { label: "Sätze", value: String(p.sets) },

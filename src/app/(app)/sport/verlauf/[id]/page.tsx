@@ -7,8 +7,8 @@ import { ApplyToPlan, DeleteWorkout } from "@/components/sport/workout-actions";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { MUSCLE_LABELS } from "@/lib/domain/exercises";
-import { differsFromPlan, formatSet, planDayFromWorkout, resolveSet, summarizeSession, workoutDuration } from "@/lib/domain/workout";
-import { formatDayShort, formatNumber } from "@/lib/format";
+import { differsFromPlan, formatSet, heartRateLabel, planDayFromWorkout, resolveSet, sessionStats } from "@/lib/domain/workout";
+import { formatDayShort } from "@/lib/format";
 import { getPostForWorkout } from "@/lib/server/posts";
 import { getTrainingPlan } from "@/lib/server/sport";
 import { getWorkoutSession } from "@/lib/server/workouts";
@@ -30,7 +30,6 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
   const session = await getWorkoutSession(id, user.id);
   if (!session) notFound();
   const justFinished = query.fertig === "1" && session.endedAt != null;
-  const summary = summarizeSession(session, new Date());
   // Fehler (z. B. Tabelle fehlt noch) = wie nicht geteilt
   const post = session.endedAt ? await getPostForWorkout(session.id).catch(() => null) : null;
 
@@ -99,12 +98,7 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
       )}
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: "Dauer", value: workoutDuration(summary.durationSeconds) },
-          { label: "Übungen", value: String(summary.exercises) },
-          { label: "Sätze", value: String(summary.sets) },
-          { label: "Volumen", value: `${formatNumber(Math.round(summary.volumeKg), 0)} kg` },
-        ].map((s) => (
+        {sessionStats(session, new Date()).map((s) => (
           <div key={s.label} className="rounded-3xl border bg-card p-4">
             <dt className="text-sm text-muted-foreground">{s.label}</dt>
             <dd className="font-heading text-2xl font-semibold tabular-nums">{s.value}</dd>
@@ -139,10 +133,14 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
               <ol className="divide-y">
                 {e.sets.map((s) => {
                   const label = s.kind === "warmup" ? "A" : String(++n);
+                  const values = resolveSet(s, null, e.exercise.tracking);
                   return (
                     <li key={s.id} className={cn("flex items-center gap-3 px-4 py-2 md:px-5", !s.done && "opacity-50")}>
                       <span className={cn("w-6 text-center text-sm font-semibold tabular-nums", s.kind === "warmup" ? "text-primary" : "text-muted-foreground")}>{label}</span>
-                      <span className="font-medium tabular-nums">{formatSet(resolveSet(s, null, e.exercise.tracking), e.exercise.tracking)}</span>
+                      <span className="font-medium tabular-nums">
+                        {formatSet(values, e.exercise.tracking)}
+                        {values.avgHeartRate != null ? ` · ${heartRateLabel(values.avgHeartRate)}` : ""}
+                      </span>
                       {s.kind === "warmup" ? <span className="text-xs text-muted-foreground">Aufwärmen</span> : null}
                     </li>
                   );

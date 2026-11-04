@@ -3,7 +3,7 @@ import { addDays, daysBetween, mondayOf } from "./week";
 
 // Sport & Gesundheit, Phase S3: Statistik aus den beendeten Trainings.
 
-export type StatsSet = { kind: "warmup" | "normal"; weightKg: number | null; reps: number | null; seconds: number | null; distanceM: number | null; speedKmh?: number | null };
+export type StatsSet = { kind: "warmup" | "normal"; weightKg: number | null; reps: number | null; seconds: number | null; distanceM: number | null; speedKmh?: number | null; avgHeartRate?: number | null };
 
 export type StatsWorkout = {
   id: string;
@@ -112,12 +112,12 @@ export function weeklyStats(workouts: StatsWorkout[], mondays: string[]): WeekSt
 }
 
 /** Übungen mit Daten, am häufigsten trainierte zuerst (für die Auswahl). */
-export function exerciseOptions(workouts: StatsWorkout[]): { id: string; name: string; tracking: Tracking; sessions: number }[] {
-  const map = new Map<string, { id: string; name: string; tracking: Tracking; sessions: number }>();
+export function exerciseOptions(workouts: StatsWorkout[]): { id: string; name: string; tracking: Tracking; cardio: boolean; sessions: number }[] {
+  const map = new Map<string, { id: string; name: string; tracking: Tracking; cardio: boolean; sessions: number }>();
   for (const w of workouts) {
     for (const e of w.exercises) {
       if (normalSets(e.sets).length === 0) continue;
-      const entry = map.get(e.exerciseId) ?? { id: e.exerciseId, name: e.name, tracking: e.tracking, sessions: 0 };
+      const entry = map.get(e.exerciseId) ?? { id: e.exerciseId, name: e.name, tracking: e.tracking, cardio: isCardioExercise(e), sessions: 0 };
       entry.sessions++;
       map.set(e.exerciseId, entry);
     }
@@ -142,6 +142,8 @@ export type ExerciseSession = {
   totalSeconds: number | null;
   /** Ausdauer: Ø Tempo (Strecke ÷ Zeit der Sätze mit beidem, sonst die eingetragene Geschwindigkeit) */
   speedKmh: number | null;
+  /** Ausdauer: Ø Herzfrequenz der Sätze, die eine haben */
+  avgHeartRate: number | null;
   sets: number;
 };
 
@@ -158,6 +160,22 @@ export function averageSpeed(sets: StatsSet[]): number | null {
   }
   const speeds = sets.map((s) => s.speedKmh).filter((v): v is number => v != null && v > 0);
   return speeds.length ? Math.round((speeds.reduce((a, b) => a + b, 0) / speeds.length) * 10) / 10 : null;
+}
+
+/** Ø Herzfrequenz in bpm über die Sätze mit Angabe; haben alle eine Zeit, zählen längere Sätze entsprechend mehr. */
+export function averageHeartRate(sets: StatsSet[]): number | null {
+  const rated = sets.filter((s) => s.avgHeartRate != null);
+  if (!rated.length) return null;
+  const timed = rated.every((s) => s.seconds);
+  const weight = (s: StatsSet) => (timed ? s.seconds! : 1);
+  const total = rated.reduce((sum, s) => sum + weight(s), 0);
+  return Math.round(rated.reduce((sum, s) => sum + s.avgHeartRate! * weight(s), 0) / total);
+}
+
+/** Ø Herzfrequenz über alle Trainings mit Angabe (jedes Training zählt gleich). */
+export function overallHeartRate(sessions: ExerciseSession[]): number | null {
+  const rates = sessions.map((s) => s.avgHeartRate).filter((v): v is number => v != null);
+  return rates.length ? Math.round(rates.reduce((a, b) => a + b, 0) / rates.length) : null;
 }
 
 /** Verlauf einer Übung: je Training die besten Werte, älteste zuerst. */
@@ -193,6 +211,7 @@ export function exerciseProgress(workouts: StatsWorkout[], exerciseId: string): 
       totalDistanceM: sum(sets.map((s) => s.distanceM)),
       totalSeconds: sum(sets.map((s) => s.seconds)),
       speedKmh: averageSpeed(sets),
+      avgHeartRate: averageHeartRate(sets),
       sets: sets.length,
     });
   }

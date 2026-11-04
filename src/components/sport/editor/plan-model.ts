@@ -81,6 +81,20 @@ export function draftFromPlan(plan: PlanDetail, nextKey: () => string): DraftPla
   };
 }
 
+/** Dauer (Sekunden als Text) für die Felder Minuten und Sekunden; 0 bleibt leer. */
+export function durationParts(value: string): { minutes: string; seconds: string } {
+  const total = int(value);
+  if (!total) return { minutes: "", seconds: "" };
+  return { minutes: total >= 60 ? String(Math.floor(total / 60)) : "", seconds: total % 60 ? String(total % 60) : "" };
+}
+
+/** Minuten und Sekunden aus den Feldern → Dauer in Sekunden als Text; nur Ziffern zählen, ohne Dauer leer. */
+export function durationFromParts(minutes: string, seconds: string): string {
+  const digits = (v: string) => Number(v.replace(/\D/g, "") || 0);
+  const total = digits(minutes) * 60 + digits(seconds);
+  return total > 0 ? String(total) : "";
+}
+
 /** Text → Zahl; leer = null, Unsinn = NaN (meldet dann die Prüfung). */
 function int(value: string): number | null {
   const v = value.trim();

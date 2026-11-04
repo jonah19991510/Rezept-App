@@ -18,6 +18,7 @@ import {
   exerciseRecords,
   inRange,
   mondaysBetween,
+  overallHeartRate,
   RANGE_LABELS,
   rangeEnd,
   rangeStart,
@@ -45,9 +46,11 @@ const CARDIO_METRICS: { value: CardioMetric; label: string }[] = [
   { value: "time", label: "Zeit" },
   { value: "speed", label: "Tempo" },
 ];
+const HEART_RATE_METRIC: { value: CardioMetric; label: string } = { value: "heartRate", label: "Herzfrequenz" };
 const kg = (v: number) => `${formatNumber(Math.round(v), 0)} kg`;
 const km = (meters: number) => `${formatNumber(meters / 1000, 2)} km`;
 const kmh = (v: number) => `${formatNumber(v, 1)} km/h`;
+const bpm = (v: number) => `${v} bpm`;
 /** Große Mengen kompakt: „64,1 t“ statt „64.099 kg“ */
 const tons = (v: number) => (v >= 10000 ? `${formatNumber(v / 1000, 1)} t` : kg(v));
 /** Gesamtzeit kompakt: „45 Min.“, „28 Std.“ */
@@ -95,6 +98,16 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
   const exercise = options.find((o) => o.id === exerciseId) ?? options[0] ?? null;
   const sessions = useMemo(() => (exercise ? exerciseProgress(visible, exercise.id) : []), [visible, exercise]);
   const records = useMemo(() => exerciseRecords(sessions), [sessions]);
+  const heartRate = useMemo(() => overallHeartRate(sessions), [sessions]);
+  // Herzfrequenz nur, wenn es Werte gibt; Ausdauer nach Zeit hat keine Strecke und kein Tempo
+  const metric: CardioMetric =
+    cardioMetric === "heartRate" && heartRate != null ? "heartRate" : exercise?.tracking === "time" ? "time" : cardioMetric === "heartRate" ? "distance" : cardioMetric;
+  const metricChips: { value: CardioMetric; label: string }[] =
+    exercise?.tracking === "distance_time"
+      ? [...CARDIO_METRICS, ...(heartRate != null ? [HEART_RATE_METRIC] : [])]
+      : exercise?.cardio && heartRate != null
+        ? [{ value: "time", label: "Zeit" }, HEART_RATE_METRIC]
+        : [];
   const muscles = useMemo(() => setsPerMuscle(visible, mondays.length), [visible, mondays.length]);
   const calendar = useMemo(() => trainingCalendar(workouts, today, 12), [workouts, today]);
   const latestRecords = useMemo(() => recentRecords(visible), [visible]);
@@ -191,16 +204,16 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
                 <DataTable
                   head={
                     exercise.tracking === "distance_time"
-                      ? ["Datum", "Strecke", "Zeit", "Ø Tempo"]
+                      ? ["Datum", "Strecke", "Zeit", "Ø Tempo", "Ø Herzfrequenz"]
                       : isTimed(exercise.tracking)
-                        ? ["Datum", "Bestwert", "Sätze"]
+                        ? ["Datum", "Bestwert", "Sätze", ...(exercise.cardio ? ["Ø Herzfrequenz"] : [])]
                         : ["Datum", "Schwerster Satz", "Geschätztes 1RM", "Volumen"]
                   }
                   rows={sessions.map((s) =>
                     exercise.tracking === "distance_time"
-                      ? [date(s.date), s.totalDistanceM != null ? km(s.totalDistanceM) : "–", s.totalSeconds != null ? mmss(s.totalSeconds) : "–", s.speedKmh != null ? kmh(s.speedKmh) : "–"]
+                      ? [date(s.date), s.totalDistanceM != null ? km(s.totalDistanceM) : "–", s.totalSeconds != null ? mmss(s.totalSeconds) : "–", s.speedKmh != null ? kmh(s.speedKmh) : "–", s.avgHeartRate != null ? bpm(s.avgHeartRate) : "–"]
                       : isTimed(exercise.tracking)
-                      ? [date(s.date), exercise.tracking === "time" ? (s.maxSeconds != null ? mmss(s.maxSeconds) : "–") : s.maxDistanceM != null ? `${formatNumber(s.maxDistanceM / 1000, 2)} km` : "–", s.sets]
+                      ? [date(s.date), exercise.tracking === "time" ? (s.maxSeconds != null ? mmss(s.maxSeconds) : "–") : s.maxDistanceM != null ? `${formatNumber(s.maxDistanceM / 1000, 2)} km` : "–", s.sets, ...(exercise.cardio ? [s.avgHeartRate != null ? bpm(s.avgHeartRate) : "–"] : [])]
                       : [
                           date(s.date),
                           s.bestWeightKg != null ? `${formatNumber(s.bestWeightKg, 1)} kg × ${s.bestWeightReps ?? "–"}` : s.maxReps != null ? `× ${s.maxReps}` : "–",
@@ -221,15 +234,19 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
                     </option>
                   ))}
                 </NativeSelect>
-                <dl className={cn("grid gap-2", exercise.tracking === "distance_time" ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4")}>
+                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {isTimed(exercise.tracking) ? (
                     exercise.tracking === "time" ? (
-                      <RecordTile label="Längster Satz" value={records.seconds ? mmss(records.seconds.value) : "–"} date={records.seconds?.date} />
+                      <>
+                        <RecordTile label="Längster Satz" value={records.seconds ? mmss(records.seconds.value) : "–"} date={records.seconds?.date} />
+                        {exercise.cardio ? <RecordTile label="Ø Herzfrequenz" value={heartRate != null ? bpm(heartRate) : "–"} /> : null}
+                      </>
                     ) : (
                       <>
                         <RecordTile compact label="Längste Strecke" value={records.totalDistance ? km(records.totalDistance.value) : "–"} date={records.totalDistance?.date} />
                         <RecordTile compact label="Längste Zeit" value={records.totalSeconds ? mmss(records.totalSeconds.value) : "–"} date={records.totalSeconds?.date} />
                         <RecordTile compact label="Schnellstes Tempo" value={records.speed ? kmh(records.speed.value) : "–"} date={records.speed?.date} />
+                        <RecordTile compact label="Ø Herzfrequenz" value={heartRate != null ? bpm(heartRate) : "–"} />
                       </>
                     )
                   ) : (
@@ -241,17 +258,17 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
                     </>
                   )}
                 </dl>
-                {sessions.length > 1 && exercise.tracking === "distance_time" ? (
+                {sessions.length > 1 && metricChips.length > 1 ? (
                   <ChipRow label="Im Diagramm">
-                    {CARDIO_METRICS.map((m) => (
-                      <button key={m.value} type="button" aria-pressed={cardioMetric === m.value} onClick={() => setCardioMetric(m.value)} className={chipClass(cardioMetric === m.value)}>
+                    {metricChips.map((m) => (
+                      <button key={m.value} type="button" aria-pressed={metric === m.value} onClick={() => setCardioMetric(m.value)} className={chipClass(metric === m.value)}>
                         {m.label}
                       </button>
                     ))}
                   </ChipRow>
                 ) : null}
                 {sessions.length > 1 ? (
-                  <ExerciseProgressChart sessions={sessions} tracking={exercise.tracking} metric={cardioMetric} />
+                  <ExerciseProgressChart sessions={sessions} tracking={exercise.tracking} metric={metric} />
                 ) : (
                   <p className="text-sm text-muted-foreground">Ab zwei Trainings mit dieser Übung siehst du hier den Verlauf.</p>
                 )}

@@ -9,9 +9,13 @@ import {
   finalizeSession,
   formatSet,
   nextPlanDay,
+  heartRateLabel,
   parseClock,
+  parseHeartRate,
   planDayFromWorkout,
   resolveSet,
+  sessionStats,
+  setInputs,
   summarizeSession,
   toSyncPayload,
   uuid,
@@ -19,6 +23,7 @@ import {
   workoutDuration,
   type Session,
 } from "./workout";
+import { workoutPayloadSchema } from "@/lib/validation/workout";
 
 const bench: ExerciseOption = { id: "bench", name: "Bankdrücken", muscleGroup: "chest", secondaryMuscles: [], equipment: "barbell", tracking: "weight_reps", category: "training", instructions: null, own: false };
 const plank: ExerciseOption = { ...bench, id: "plank", name: "Plank", tracking: "time", equipment: "bodyweight" };
@@ -105,6 +110,8 @@ describe("Anzeige und Eingabe", () => {
     expect(parseClock("1:30")).toBe(90);
     expect(parseClock("1:02:00")).toBe(3720);
     expect(parseClock("abc")).toBeNull();
+    expect(parseClock("45", "minutes")).toBe(2700);
+    expect(parseClock("1:30", "minutes")).toBe(90);
   });
 
   it("nimmt für leere Felder die Werte vom letzten Mal", () => {
@@ -179,6 +186,98 @@ describe("summarizeSession", () => {
   });
 });
 
+describe("sessionStats", () => {
+  const cardio: ExerciseOption = { ...bench, id: "band", name: "Laufband", muscleGroup: "cardio", equipment: "machine", tracking: "distance_time" };
+  const cross: ExerciseOption = { ...bench, id: "cross", name: "Crosstrainer", muscleGroup: "cardio", equipment: "machine", tracking: "time" };
+  const entry = (exercise: ExerciseOption, sets: Session["exercises"][number]["sets"]) => ({
+    id: exercise.id,
+    exercise,
+    repsMin: null,
+    repsMax: null,
+    targetSeconds: null,
+    restSeconds: null,
+    warmup: false,
+    note: "",
+    sets,
+  });
+  const done = { ...emptySet(), done: true };
+  const labels = (stats: { label: string; value: string }[]) => Object.fromEntries(stats.map((s) => [s.label, s.value]));
+  const base = { ...session, startedAt: "2026-10-26T10:00:00.000Z", endedAt: "2026-10-26T10:02:00.000Z" };
+
+  it("zeigt bei reinem Ausdauertraining Dauer aus den Sätzen, Geschwindigkeit, Strecke und Ø Herzfrequenz", () => {
+    const stats = sessionStats({ ...base, exercises: [entry(cardio, [{ ...done, speed: "10", seconds: "45:00", heartRate: "145" }])] }, new Date());
+    expect(stats).toEqual([
+      { label: "Dauer", value: "45 Min." },
+      { label: "Geschwindigkeit", value: "10 km/h" },
+      { label: "Strecke", value: "7,5 km" },
+      { label: "Ø Herzfrequenz", value: "145 bpm" },
+    ]);
+  });
+
+  it("rechnet mehrere Sätze zusammen und lässt nicht erledigte weg", () => {
+    const sets = [
+      { ...done, distance: "2", seconds: "10:00", heartRate: "120" },
+      { ...done, distance: "4", seconds: "20:00", heartRate: "150" },
+      { ...emptySet(), distance: "9", seconds: "60:00", heartRate: "200" },
+    ];
+    expect(labels(sessionStats({ ...base, exercises: [entry(cardio, sets)] }, new Date()))).toEqual({
+      Dauer: "30 Min.",
+      Geschwindigkeit: "12 km/h",
+      Strecke: "6 km",
+      "Ø Herzfrequenz": "140 bpm",
+    });
+  });
+
+  it("zeigt fehlende Werte als Strich und nimmt ohne Zeit die Dauer des Trainings", () => {
+    expect(labels(sessionStats({ ...base, exercises: [entry(cross, [{ ...done, seconds: "20:00" }])] }, new Date()))).toEqual({
+      Dauer: "20 Min.",
+      Geschwindigkeit: "–",
+      Strecke: "–",
+      "Ø Herzfrequenz": "–",
+    });
+    expect(labels(sessionStats({ ...base, exercises: [entry(cardio, [{ ...done, distance: "5" }])] }, new Date())).Dauer).toBe("2 Min.");
+  });
+
+  it("bleibt bei Kraft und gemischten Trainings bei Übungen, Sätzen und Volumen", () => {
+    const kraft = { ...done, weight: "50", reps: "10" };
+    const expected = ["Dauer", "Übungen", "Sätze", "Volumen"];
+    expect(sessionStats({ ...base, exercises: [entry(bench, [kraft])] }, new Date()).map((s) => s.label)).toEqual(expected);
+    expect(sessionStats({ ...base, exercises: [entry(bench, [kraft]), entry(cardio, [{ ...done, seconds: "45:00" }])] }, new Date()).map((s) => s.label)).toEqual(expected);
+    expect(sessionStats({ ...base, exercises: [entry(cardio, [emptySet()])] }, new Date()).map((s) => s.label)).toEqual(expected);
+  });
+});
+
+describe("Prüfung beim Speichern", () => {
+  it("lässt jedes Feld von toSyncPayload durch, auch die Herzfrequenz", () => {
+    const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+    const treadmill: ExerciseOption = { ...bench, id: id(1), name: "Laufband", muscleGroup: "cardio", tracking: "distance_time" };
+    const payload = toSyncPayload({
+      ...session,
+      id: id(2),
+      planId: null,
+      planDayId: null,
+      startedAt: "2026-11-04T06:45:00.000Z",
+      endedAt: "2026-11-04T07:30:00.000Z",
+      exercises: [
+        {
+          id: id(3),
+          exercise: treadmill,
+          repsMin: null,
+          repsMax: null,
+          targetSeconds: null,
+          restSeconds: null,
+          warmup: false,
+          note: "",
+          sets: [{ ...emptySet(), id: id(4), speed: "4,4", distance: "3,2", seconds: "45:00", heartRate: "145", done: true, doneAt: "2026-11-04T07:30:00.000Z" }],
+        },
+      ],
+    });
+    expect(payload.exercises[0].sets[0].avg_heart_rate).toBe(145);
+    // Die Prüfung entfernt unbekannte Felder stillschweigend: Was hier fehlt, käme nie in der Datenbank an
+    expect(workoutPayloadSchema.parse(payload)).toEqual(payload);
+  });
+});
+
 describe("toSyncPayload", () => {
   it("wandelt Eingaben in Zahlen", () => {
     const payload = toSyncPayload(session);
@@ -246,5 +345,32 @@ describe("Nachtragen", () => {
       ["a", "60", "8", true, "2026-10-26T11:00:00.000Z"],
       ["b", "55", "10", true, "2026-10-26T11:00:00.000Z"],
     ]);
+  });
+});
+
+describe("Ausdauer: Minuten und Herzfrequenz", () => {
+  it("liest eine einzelne Zahl bei Strecke und Zeit als Minuten, sonst als Sekunden", () => {
+    expect(resolveSet({ ...emptySet(), seconds: "45" }, null, "distance_time")).toMatchObject({ seconds: 2700 });
+    expect(resolveSet({ ...emptySet(), seconds: "45" }, null, "time")).toMatchObject({ seconds: 45 });
+  });
+
+  it("speichert kurze Zeiten so, dass sie beim erneuten Lesen gleich bleiben", () => {
+    const values = resolveSet({ ...emptySet(), seconds: "0:45" }, null, "distance_time");
+    expect(setInputs(values).seconds).toBe("0:45");
+    expect(resolveSet({ ...emptySet(), seconds: setInputs(values).seconds }, null, "distance_time")).toMatchObject({ seconds: 45 });
+  });
+
+  it("übernimmt die Herzfrequenz nie vom letzten Mal und prüft den Bereich", () => {
+    const last = { weightKg: null, reps: null, seconds: 1800, distanceM: 5000, speedKmh: 10, avgHeartRate: 150 };
+    expect(resolveSet(emptySet(), last, "distance_time").avgHeartRate).toBeNull();
+    expect(resolveSet({ ...emptySet(), heartRate: "145" }, last, "distance_time").avgHeartRate).toBe(145);
+    expect(parseHeartRate("14")).toBeNull();
+    expect(parseHeartRate("300")).toBeNull();
+    expect(parseHeartRate("")).toBeNull();
+  });
+
+  it("zeigt die Herzfrequenz nicht im Satz-Text, der auch in geteilten Trainings steht", () => {
+    expect(formatSet({ weightKg: null, reps: null, seconds: 1800, distanceM: 5000, speedKmh: 10, avgHeartRate: 145 }, "distance_time")).toBe("10 km/h · 5 km · 30:00");
+    expect(heartRateLabel(145)).toBe("Ø 145 bpm");
   });
 });

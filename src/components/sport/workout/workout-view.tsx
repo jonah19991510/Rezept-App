@@ -50,6 +50,7 @@ import {
   mmss,
   resolveSet,
   setHasValues,
+  parseHeartRate,
   setInputs,
   summarizeSession,
   uuid,
@@ -60,6 +61,7 @@ import {
   type SessionExercise,
   type SessionSet,
 } from "@/lib/domain/workout";
+import { isCardioExercise } from "@/lib/domain/workout-stats";
 import { parseDecimal } from "@/lib/domain/decimal";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -159,6 +161,10 @@ export function WorkoutView({
   function toggleSet(e: SessionExercise, set: SessionSet, normalIndex: number) {
     if (set.done) {
       updateSet(e.id, set.id, { done: false, doneAt: null });
+      return;
+    }
+    if (set.heartRate?.trim() && parseHeartRate(set.heartRate) == null) {
+      toast("Die Herzfrequenz muss zwischen 30 und 250 liegen.");
       return;
     }
     const values = resolveSet(set, set.kind === "normal" ? lastFor(last, e.exercise.id, normalIndex) : null, e.exercise.tracking);
@@ -756,14 +762,18 @@ function ExerciseCard({
             const prev = set.kind === "normal" ? lastFor(last, exercise.id, index) : null;
             const label = set.kind === "warmup" ? "A" : String(index + 1);
             const ph = prev ? setInputs(prev) : null;
-            const field = (key: "weight" | "reps" | "seconds" | "distance" | "speed", aria: string, mode: "decimal" | "numeric" | "text") => (
+            const field = (key: "weight" | "reps" | "seconds" | "distance" | "speed" | "heartRate", aria: string, mode: "decimal" | "numeric" | "text") => (
               <input
                 inputMode={mode}
                 value={set[key] ?? ""}
-                placeholder={ph?.[key] || (key === "seconds" ? "0:00" : "")}
+                placeholder={ph?.[key] || (key === "heartRate" ? "optional" : key !== "seconds" ? "" : cardio ? "Min." : "0:00")}
                 onChange={(ev) => onChangeSet(set.id, { [key]: ev.target.value })}
                 aria-label={`${aria}, ${set.kind === "warmup" ? "Aufwärmsatz" : `Satz ${index + 1}`}`}
-                className={cn(inputClass, set.done && "border-transparent bg-transparent")}
+                className={cn(
+                  inputClass,
+                  set.done && "border-transparent bg-transparent",
+                  key === "heartRate" && set.heartRate?.trim() && parseHeartRate(set.heartRate) == null && "border-destructive",
+                )}
               />
             );
             return (
@@ -804,6 +814,13 @@ function ExerciseCard({
                 >
                   <Check className="size-5" aria-hidden />
                 </button>
+                {isCardioExercise(exercise) && set.kind === "normal" ? (
+                  <div className="col-span-full flex items-center gap-2 pb-1">
+                    <span className="min-w-0 flex-1 pl-1 text-sm whitespace-nowrap text-muted-foreground">Ø Herzfrequenz</span>
+                    <div className="w-24 shrink-0">{field("heartRate", "Durchschnittliche Herzfrequenz in Schlägen pro Minute", "numeric")}</div>
+                    <span className="w-11 shrink-0 text-center text-sm text-muted-foreground">bpm</span>
+                  </div>
+                ) : null}
               </li>
             );
           })}

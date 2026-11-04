@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   estimate1RM,
+  averageHeartRate,
   exerciseOptions,
+  overallHeartRate,
   exerciseProgress,
   exerciseRecords,
   inRange,
@@ -161,6 +163,25 @@ describe("Muskelgruppen, Serie, Kalender, Kennzahlen", () => {
     expect(calendar[0].days[0]).toMatchObject({ count: 2, kind: "both" });
     expect(calendar[0].days[1]).toMatchObject({ count: 1, kind: "cardio" });
     expect(calendar[1].days[1]).toMatchObject({ count: 1, kind: "both" });
+  });
+
+  it("mittelt die Herzfrequenz nach Zeit, ohne Angabe bleibt sie leer", () => {
+    const run = (seconds: number | null, avgHeartRate: number | null) => ({ kind: "normal" as const, weightKg: null, reps: null, seconds, distanceM: null, avgHeartRate });
+    expect(averageHeartRate([run(600, 120), run(1800, 160)])).toBe(150);
+    expect(averageHeartRate([run(null, 120), run(1800, 160)])).toBe(140);
+    expect(averageHeartRate([run(600, 120), run(600, null)])).toBe(120);
+    expect(averageHeartRate([run(600, null)])).toBeNull();
+    const session = (date: string, rate: number | null): StatsWorkout => ({
+      id: date,
+      title: "Lauf",
+      date,
+      durationSeconds: 600,
+      exercises: [{ exerciseId: "band", name: "Laufband", muscleGroup: "cardio", secondaryMuscles: [], tracking: "distance_time", category: "training", sets: [run(600, rate)] }],
+    });
+    const sessions = exerciseProgress([session("2026-10-05", 140), session("2026-10-12", null), session("2026-10-19", 150)], "band");
+    expect(sessions.map((s) => s.avgHeartRate)).toEqual([140, null, 150]);
+    expect(overallHeartRate(sessions)).toBe(145);
+    expect(overallHeartRate([])).toBeNull();
   });
 
   it("fasst den Zeitraum zusammen", () => {

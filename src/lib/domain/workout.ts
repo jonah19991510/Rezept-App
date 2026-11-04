@@ -1,5 +1,6 @@
 import { parseDecimal } from "./decimal";
 import { isTimed, type Equipment, type ExerciseOption, type Tracking } from "./exercises";
+import { averageHeartRate, averageSpeed, isCardioExercise, type StatsSet } from "./workout-stats";
 import { formatNumber } from "@/lib/format";
 
 // Sport & Gesundheit, Phase S2: ein Training im Gym (Stand auf dem Handy, Aufwärmsätze, letzte Werte, Abschluss).
@@ -12,12 +13,14 @@ export type SessionSet = {
   kind: SetKind;
   weight: string;
   reps: string;
-  /** Zeit-Übungen: Sekunden; Strecke: Minuten stehen hier als Sekunden */
+  /** Zeit als „1:30“; eine einzelne Zahl sind bei Zeit-Übungen Sekunden, bei Strecke und Zeit Minuten (siehe parseClock) */
   seconds: string;
   /** Strecke in km */
   distance: string;
   /** Geschwindigkeit in km/h (Strecke und Zeit). Fehlt in Ständen vom Handy vor dem 27.10.2026. */
   speed?: string;
+  /** Ø Herzfrequenz in bpm (Ausdauer, optional). Fehlt in Ständen vom Handy vor dem 04.11.2026. */
+  heartRate?: string;
   done: boolean;
   doneAt: string | null;
 };
@@ -48,7 +51,7 @@ export type Session = {
 };
 
 /** Ein Satz vom letzten Mal (für die hellen Vorgaben). */
-export type LastSet = { weightKg: number | null; reps: number | null; seconds: number | null; distanceM: number | null; speedKmh?: number | null };
+export type LastSet = { weightKg: number | null; reps: number | null; seconds: number | null; distanceM: number | null; speedKmh?: number | null; avgHeartRate?: number | null };
 
 /** UUID v4, auch ohne sichere Verbindung (crypto.randomUUID gibt es im Heimnetz über http nicht). */
 export function uuid(): string {
@@ -68,7 +71,7 @@ export function uuid(): string {
 }
 
 export function emptySet(kind: SetKind = "normal", id = uuid()): SessionSet {
-  return { id, kind, weight: "", reps: "", seconds: "", distance: "", speed: "", done: false, doneAt: null };
+  return { id, kind, weight: "", reps: "", seconds: "", distance: "", speed: "", heartRate: "", done: false, doneAt: null };
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +128,10 @@ export function warmupSets(workingKg: number, equipment: Equipment): { weightKg:
 
 const kg = (n: number) => `${formatNumber(n, 2)} kg`;
 
-/** „60 kg × 8“, „× 12“ (Körpergewicht), „+10 kg × 8“, „45 s“, „10 km/h · 5 km · 30:00“ */
+/**
+ * „60 kg × 8“, „× 12“ (Körpergewicht), „+10 kg × 8“, „45 s“, „10 km/h · 5 km · 30:00“. Ohne Herzfrequenz: Der Text landet
+ * auch in geteilten Trainings, die Herzfrequenz bleibt privat (Anzeige im eigenen Verlauf: heartRateLabel).
+ */
 export function formatSet(set: LastSet, tracking: Tracking): string {
   if (tracking === "time") return set.seconds != null ? mmss(set.seconds) : "–";
   if (tracking === "distance_time") {
@@ -139,6 +145,19 @@ export function formatSet(set: LastSet, tracking: Tracking): string {
   const reps = set.reps != null ? `× ${set.reps}` : "";
   if (tracking === "bodyweight_reps") return set.weightKg ? `+${kg(set.weightKg)} ${reps}`.trim() : reps || "–";
   return set.weightKg != null ? `${kg(set.weightKg)} ${reps}`.trim() : reps || "–";
+}
+
+/** „Ø 145 bpm“ */
+export function heartRateLabel(bpm: number): string {
+  return `Ø ${bpm} bpm`;
+}
+
+/** Ø Herzfrequenz aus der Eingabe; leer oder außerhalb von 30–250 bpm: null. */
+export function parseHeartRate(input: string): number | null {
+  const value = parseDecimal(input);
+  if (value == null) return null;
+  const bpm = Math.round(value);
+  return bpm >= 30 && bpm <= 250 ? bpm : null;
 }
 
 /** Dauer eines Trainings in ganzen Minuten: „unter 1 Min.“, „23 Min.“, „1 Std. 5 Min.“ */
@@ -160,11 +179,14 @@ export function mmss(seconds: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
 }
 
-/** Eingabe für Zeiten: „45“ (Sekunden), „1:30“ (Min:Sek), „1:02:00“. */
-export function parseClock(input: string): number | null {
+/**
+ * Eingabe für Zeiten: „1:30“ (Min:Sek), „1:02:00“; eine einzelne Zahl wie „45“ sind Sekunden oder, bei `bare: "minutes"`,
+ * Minuten (Laufband & Co.: niemand läuft 45 Sekunden).
+ */
+export function parseClock(input: string, bare: "seconds" | "minutes" = "seconds"): number | null {
   const v = input.trim();
   if (!v) return null;
-  if (/^\d+$/.test(v)) return Number(v);
+  if (/^\d+$/.test(v)) return Number(v) * (bare === "minutes" ? 60 : 1);
   const parts = v.split(":");
   if (parts.length > 3 || parts.some((p) => !/^\d+$/.test(p))) return null;
   return parts.reduce((total, p) => total * 60 + Number(p), 0);
@@ -188,13 +210,13 @@ export function completeCardio(values: LastSet): LastSet {
  * daraus gerechnet statt vom letzten Mal übernommen (sonst passen die drei nicht zusammen).
  */
 export function resolveSet(set: SessionSet, last: LastSet | null, tracking?: Tracking): LastSet {
+  const cardio = tracking === "distance_time";
   const weight = parseDecimal(set.weight);
   const reps = parseDecimal(set.reps);
-  const seconds = parseClock(set.seconds);
+  const seconds = parseClock(set.seconds, cardio ? "minutes" : "seconds");
   const distance = parseDecimal(set.distance);
   const speedText = set.speed ?? "";
   const speed = parseDecimal(speedText);
-  const cardio = tracking === "distance_time";
   const typed = [speedText, set.distance, set.seconds].filter((v) => v.trim() !== "").length;
   const cardioLast = cardio && typed >= 2 ? null : last;
   const values: LastSet = {
@@ -203,18 +225,22 @@ export function resolveSet(set: SessionSet, last: LastSet | null, tracking?: Tra
     seconds: seconds ?? (set.seconds.trim() === "" ? (cardioLast?.seconds ?? null) : null),
     distanceM: distance != null ? distance * 1000 : set.distance.trim() === "" ? (cardioLast?.distanceM ?? null) : null,
     speedKmh: speed ?? (speedText.trim() === "" ? (cardioLast?.speedKmh ?? null) : null),
+    // Ein Messwert des Tages: nie vom letzten Mal übernehmen
+    avgHeartRate: parseHeartRate(set.heartRate ?? ""),
   };
   return cardio ? completeCardio(values) : values;
 }
 
 /** Werte als Eingabetext (für das Ausfüllen beim Abhaken). */
-export function setInputs(values: LastSet): Pick<SessionSet, "weight" | "reps" | "seconds" | "distance" | "speed"> {
+export function setInputs(values: LastSet): Pick<SessionSet, "weight" | "reps" | "seconds" | "distance" | "speed" | "heartRate"> {
   return {
     weight: values.weightKg != null ? formatNumber(values.weightKg, 2).replace(/\./g, "") : "",
     reps: values.reps != null ? String(values.reps) : "",
-    seconds: values.seconds != null ? (values.seconds >= 60 ? mmss(values.seconds) : String(values.seconds)) : "",
+    // Immer als Uhrzeit, eine einzelne Zahl hieße je nach Übung Sekunden oder Minuten
+    seconds: values.seconds != null ? mmss(values.seconds) : "",
     distance: values.distanceM != null ? formatNumber(values.distanceM / 1000, 2).replace(/\./g, "") : "",
     speed: values.speedKmh != null ? formatNumber(values.speedKmh, 1).replace(/\./g, "") : "",
+    heartRate: values.avgHeartRate != null ? String(values.avgHeartRate) : "",
   };
 }
 
@@ -282,6 +308,39 @@ export function summarizeSession(session: Session, now: Date): SessionSummary {
   return { exercises, sets, volumeKg, durationSeconds };
 }
 
+/**
+ * Kennzahlen oben in einem Training. Reine Ausdauertrainings: Dauer (eingetragene Zeit der Sätze, sonst die des
+ * Trainings), Geschwindigkeit, Strecke und Ø Herzfrequenz; alle anderen: Dauer, Übungen, Sätze und Volumen.
+ */
+export function sessionStats(session: Session, now: Date): { label: string; value: string }[] {
+  const summary = summarizeSession(session, now);
+  const exercises = session.exercises.flatMap((e) => {
+    const sets = e.sets.filter((s) => s.done && s.kind === "normal");
+    return sets.length ? [{ exercise: e.exercise, sets }] : [];
+  });
+  if (exercises.length === 0 || !exercises.every((e) => isCardioExercise(e.exercise))) {
+    return [
+      { label: "Dauer", value: workoutDuration(summary.durationSeconds) },
+      { label: "Übungen", value: String(summary.exercises) },
+      { label: "Sätze", value: String(summary.sets) },
+      { label: "Volumen", value: `${formatNumber(Math.round(summary.volumeKg), 0)} kg` },
+    ];
+  }
+  const sets: StatsSet[] = exercises.flatMap((e) =>
+    e.sets.map((s) => ({ ...resolveSet(s, null, e.exercise.tracking), kind: "normal" as const })),
+  );
+  const seconds = sets.reduce((sum, s) => sum + (s.seconds ?? 0), 0);
+  const meters = sets.reduce((sum, s) => sum + (s.distanceM ?? 0), 0);
+  const speed = averageSpeed(sets);
+  const heartRate = averageHeartRate(sets);
+  return [
+    { label: "Dauer", value: workoutDuration(seconds || summary.durationSeconds) },
+    { label: "Geschwindigkeit", value: speed != null ? `${formatNumber(speed, 1)} km/h` : "–" },
+    { label: "Strecke", value: meters > 0 ? `${formatNumber(meters / 1000, 2)} km` : "–" },
+    { label: "Ø Herzfrequenz", value: heartRate != null ? `${heartRate} bpm` : "–" },
+  ];
+}
+
 /** Stand für sync_workout (Zahlen statt Text, Strecke in Metern, Minuten:Sekunden als Sekunden). */
 export function toSyncPayload(session: Session) {
   return {
@@ -313,11 +372,12 @@ export function toSyncPayload(session: Session) {
           weight_kg: weight != null && weight >= 0 && weight <= 1000 ? Math.round(weight * 100) / 100 : null,
           reps: reps != null && reps >= 0 && reps <= 1000 ? Math.round(reps) : null,
           seconds: (() => {
-            const v = parseClock(s.seconds);
+            const v = parseClock(s.seconds, e.exercise.tracking === "distance_time" ? "minutes" : "seconds");
             return v != null && v <= 86400 ? v : null;
           })(),
           distance_m: distance != null && distance >= 0 && distance <= 1000 ? Math.round(distance * 10000) / 10 : null,
           speed_kmh: speed != null && speed >= 0 && speed < 100 ? Math.round(speed * 10) / 10 : null,
+          avg_heart_rate: parseHeartRate(s.heartRate ?? ""),
           done: s.done,
           done_at: s.doneAt,
         };

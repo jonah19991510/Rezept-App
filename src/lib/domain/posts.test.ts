@@ -46,6 +46,14 @@ describe("buildPostSummary", () => {
     expect(s.exercises[1].best).toBe("3 km · 20:00");
   });
 
+  it("lässt die Herzfrequenz aus geteilten Trainings weg", () => {
+    const withRate = bench("w3", "2026-11-03", [[80, 5]]);
+    withRate.exercises[1].sets = withRate.exercises[1].sets.map((set) => ({ ...set, avgHeartRate: 147 }));
+    const summary = JSON.stringify(buildPostSummary(withRate, [withRate]));
+    expect(summary).not.toContain("147");
+    expect(summary).not.toMatch(/heart|bpm/i);
+  });
+
   it("findet neue Bestwerte gegenüber früheren Trainings", () => {
     expect(s.records).toHaveLength(1);
     expect(recordLabel(s.records[0])).toBe("Bankdrücken: geschätztes 1RM 95 kg (vorher 88,7 kg)");
