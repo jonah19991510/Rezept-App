@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 
 // Sport & Gesundheit, Phase S2: Trainings lesen.
 
-const EXERCISE_COLUMNS = "id, name, muscle_group, secondary_muscles, equipment, tracking, created_by";
+const EXERCISE_COLUMNS = "id, name, muscle_group, secondary_muscles, equipment, tracking, category, instructions, created_by";
 
 export type ActiveWorkout = { id: string; title: string; startedAt: string };
 
@@ -51,6 +51,8 @@ export async function getWorkoutSession(workoutId: string, userId: string): Prom
           secondaryMuscles: x.secondary_muscles,
           equipment: x.equipment,
           tracking: x.tracking,
+          category: x.category,
+          instructions: x.instructions,
           own: x.created_by === userId,
         };
         return {
@@ -173,7 +175,7 @@ export async function getWorkoutStatsData(userId: string): Promise<StatsWorkout[
   const { data, error } = await supabase
     .from("workouts")
     .select(
-      "id, title, started_at, ended_at, workout_exercises!workout_exercises_workout_id_fkey(position, exercises!workout_exercises_exercise_id_fkey(id, name, muscle_group, secondary_muscles, tracking), workout_sets!workout_sets_workout_exercise_id_fkey(position, kind, done, weight_kg, reps, seconds, distance_m, speed_kmh))",
+      "id, title, started_at, ended_at, workout_exercises!workout_exercises_workout_id_fkey(position, exercises!workout_exercises_exercise_id_fkey(id, name, muscle_group, secondary_muscles, tracking, category), workout_sets!workout_sets_workout_exercise_id_fkey(position, kind, done, weight_kg, reps, seconds, distance_m, speed_kmh))",
     )
     .eq("user_id", userId)
     .not("ended_at", "is", null)
@@ -192,6 +194,7 @@ export async function getWorkoutStatsData(userId: string): Promise<StatsWorkout[
         muscleGroup: e.exercises.muscle_group,
         secondaryMuscles: e.exercises.secondary_muscles,
         tracking: e.exercises.tracking,
+        category: e.exercises.category,
         sets: [...e.workout_sets]
           .filter((s) => s.done)
           .sort((a, b) => a.position - b.position)

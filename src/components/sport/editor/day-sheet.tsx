@@ -26,7 +26,9 @@ export function DaySheet({
   onRemove: () => void;
 }) {
   if (!day) return null;
-  const suggestion = suggestedFocus(day.exercises.map((e) => ({ muscleGroup: e.exercise.muscleGroup, sets: e.sets })));
+  // Dehnen und Reha bestimmen den Fokus nur, wenn der Tag aus nichts anderem besteht
+  const training = day.exercises.filter((e) => e.exercise.category === "training");
+  const suggestion = suggestedFocus((training.length ? training : day.exercises).map((e) => ({ muscleGroup: e.exercise.muscleGroup, sets: e.sets })));
   return (
     <EditorSheet
       open={open}

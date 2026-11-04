@@ -8,6 +8,8 @@ const ex = (name: string, muscleGroup: ExerciseOption["muscleGroup"], extra: Par
   secondaryMuscles: [],
   equipment: "barbell",
   tracking: "weight_reps",
+  category: "training",
+  instructions: null,
   own: false,
   ...extra,
 });
@@ -43,6 +45,24 @@ describe("searchExercises", () => {
       "Bankdrücken (Langhantel)",
       "Schrägbankdrücken (Kurzhantel)",
     ]);
+  });
+});
+
+describe("searchExercises mit Art und Anleitung", () => {
+  const mixed = [
+    ...list,
+    ex("Fersengang", "shins", { category: "rehab", equipment: "bodyweight", instructions: "Für Shin Splints. Auf den Fersen gehen." }),
+    ex("Wadendehnung", "calves", { category: "stretching", equipment: "bodyweight", tracking: "time" }),
+    ex("Shin Splints Spezial", "calves", { category: "rehab", equipment: "bodyweight" }),
+  ];
+
+  it("findet Beschwerden über die Anleitung, Treffer im Namen zuerst", () => {
+    expect(searchExercises(mixed, "shin splints").map((e) => e.name)).toEqual(["Shin Splints Spezial", "Fersengang"]);
+  });
+
+  it("filtert nach Art und findet sie auch über die Suche", () => {
+    expect(searchExercises(mixed, "", null, "stretching").map((e) => e.name)).toEqual(["Wadendehnung"]);
+    expect(searchExercises(mixed, "dehnen").map((e) => e.name)).toEqual(["Wadendehnung"]);
   });
 });
 
@@ -84,6 +104,11 @@ describe("Übungsdatenbank", () => {
     expect(filterLibrary(lib, { query: "", view: "trainiert", muscle: "back" }).map((e) => e.name)).toEqual(["Klimmzug"]);
     expect(filterLibrary(lib, { query: "", view: "plaene", muscle: null })).toHaveLength(1);
     expect(filterLibrary(lib, { query: "rudern", view: "alle", muscle: null }).map((e) => e.name)).toEqual(["Mias Spezialrudern"]);
+  });
+
+  it("filtert in der Datenbank nach Art", () => {
+    const withStretch = [...lib, { ...ex("Brustdehnung", "chest", { category: "stretching" }), origin: "seed" as const, planCount: 0, workoutCount: 0 }];
+    expect(filterLibrary(withStretch, { query: "", view: "alle", muscle: null, category: "stretching" }).map((e) => e.name)).toEqual(["Brustdehnung"]);
   });
 
   it("erlaubt Ändern bei eigenen, beim Grundbestand nur Admins, nie bei fremden", () => {

@@ -149,6 +149,8 @@ export function convertGymExport(raw: GymExport, now: Date): SportBackupFileInpu
         secondary_muscles: [],
         equipment: gymEquipment(name),
         tracking: "weight_reps",
+        category: "training",
+        instructions: null,
       });
     }
     return exercises.get(key)!;

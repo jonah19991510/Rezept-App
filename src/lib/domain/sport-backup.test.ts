@@ -9,8 +9,8 @@ import {
   type WorkoutRowForBackup,
 } from "./sport-backup";
 
-const bench = { name: "Bankdrücken (Langhantel)", muscle_group: "chest", secondary_muscles: ["triceps"], equipment: "barbell", tracking: "weight_reps" } as const;
-const own = { name: "Meine Kabelpresse", muscle_group: "chest", secondary_muscles: [], equipment: "cable", tracking: "weight_reps" } as const;
+const bench = { name: "Bankdrücken (Langhantel)", muscle_group: "chest", secondary_muscles: ["triceps"], equipment: "barbell", tracking: "weight_reps", category: "training", instructions: null } as const;
+const own = { name: "Meine Kabelpresse", muscle_group: "chest", secondary_muscles: [], equipment: "cable", tracking: "weight_reps", category: "training", instructions: null } as const;
 
 const row: PlanRowForBackup = {
   title: "Push",

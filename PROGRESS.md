@@ -1348,6 +1348,28 @@ Plan vom 26.10.2026 (vom Nutzer bestätigt), je Phase ein Durchgang mit Test und
 Entscheidungen des Nutzers (26.10.2026): Pläne mit Trainingstagen; Training auch ohne Netz; Import nur der eigenen
 Sicherung; „Kommt bald“-Punkte als Platzhalterseiten.
 
+### Dehnen und Reha in der Übungsdatenbank (04.11.2026)
+
+Wunsch des Nutzers: Dehnübungen für alle Muskelgruppen (auch vernachlässigte) und Übungen gegen Beschwerden wie Shin
+Splints.
+
+- **Migrationen** `…20261104100000_exercise_categories` und `…20261104110000_stretching_rehab_exercises` am 04.11.2026
+  von Claude über die Supabase-Verbindung eingespielt (mit Freigabe des Nutzers; in Supabase Versionen `20261104071310`
+  und `20261104071438`). Per SQL geprüft: 55 Dehnen, 34 Reha, alle mit Anleitung; 122 bestehende Übungen zählen als
+  Training. Neue Enum-Werte lassen sich nicht einfach zurücknehmen.
+- **Art** (`exercises.category`: Training, Dehnen, Reha) als Filter in Übungsdatenbank und Übungsauswahl, Etikett an der
+  Übung, wählbar beim Anlegen. Die Art allein öffnet keine Gruppen, sie bleiben auf- und zuklappbar. **Anleitung** (`exercises.instructions`, höchstens 500 Zeichen): aufklappbar im Plan und
+  im Training, in der Datenbank sichtbar bzw. änderbar. Bei Reha steht ein Hinweis auf ärztliche Abklärung dabei.
+- **Neue Muskelgruppen:** Nacken, Hüftbeuger, Schienbein, Füße.
+- **Suche** auch in der Anleitung („shin splints“ findet 21 Übungen), Treffer nur in der Anleitung stehen hinten.
+- **Statistik:** Dehnen und Reha zählen nicht bei „Sätze pro Muskelgruppe“, Bestwerten, Schwerpunkt öffentlicher Pläne
+  und (außer bei reinen Dehntagen) beim Fokus-Vorschlag. Neue Plan-Einträge starten mit 2 × 30 s bzw. 2 × 10–15.
+- **Bewusst offen:** Ein reines Dehntraining zählt im Kalender als Kraft und bei Trainingstagen, Gesamtsätzen und
+  Challenges wie jedes andere Training.
+- **Geprüft:** Tests, Typecheck, Lint, Build. Oberfläche der Übungsdatenbank über eine temporäre Vorschauseite (danach
+  gelöscht) bei 375 px: Filter, Suche, Detail- und Admin-Ansicht, kein seitliches Scrollen. **Nicht geprüft** (kein
+  Login in Claudes Browser): echte Datenbank-Seite, Speichern, Auswahl im Plan-Editor, Anleitung im Plan und im Training.
+
 ### App-Icon: Topf mit Puls (03.11.2026)
 
 **Live** seit 03.11.2026: Push `d08c626` → Deployment `dpl_4kUX2iYqaLvFSmSPFH7WZ8g9L6Qh` (`production`, `source: git`,

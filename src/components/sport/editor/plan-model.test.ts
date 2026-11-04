@@ -11,6 +11,8 @@ const bench: ExerciseOption = {
   secondaryMuscles: [],
   equipment: "barbell",
   tracking: "weight_reps",
+  category: "training",
+  instructions: null,
   own: false,
 };
 const plank: ExerciseOption = { ...bench, id: "1b6c2f2e-1d6f-4a51-9a51-2b7b3c3f2a10", name: "Plank", tracking: "time", equipment: "bodyweight" };
@@ -19,6 +21,11 @@ describe("newDraftExercise", () => {
   it("setzt übliche Vorgaben je nach Erfassung", () => {
     expect(newDraftExercise("k1", bench)).toMatchObject({ sets: 3, repsMin: "8", repsMax: "12", restSeconds: 90 });
     expect(newDraftExercise("k1", plank)).toMatchObject({ sets: 3, targetSeconds: "45", restSeconds: 60 });
+  });
+
+  it("gibt Dehnen und Reha kürzere Vorgaben", () => {
+    expect(newDraftExercise("k1", { ...plank, category: "stretching" })).toMatchObject({ sets: 2, targetSeconds: "30", restSeconds: 15 });
+    expect(newDraftExercise("k1", { ...bench, category: "rehab", tracking: "bodyweight_reps" })).toMatchObject({ sets: 2, repsMin: "10", repsMax: "15", restSeconds: 30 });
   });
 });
 

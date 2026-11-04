@@ -14,6 +14,7 @@ const bench = (id: string, date: string, sets: [number, number][], warmup = fals
       muscleGroup: "chest",
       secondaryMuscles: [],
       tracking: "weight_reps",
+      category: "training",
       sets: [
         ...(warmup ? [{ kind: "warmup" as const, weightKg: 40, reps: 10, seconds: null, distanceM: null }] : []),
         ...sets.map(([weightKg, reps]) => ({ kind: "normal" as const, weightKg, reps, seconds: null, distanceM: null })),
@@ -25,6 +26,7 @@ const bench = (id: string, date: string, sets: [number, number][], warmup = fals
       muscleGroup: "cardio",
       secondaryMuscles: [],
       tracking: "distance_time",
+      category: "training",
       sets: [{ kind: "normal", weightKg: null, reps: null, seconds: 1200, distanceM: 3000 }],
     },
   ],

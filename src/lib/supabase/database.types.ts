@@ -914,30 +914,36 @@ export type Database = {
       }
       exercises: {
         Row: {
+          category: Database["public"]["Enums"]["exercise_category"]
           created_at: string
           created_by: string | null
           equipment: Database["public"]["Enums"]["exercise_equipment"]
           id: string
+          instructions: string | null
           muscle_group: Database["public"]["Enums"]["muscle_group"]
           name: string
           secondary_muscles: Database["public"]["Enums"]["muscle_group"][]
           tracking: Database["public"]["Enums"]["exercise_tracking"]
         }
         Insert: {
+          category?: Database["public"]["Enums"]["exercise_category"]
           created_at?: string
           created_by?: string | null
           equipment: Database["public"]["Enums"]["exercise_equipment"]
           id?: string
+          instructions?: string | null
           muscle_group: Database["public"]["Enums"]["muscle_group"]
           name: string
           secondary_muscles?: Database["public"]["Enums"]["muscle_group"][]
           tracking?: Database["public"]["Enums"]["exercise_tracking"]
         }
         Update: {
+          category?: Database["public"]["Enums"]["exercise_category"]
           created_at?: string
           created_by?: string | null
           equipment?: Database["public"]["Enums"]["exercise_equipment"]
           id?: string
+          instructions?: string | null
           muscle_group?: Database["public"]["Enums"]["muscle_group"]
           name?: string
           secondary_muscles?: Database["public"]["Enums"]["muscle_group"][]
@@ -2233,6 +2239,7 @@ export type Database = {
     }
     Enums: {
       cocktail_method: "shaken" | "stirred" | "built" | "blended"
+      exercise_category: "training" | "stretching" | "rehab"
       exercise_equipment:
         | "barbell"
         | "dumbbell"
@@ -2260,6 +2267,10 @@ export type Database = {
         | "calves"
         | "full_body"
         | "cardio"
+        | "neck"
+        | "hip_flexors"
+        | "shins"
+        | "feet"
       food_group:
         | "vegetables"
         | "fruit"
@@ -2437,6 +2448,7 @@ export const Constants = {
   public: {
     Enums: {
       cocktail_method: ["shaken", "stirred", "built", "blended"],
+      exercise_category: ["training", "stretching", "rehab"],
       exercise_equipment: [
         "barbell",
         "dumbbell",
@@ -2465,6 +2477,10 @@ export const Constants = {
         "calves",
         "full_body",
         "cardio",
+        "neck",
+        "hip_flexors",
+        "shins",
+        "feet",
       ],
       food_group: [
         "vegetables",

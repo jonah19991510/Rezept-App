@@ -14,8 +14,11 @@ import { FabButton } from "@/components/recipes/new-recipe-fab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   canEditExercise,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
   EQUIPMENT_LABELS,
   EQUIPMENT_ORDER,
   filterLibrary,
@@ -25,8 +28,10 @@ import {
   MUSCLE_LABELS,
   MUSCLE_ORDER,
   normalizeSearch,
+  REHAB_HINT,
   TRACKING_LABELS,
   type Equipment,
+  type ExerciseCategory,
   type LibraryExercise,
   type LibraryView,
   type MuscleGroup,
@@ -46,12 +51,30 @@ const TRACKING_CHOICES: { value: Tracking; label: string }[] = [
   { value: "distance_time", label: "Strecke" },
 ];
 
-type Draft = { name: string; muscle: MuscleGroup | ""; equipment: Equipment | ""; tracking: Tracking; secondary: MuscleGroup[] };
+const CATEGORY_CHOICES = CATEGORY_ORDER.map((value) => ({ value, label: CATEGORY_LABELS[value] }));
 
-const draftOf = (e: LibraryExercise | null): Draft =>
+type Draft = {
+  name: string;
+  muscle: MuscleGroup | "";
+  equipment: Equipment | "";
+  tracking: Tracking;
+  secondary: MuscleGroup[];
+  category: ExerciseCategory;
+  instructions: string;
+};
+
+const draftOf = (e: LibraryExercise | null, category: ExerciseCategory | null = null): Draft =>
   e
-    ? { name: e.name, muscle: e.muscleGroup, equipment: e.equipment, tracking: e.tracking, secondary: e.secondaryMuscles }
-    : { name: "", muscle: "", equipment: "", tracking: "weight_reps", secondary: [] };
+    ? {
+        name: e.name,
+        muscle: e.muscleGroup,
+        equipment: e.equipment,
+        tracking: e.tracking,
+        secondary: e.secondaryMuscles,
+        category: e.category,
+        instructions: e.instructions ?? "",
+      }
+    : { name: "", muscle: "", equipment: "", tracking: "weight_reps", secondary: [], category: category ?? "training", instructions: "" };
 
 function usage(e: LibraryExercise): string | null {
   const parts = [
@@ -62,7 +85,7 @@ function usage(e: LibraryExercise): string | null {
 }
 
 /**
- * Übungsdatenbank (Profilmenü im Sport-Bereich): Suche, Ansicht und Muskelgruppe als Chips, Liste nach Muskelgruppe
+ * Übungsdatenbank (Profilmenü im Sport-Bereich): Suche, Ansicht, Art und Muskelgruppe als Chips, Liste nach Muskelgruppe
  * (aufklappbar) oder A–Z. Antippen öffnet die Übung; eigene (und als Admin der Grundbestand) lassen sich ändern und
  * löschen. Plus-Knopf: neue Übung.
  */
@@ -71,6 +94,7 @@ export function ExerciseLibrary({ exercises, isAdmin }: { exercises: LibraryExer
   const [query, setQuery] = useState("");
   const [view, setView] = useState<LibraryView>("alle");
   const [muscle, setMuscle] = useState<MuscleGroup | null>(null);
+  const [category, setCategory] = useState<ExerciseCategory | null>(null);
   const [sort, setSort] = useState<"muskel" | "name">("muskel");
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => new Set());
   const [sheet, setSheet] = useState<{ id: string | null; open: boolean } | null>(null);
@@ -78,14 +102,15 @@ export function ExerciseLibrary({ exercises, isAdmin }: { exercises: LibraryExer
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [pending, startTransition] = useTransition();
 
-  const shown = useMemo(() => filterLibrary(exercises, { query, view, muscle }), [exercises, query, view, muscle]);
+  const shown = useMemo(() => filterLibrary(exercises, { query, view, muscle, category }), [exercises, query, view, muscle, category]);
+  // Die Art zählt nicht: Auch unter „Dehnen“ bleiben es viele Übungen, die Gruppen lassen sich weiter auf- und zuklappen
   const filtering = normalizeSearch(query) !== "" || muscle !== null || view !== "alle";
   const muscles = MUSCLE_ORDER.filter((m) => exercises.some((e) => e.muscleGroup === m));
   const current = sheet?.id ? (exercises.find((e) => e.id === sheet.id) ?? null) : null;
   const editable = sheet?.id == null || (current != null && canEditExercise(current, isAdmin));
 
   function open(e: LibraryExercise | null) {
-    setDraft(draftOf(e));
+    setDraft(draftOf(e, category));
     setErrors({});
     setSheet({ id: e?.id ?? null, open: true });
   }
@@ -97,6 +122,8 @@ export function ExerciseLibrary({ exercises, isAdmin }: { exercises: LibraryExer
       equipment: draft.equipment as Equipment,
       tracking: draft.tracking,
       secondary_muscles: draft.secondary.filter((m) => m !== draft.muscle),
+      category: draft.category,
+      instructions: draft.instructions,
     };
     startTransition(async () => {
       const result = sheet?.id ? await updateExerciseAction(sheet.id, input) : await createExerciseAction(input);
@@ -137,6 +164,7 @@ export function ExerciseLibrary({ exercises, isAdmin }: { exercises: LibraryExer
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-2">
               <span className="truncate font-medium">{e.name}</span>
+              {e.category !== "training" ? <TagLabel tone="sage">{CATEGORY_LABELS[e.category]}</TagLabel> : null}
               {e.origin === "own" ? <TagLabel>Eigene</TagLabel> : null}
             </span>
             <span className="block truncate text-sm text-muted-foreground">
@@ -159,6 +187,13 @@ export function ExerciseLibrary({ exercises, isAdmin }: { exercises: LibraryExer
             <CountChip key={v} active={view === v} count={exercises.filter((e) => matchesLibraryView(e, v)).length} onClick={() => setView(v)}>
               {LIBRARY_VIEW_LABELS[v]}
             </CountChip>
+          ))}
+        </ChipRow>
+        <ChipRow label="Art">
+          {CATEGORY_ORDER.map((c) => (
+            <button key={c} type="button" aria-pressed={category === c} onClick={() => setCategory(category === c ? null : c)} className={chipClass(category === c)}>
+              {CATEGORY_LABELS[c]}
+            </button>
           ))}
         </ChipRow>
         <ChipRow label="Muskelgruppe">
@@ -290,6 +325,10 @@ export function ExerciseLibrary({ exercises, isAdmin }: { exercises: LibraryExer
               />
               {errors.name ? <p className="mt-1 text-sm text-destructive">{errors.name[0]}</p> : null}
             </div>
+            <div>
+              <FieldHeading>Art</FieldHeading>
+              <RadioSegments label="Art" value={draft.category} options={CATEGORY_CHOICES} onChange={(category) => setDraft({ ...draft, category })} />
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <FieldHeading htmlFor="lib-muscle">Muskelgruppe</FieldHeading>
@@ -358,9 +397,27 @@ export function ExerciseLibrary({ exercises, isAdmin }: { exercises: LibraryExer
               </div>
               <p className="mt-1 text-xs text-muted-foreground">Zählen in der Statistik „Sätze pro Muskelgruppe“ halb.</p>
             </div>
+            <div>
+              <FieldHeading htmlFor="lib-instructions" aside="optional">
+                Anleitung
+              </FieldHeading>
+              <Textarea
+                id="lib-instructions"
+                value={draft.instructions}
+                maxLength={500}
+                rows={4}
+                onChange={(e) => setDraft({ ...draft, instructions: e.target.value })}
+                aria-invalid={Boolean(errors.instructions) || undefined}
+              />
+              {errors.instructions ? <p className="mt-1 text-sm text-destructive">{errors.instructions[0]}</p> : null}
+              {draft.category === "rehab" ? <p className="mt-1 text-xs text-muted-foreground">{REHAB_HINT}</p> : null}
+            </div>
           </>
         ) : current ? (
           <dl className="grid gap-3">
+            {current.instructions ? <Detail label="Anleitung" value={current.instructions} /> : null}
+            {current.category === "rehab" ? <p className="text-xs text-muted-foreground">{REHAB_HINT}</p> : null}
+            <Detail label="Art" value={CATEGORY_LABELS[current.category]} />
             <Detail label="Muskelgruppe" value={MUSCLE_LABELS[current.muscleGroup]} />
             {current.secondaryMuscles.length ? <Detail label="Nebenmuskeln" value={current.secondaryMuscles.map((m) => MUSCLE_LABELS[m]).join(", ")} /> : null}
             <Detail label="Gerät" value={EQUIPMENT_LABELS[current.equipment]} />

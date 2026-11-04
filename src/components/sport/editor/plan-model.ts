@@ -27,10 +27,17 @@ export function keyGenerator(start = 0) {
   return () => `k${++n}`;
 }
 
-/** Neue Übung im Plan mit üblichen Vorgaben: Kraft 3 × 8–12 mit 90 s Pause, Zeit 3 × 45 s, Ausdauer 1 Satz. */
+/**
+ * Neue Übung im Plan mit üblichen Vorgaben: Kraft 3 × 8–12 mit 90 s Pause, Zeit 3 × 45 s, Ausdauer 1 Satz;
+ * Dehnen und Reha kürzer: 2 × 30 s oder 2 × 10–15 mit wenig Pause.
+ */
 export function newDraftExercise(key: string, exercise: ExerciseOption): DraftExercise {
   const base = { key, exercise, warmup: false, note: "", repsMin: "", repsMax: "", targetSeconds: "" };
   if (exercise.tracking === "distance_time") return { ...base, sets: 1, restSeconds: null };
+  if (exercise.category !== "training") {
+    if (exercise.tracking === "time") return { ...base, sets: 2, targetSeconds: "30", restSeconds: 15 };
+    return { ...base, sets: 2, repsMin: "10", repsMax: "15", restSeconds: 30 };
+  }
   if (exercise.tracking === "time") return { ...base, sets: 3, targetSeconds: "45", restSeconds: 60 };
   return { ...base, sets: 3, repsMin: "8", repsMax: "12", restSeconds: 90 };
 }

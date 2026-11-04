@@ -26,6 +26,7 @@ const bench = (sets: ReturnType<typeof set>[]) => ({
   muscleGroup: "chest" as const,
   secondaryMuscles: ["triceps" as const, "shoulders" as const],
   tracking: "weight_reps" as const,
+  category: "training" as const,
   sets,
 });
 
@@ -39,7 +40,7 @@ const workouts: StatsWorkout[] = [
     durationSeconds: 3000,
     exercises: [
       bench([set(65, 5)]),
-      { exerciseId: "plank", name: "Plank", muscleGroup: "core", secondaryMuscles: [], tracking: "time", sets: [{ kind: "normal", weightKg: null, reps: null, seconds: 60, distanceM: null }] },
+      { exerciseId: "plank", name: "Plank", muscleGroup: "core", secondaryMuscles: [], tracking: "time", category: "training", sets: [{ kind: "normal", weightKg: null, reps: null, seconds: 60, distanceM: null }] },
     ],
   },
 ];
@@ -67,7 +68,7 @@ describe("Zeitraum und Wochen", () => {
       title: "Laufband",
       date,
       durationSeconds: 1800,
-      exercises: [{ exerciseId: "band", name: "Laufband", muscleGroup: "cardio", secondaryMuscles: [], tracking: "distance_time", sets }],
+      exercises: [{ exerciseId: "band", name: "Laufband", muscleGroup: "cardio", secondaryMuscles: [], tracking: "distance_time", category: "training", sets }],
     });
     const sessions = exerciseProgress(
       [treadmill("a", "2026-10-20", [run(2000, 720), run(3000, 1080)]), treadmill("b", "2026-10-27", [run(null, 1800, 4.8)])],
@@ -146,7 +147,7 @@ describe("Muskelgruppen, Serie, Kalender, Kennzahlen", () => {
 
   it("unterscheidet im Kalender Kraft, Ausdauer und beides", () => {
     const run = { kind: "normal" as const, weightKg: null, reps: null, seconds: 1200, distanceM: 3000 };
-    const treadmill = { exerciseId: "band", name: "Laufband", muscleGroup: "cardio" as const, secondaryMuscles: [], tracking: "distance_time" as const, sets: [run] };
+    const treadmill = { exerciseId: "band", name: "Laufband", muscleGroup: "cardio" as const, secondaryMuscles: [], tracking: "distance_time" as const, category: "training" as const, sets: [run] };
     const cardioOnly: StatsWorkout = { id: "c1", title: "Laufen", date: "2026-10-06", durationSeconds: 1200, exercises: [treadmill] };
     const mixed: StatsWorkout = { id: "c2", title: "A + Laufen", date: "2026-10-13", durationSeconds: 4000, exercises: [bench([set(60, 8)]), treadmill] };
     // Kraft und Ausdauer als zwei Trainings am selben Tag
@@ -164,5 +165,28 @@ describe("Muskelgruppen, Serie, Kalender, Kennzahlen", () => {
 
   it("fasst den Zeitraum zusammen", () => {
     expect(statsTotals(workouts, 4)).toEqual({ workouts: 3, sets: 6, volumeKg: 2160, minutes: 155, avgMinutes: 52, perWeek: 0.8 });
+  });
+
+  it("zählt Dehnen und Reha weder als Muskelsätze noch als Bestwert", () => {
+    const stretch = (date: string, seconds: number): StatsWorkout => ({
+      id: date,
+      title: "Dehnen",
+      date,
+      durationSeconds: 600,
+      exercises: [
+        {
+          exerciseId: "wade",
+          name: "Wadendehnung",
+          muscleGroup: "calves",
+          secondaryMuscles: [],
+          tracking: "time",
+          category: "stretching",
+          sets: [{ kind: "normal", weightKg: null, reps: null, seconds, distanceM: null }],
+        },
+      ],
+    });
+    const list = [stretch("2026-10-05", 30), stretch("2026-10-12", 60)];
+    expect(setsPerMuscle(list, 2)).toEqual([]);
+    expect(recentRecords(list)).toEqual([]);
   });
 });

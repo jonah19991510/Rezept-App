@@ -5,21 +5,26 @@ import type { Enums } from "@/lib/supabase/database.types";
 export type MuscleGroup = Enums<"muscle_group">;
 export type Equipment = Enums<"exercise_equipment">;
 export type Tracking = Enums<"exercise_tracking">;
+export type ExerciseCategory = Enums<"exercise_category">;
 
 /** Reihenfolge wie im Gym gedacht: Oberkörper, Rumpf, Beine, Ganzkörper, Ausdauer. */
 export const MUSCLE_ORDER: MuscleGroup[] = [
   "chest",
   "back",
   "shoulders",
+  "neck",
   "biceps",
   "triceps",
   "forearms",
   "core",
+  "hip_flexors",
   "quads",
   "hamstrings",
   "glutes",
   "adductors",
   "calves",
+  "shins",
+  "feet",
   "full_body",
   "cardio",
 ];
@@ -28,18 +33,34 @@ export const MUSCLE_LABELS: Record<MuscleGroup, string> = {
   chest: "Brust",
   back: "Rücken",
   shoulders: "Schultern",
+  neck: "Nacken",
   biceps: "Bizeps",
   triceps: "Trizeps",
   forearms: "Unterarme",
   core: "Bauch",
+  hip_flexors: "Hüftbeuger",
   quads: "Beinstrecker",
   hamstrings: "Beinbeuger",
   glutes: "Gesäß",
   adductors: "Adduktoren",
   calves: "Waden",
+  shins: "Schienbein",
+  feet: "Füße",
   full_body: "Ganzkörper",
   cardio: "Ausdauer",
 };
+
+export const CATEGORY_ORDER: ExerciseCategory[] = ["training", "stretching", "rehab"];
+
+export const CATEGORY_LABELS: Record<ExerciseCategory, string> = {
+  training: "Training",
+  stretching: "Dehnen",
+  rehab: "Reha",
+};
+
+/** Steht bei jeder Reha-Übung: ersetzt keine Abklärung, gerade bei Schmerzen am Schienbein (Ermüdungsbruch möglich). */
+export const REHAB_HINT =
+  "Ersetzt keine ärztliche Abklärung. Schmerzfrei üben und langsam steigern. Bei starken, punktuellen oder Ruheschmerzen bitte untersuchen lassen.";
 
 export const EQUIPMENT_ORDER: Equipment[] = [
   "barbell",
@@ -83,6 +104,9 @@ export type ExerciseOption = {
   secondaryMuscles: MuscleGroup[];
   equipment: Equipment;
   tracking: Tracking;
+  category: ExerciseCategory;
+  /** kurze Anleitung, vor allem bei Dehn- und Reha-Übungen */
+  instructions: string | null;
   /** selbst angelegt */
   own: boolean;
 };
@@ -113,17 +137,22 @@ export function normalizeSearch(value: string): string {
 }
 
 /**
- * Suche in Name, Muskelgruppe und Gerät: Jedes Wort muss irgendwo vorkommen („kh schräg“ findet nichts, „kurzhantel
- * schräg“ schon). Treffer am Namensanfang zuerst, sonst alphabetisch. Optional nur eine Muskelgruppe (Haupt- oder
- * Nebenmuskel).
+ * Suche in Name, Muskelgruppe, Gerät, Art und Anleitung: Jedes Wort muss irgendwo vorkommen („kh schräg“ findet nichts,
+ * „kurzhantel schräg“ schon). Treffer nur in der Anleitung („shin splints“) stehen hinten, sonst Treffer am Namensanfang
+ * zuerst, dann alphabetisch. Optional nur eine Muskelgruppe (Haupt- oder Nebenmuskel) oder eine Art.
  */
-export function searchExercises<E extends ExerciseOption>(list: E[], query: string, muscle: MuscleGroup | null = null): E[] {
+export function searchExercises<E extends ExerciseOption>(list: E[], query: string, muscle: MuscleGroup | null = null, category: ExerciseCategory | null = null): E[] {
   const words = normalizeSearch(query).split(" ").filter(Boolean);
+  const title = (e: E) => `${e.name} ${MUSCLE_LABELS[e.muscleGroup]} ${EQUIPMENT_LABELS[e.equipment]} ${CATEGORY_LABELS[e.category]}`;
+  const matches = (text: string) => {
+    const haystack = normalizeSearch(text);
+    return words.every((w) => haystack.includes(w));
+  };
+  const inTitle = (e: E) => matches(title(e));
   const filtered = list.filter((e) => {
     if (muscle && e.muscleGroup !== muscle && !e.secondaryMuscles.includes(muscle)) return false;
-    if (words.length === 0) return true;
-    const haystack = normalizeSearch(`${e.name} ${MUSCLE_LABELS[e.muscleGroup]} ${EQUIPMENT_LABELS[e.equipment]}`);
-    return words.every((w) => haystack.includes(w));
+    if (category && e.category !== category) return false;
+    return matches(`${title(e)} ${e.instructions ?? ""}`);
   });
   const first = words[0];
   return filtered.sort((a, b) => {
@@ -134,6 +163,9 @@ export function searchExercises<E extends ExerciseOption>(list: E[], query: stri
       if (pa !== pb) return pa - pb;
     }
     if (first) {
+      const ta = inTitle(a) ? 0 : 1;
+      const tb = inTitle(b) ? 0 : 1;
+      if (ta !== tb) return ta - tb;
       const sa = normalizeSearch(a.name).startsWith(first) ? 0 : 1;
       const sb = normalizeSearch(b.name).startsWith(first) ? 0 : 1;
       if (sa !== sb) return sa - sb;
@@ -171,12 +203,16 @@ export function matchesLibraryView(e: LibraryExercise, view: LibraryView): boole
   return true;
 }
 
-/** Übungen für die Datenbank-Seite filtern (Ansicht, Muskelgruppe inkl. Nebenmuskeln, Suche wie in der Auswahl). */
-export function filterLibrary<E extends LibraryExercise>(list: E[], options: { query: string; view: LibraryView; muscle: MuscleGroup | null }): E[] {
+/** Übungen für die Datenbank-Seite filtern (Ansicht, Art, Muskelgruppe inkl. Nebenmuskeln, Suche wie in der Auswahl). */
+export function filterLibrary<E extends LibraryExercise>(
+  list: E[],
+  options: { query: string; view: LibraryView; muscle: MuscleGroup | null; category?: ExerciseCategory | null },
+): E[] {
   return searchExercises(
     list.filter((e) => matchesLibraryView(e, options.view)),
     options.query,
     options.muscle,
+    options.category ?? null,
   );
 }
 

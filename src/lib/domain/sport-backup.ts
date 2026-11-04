@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Constants } from "@/lib/supabase/database.types";
-import { normalizeSearch, type Equipment, type MuscleGroup, type Tracking } from "./exercises";
+import { normalizeSearch, type Equipment, type ExerciseCategory, type MuscleGroup, type Tracking } from "./exercises";
 
 // Sport-Sicherung (26.10.2026): eigene Trainingspläne und eigene Übungen als JSON-Datei, die sich wieder importieren
 // lässt. Übungen stehen mit Namen UND Eckdaten drin: Beim Import wird nach dem Namen gesucht (Grundbestand und eigene),
@@ -16,9 +16,12 @@ export const MAX_SPORT_BACKUP_WORKOUTS = 2000;
 export const sportBackupExerciseSchema = z.object({
   name: z.string().trim().min(1).max(80),
   muscle_group: z.enum(Constants.public.Enums.muscle_group),
-  secondary_muscles: z.array(z.enum(Constants.public.Enums.muscle_group)).max(14).default([]),
+  secondary_muscles: z.array(z.enum(Constants.public.Enums.muscle_group)).max(18).default([]),
   equipment: z.enum(Constants.public.Enums.exercise_equipment),
   tracking: z.enum(Constants.public.Enums.exercise_tracking),
+  // Ältere Sicherungen kennen beides nicht
+  category: z.enum(Constants.public.Enums.exercise_category).default("training"),
+  instructions: z.string().max(500).nullable().default(null),
 });
 
 const optionalInt = (min: number, max: number) => z.number().int().min(min).max(max).nullable();
@@ -102,7 +105,15 @@ export type SportBackupWorkout = z.infer<typeof sportBackupWorkoutSchema>;
 export type SportBackupFile = z.infer<typeof sportBackupFileSchema>;
 export type SportBackupFileInput = z.input<typeof sportBackupFileSchema>;
 
-type BackupExerciseRow = { name: string; muscle_group: MuscleGroup; secondary_muscles: MuscleGroup[]; equipment: Equipment; tracking: Tracking };
+type BackupExerciseRow = {
+  name: string;
+  muscle_group: MuscleGroup;
+  secondary_muscles: MuscleGroup[];
+  equipment: Equipment;
+  tracking: Tracking;
+  category: ExerciseCategory;
+  instructions: string | null;
+};
 
 /** Plan aus der Datenbank (mit Tagen und Übungen samt Übungsdaten), wie ihn der Export liest. */
 export type PlanRowForBackup = {
@@ -158,6 +169,8 @@ const exerciseData = (x: BackupExerciseRow): SportBackupExercise => ({
   secondary_muscles: x.secondary_muscles,
   equipment: x.equipment,
   tracking: x.tracking,
+  category: x.category,
+  instructions: x.instructions,
 });
 
 export function toSportBackupFile(

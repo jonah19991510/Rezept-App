@@ -20,7 +20,7 @@ import {
   type Session,
 } from "./workout";
 
-const bench: ExerciseOption = { id: "bench", name: "Bankdrücken", muscleGroup: "chest", secondaryMuscles: [], equipment: "barbell", tracking: "weight_reps", own: false };
+const bench: ExerciseOption = { id: "bench", name: "Bankdrücken", muscleGroup: "chest", secondaryMuscles: [], equipment: "barbell", tracking: "weight_reps", category: "training", instructions: null, own: false };
 const plank: ExerciseOption = { ...bench, id: "plank", name: "Plank", tracking: "time", equipment: "bodyweight" };
 
 describe("warmupSets", () => {

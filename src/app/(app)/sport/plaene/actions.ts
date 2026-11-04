@@ -95,7 +95,7 @@ export async function createExerciseAction(input: ExerciseInput): Promise<Create
   const { data, error } = await supabase
     .from("exercises")
     .insert({ ...parsed.data, created_by: user.id })
-    .select("id, name, muscle_group, secondary_muscles, equipment, tracking")
+    .select("id, name, muscle_group, secondary_muscles, equipment, tracking, category, instructions")
     .single();
   if (error) {
     if (error.code === "23505") return { ok: false, fieldErrors: { name: ["Eine Übung mit diesem Namen hast du schon."] } };
@@ -110,6 +110,8 @@ export async function createExerciseAction(input: ExerciseInput): Promise<Create
       secondaryMuscles: data.secondary_muscles,
       equipment: data.equipment,
       tracking: data.tracking,
+      category: data.category,
+      instructions: data.instructions,
       own: true,
     },
   };

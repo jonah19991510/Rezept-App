@@ -45,6 +45,14 @@ export const exerciseInputSchema = z.object({
   tracking: z.enum(Constants.public.Enums.exercise_tracking),
   /** Nebenmuskeln (ohne den Hauptmuskel) */
   secondary_muscles: z.array(z.enum(Constants.public.Enums.muscle_group)).max(8).default([]),
+  category: z.enum(Constants.public.Enums.exercise_category).default("training"),
+  /** kurze Anleitung; leer = keine */
+  instructions: z
+    .string()
+    .trim()
+    .max(500, "Höchstens 500 Zeichen.")
+    .default("")
+    .transform((v) => v || null),
 });
 
 export type ExerciseInput = z.input<typeof exerciseInputSchema>;

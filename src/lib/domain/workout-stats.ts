@@ -1,4 +1,4 @@
-import { isTimed, MUSCLE_ORDER, type MuscleGroup, type Tracking } from "./exercises";
+import { isTimed, MUSCLE_ORDER, type ExerciseCategory, type MuscleGroup, type Tracking } from "./exercises";
 import { addDays, daysBetween, mondayOf } from "./week";
 
 // Sport & Gesundheit, Phase S3: Statistik aus den beendeten Trainings.
@@ -17,6 +17,7 @@ export type StatsWorkout = {
     muscleGroup: MuscleGroup;
     secondaryMuscles: MuscleGroup[];
     tracking: Tracking;
+    category: ExerciseCategory;
     /** nur erledigte Sätze */
     sets: StatsSet[];
   }[];
@@ -231,7 +232,7 @@ export type RecentRecord = { date: string; workoutId: string; exerciseId: string
 
 /**
  * Neue Bestwerte (geschätztes 1RM; ohne Gewicht Wiederholungen bzw. Zeit/Strecke) gegenüber allen früheren Trainings.
- * Das erste Training einer Übung zählt nicht als Bestwert. Neueste zuerst.
+ * Das erste Training einer Übung zählt nicht als Bestwert, Dehn- und Reha-Übungen nie. Neueste zuerst.
  */
 export function recentRecords(workouts: StatsWorkout[], limit = 8): RecentRecord[] {
   const bestSoFar = new Map<string, { kind: RecentRecord["kind"]; value: number }>();
@@ -239,7 +240,7 @@ export function recentRecords(workouts: StatsWorkout[], limit = 8): RecentRecord
   for (const w of [...workouts].sort((a, b) => a.date.localeCompare(b.date))) {
     for (const e of w.exercises) {
       const sets = normalSets(e.sets);
-      if (sets.length === 0) continue;
+      if (sets.length === 0 || e.category !== "training") continue;
       let kind: RecentRecord["kind"];
       let value: number | null;
       if (e.tracking === "time") {
@@ -272,14 +273,14 @@ export function recentRecords(workouts: StatsWorkout[], limit = 8): RecentRecord
 
 /**
  * Arbeitssätze pro Muskelgruppe und Woche im Zeitraum (Hauptmuskel zählt 1, Nebenmuskeln je ½), sortiert nach Menge.
- * Für Muskelaufbau gelten etwa 10–20 Sätze pro Muskel und Woche als guter Bereich.
+ * Für Muskelaufbau gelten etwa 10–20 Sätze pro Muskel und Woche als guter Bereich; Dehnen und Reha zählen deshalb nicht.
  */
 export function setsPerMuscle(workouts: StatsWorkout[], weeks: number): { muscle: MuscleGroup; perWeek: number; total: number }[] {
   const totals = new Map<MuscleGroup, number>();
   for (const w of workouts) {
     for (const e of w.exercises) {
       const n = normalSets(e.sets).length;
-      if (!n) continue;
+      if (!n || e.category !== "training") continue;
       totals.set(e.muscleGroup, (totals.get(e.muscleGroup) ?? 0) + n);
       for (const m of e.secondaryMuscles) if (m !== e.muscleGroup) totals.set(m, (totals.get(m) ?? 0) + n / 2);
     }

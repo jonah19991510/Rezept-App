@@ -36,6 +36,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ExerciseInstructions } from "@/components/sport/exercise-instructions";
 import { EQUIPMENT_LABELS, isTimed, MUSCLE_LABELS, type ExerciseOption } from "@/lib/domain/exercises";
 import { repsRange, restLabel } from "@/lib/domain/training-plan";
 import { formatCountdown } from "@/lib/domain/timers";
@@ -704,6 +705,8 @@ function ExerciseCard({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <ExerciseInstructions exercise={exercise} className="px-4 pb-1" />
 
       {entry.warmup && !hasWarmups && tracking === "weight_reps" ? (
         <div className="px-4 pb-1">

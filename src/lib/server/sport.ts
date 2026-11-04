@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 
 // Sport & Gesundheit, Phase S1: Übungen und Trainingspläne lesen.
 
-type ExerciseRow = Pick<Tables<"exercises">, "id" | "name" | "muscle_group" | "secondary_muscles" | "equipment" | "tracking" | "created_by">;
+type ExerciseRow = Pick<Tables<"exercises">, "id" | "name" | "muscle_group" | "secondary_muscles" | "equipment" | "tracking" | "category" | "instructions" | "created_by">;
 
 function toExerciseOption(row: ExerciseRow, userId: string): ExerciseOption {
   return {
@@ -17,11 +17,13 @@ function toExerciseOption(row: ExerciseRow, userId: string): ExerciseOption {
     secondaryMuscles: row.secondary_muscles,
     equipment: row.equipment,
     tracking: row.tracking,
+    category: row.category,
+    instructions: row.instructions,
     own: row.created_by === userId,
   };
 }
 
-const EXERCISE_COLUMNS = "id, name, muscle_group, secondary_muscles, equipment, tracking, created_by";
+const EXERCISE_COLUMNS = "id, name, muscle_group, secondary_muscles, equipment, tracking, category, instructions, created_by";
 
 /** Alle Übungen (Grundbestand und von Nutzern angelegte), für die Auswahl im Editor. */
 export async function getExercises(userId: string): Promise<ExerciseOption[]> {
@@ -153,7 +155,7 @@ export async function getPublicTrainingPlans(userId: string): Promise<PublicPlan
     supabase
       .from("training_plans")
       .select(
-        "id, title, description, owner_id, updated_at, profiles!training_plans_owner_id_fkey(display_name), training_plan_days!training_plan_days_plan_id_fkey(name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(sets, exercises!training_plan_exercises_exercise_id_fkey(muscle_group)))",
+        "id, title, description, owner_id, updated_at, profiles!training_plans_owner_id_fkey(display_name), training_plan_days!training_plan_days_plan_id_fkey(name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(sets, exercises!training_plan_exercises_exercise_id_fkey(muscle_group, category)))",
       )
       .eq("is_public", true)
       .order("updated_at", { ascending: false }),
@@ -164,7 +166,10 @@ export async function getPublicTrainingPlans(userId: string): Promise<PublicPlan
   return plans.data.map((p) => {
     const muscleSets: Partial<Record<MuscleGroup, number>> = {};
     for (const d of p.training_plan_days) {
-      for (const e of d.training_plan_exercises) muscleSets[e.exercises.muscle_group] = (muscleSets[e.exercises.muscle_group] ?? 0) + e.sets;
+      for (const e of d.training_plan_exercises) {
+        // Dehnen und Reha sind kein Schwerpunkt des Plans
+        if (e.exercises.category === "training") muscleSets[e.exercises.muscle_group] = (muscleSets[e.exercises.muscle_group] ?? 0) + e.sets;
+      }
     }
     return {
       id: p.id,

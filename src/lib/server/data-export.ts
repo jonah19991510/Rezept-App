@@ -269,15 +269,15 @@ export async function buildSportBackup(userId: string): Promise<SportBackupFile>
     supabase
       .from("training_plans")
       .select(
-        "title, description, is_archived, training_plan_days!training_plan_days_plan_id_fkey(position, name, focus, training_plan_exercises!training_plan_exercises_day_id_fkey(position, sets, reps_min, reps_max, target_seconds, rest_seconds, warmup, note, exercises!training_plan_exercises_exercise_id_fkey(name, muscle_group, secondary_muscles, equipment, tracking)))",
+        "title, description, is_archived, training_plan_days!training_plan_days_plan_id_fkey(position, name, focus, training_plan_exercises!training_plan_exercises_day_id_fkey(position, sets, reps_min, reps_max, target_seconds, rest_seconds, warmup, note, exercises!training_plan_exercises_exercise_id_fkey(name, muscle_group, secondary_muscles, equipment, tracking, category, instructions)))",
       )
       .eq("owner_id", userId)
       .order("created_at"),
-    supabase.from("exercises").select("name, muscle_group, secondary_muscles, equipment, tracking").eq("created_by", userId).order("name"),
+    supabase.from("exercises").select("name, muscle_group, secondary_muscles, equipment, tracking, category, instructions").eq("created_by", userId).order("name"),
     supabase
       .from("workouts")
       .select(
-        "title, started_at, ended_at, note, training_plans!workouts_plan_id_fkey(title), training_plan_days!workouts_plan_day_id_fkey(name), workout_exercises!workout_exercises_workout_id_fkey(position, note, exercises!workout_exercises_exercise_id_fkey(name, muscle_group, secondary_muscles, equipment, tracking), workout_sets!workout_sets_workout_exercise_id_fkey(position, kind, done, weight_kg, reps, seconds, distance_m, speed_kmh))",
+        "title, started_at, ended_at, note, training_plans!workouts_plan_id_fkey(title), training_plan_days!workouts_plan_day_id_fkey(name), workout_exercises!workout_exercises_workout_id_fkey(position, note, exercises!workout_exercises_exercise_id_fkey(name, muscle_group, secondary_muscles, equipment, tracking, category, instructions), workout_sets!workout_sets_workout_exercise_id_fkey(position, kind, done, weight_kg, reps, seconds, distance_m, speed_kmh))",
       )
       .eq("user_id", userId)
       .order("started_at"),

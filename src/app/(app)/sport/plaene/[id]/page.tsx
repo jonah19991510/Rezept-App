@@ -8,6 +8,7 @@ import { ActiveWorkoutBanner } from "@/components/sport/active-workout-banner";
 import { StartTraining } from "@/components/sport/start-training";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
+import { ExerciseInstructions } from "@/components/sport/exercise-instructions";
 import { EQUIPMENT_LABELS, MUSCLE_LABELS } from "@/lib/domain/exercises";
 import { planSummary, restLabel, targetLabel, totalSets } from "@/lib/domain/training-plan";
 import { getOwnCopyOf, getTrainingPlan } from "@/lib/server/sport";
@@ -135,6 +136,7 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/spo
                           </p>
                         ) : null}
                         {e.note ? <p className="mt-1 text-sm whitespace-pre-line">{e.note}</p> : null}
+                        <ExerciseInstructions exercise={e.exercise} className="mt-1" />
                       </div>
                     </li>
                   );

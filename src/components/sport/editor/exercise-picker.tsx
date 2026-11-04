@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
   EQUIPMENT_LABELS,
   EQUIPMENT_ORDER,
   groupByMuscle,
@@ -17,6 +19,7 @@ import {
   normalizeSearch,
   searchExercises,
   type Equipment,
+  type ExerciseCategory,
   type ExerciseOption,
   type MuscleGroup,
   type Tracking,
@@ -29,11 +32,12 @@ const TRACKING_CHOICES: { value: Tracking; label: string }[] = [
   { value: "time", label: "Zeit" },
   { value: "distance_time", label: "Strecke" },
 ];
+const CATEGORY_CHOICES = CATEGORY_ORDER.map((value) => ({ value, label: CATEGORY_LABELS[value] }));
 
-type Form = { name: string; muscle: MuscleGroup | ""; equipment: Equipment | ""; tracking: Tracking };
+type Form = { name: string; muscle: MuscleGroup | ""; equipment: Equipment | ""; tracking: Tracking; category: ExerciseCategory };
 
 /**
- * Übungen aus der Datenbank wählen: Suche, Muskelgruppe als wischbare Chips, ohne Filter nach Muskelgruppe in
+ * Übungen aus der Datenbank wählen: Suche, Art und Muskelgruppe als wischbare Chips, ohne Filter nach Muskelgruppe in
  * aufklappbaren Abschnitten. Mehrfachauswahl („3 hinzufügen“); beim Austauschen genügt ein Tipp. Gibt es eine Übung
  * nicht, lässt sie sich selbst anlegen.
  */
@@ -56,6 +60,7 @@ export function ExercisePicker({
 }) {
   const [query, setQuery] = useState("");
   const [muscle, setMuscle] = useState<MuscleGroup | null>(null);
+  const [category, setCategory] = useState<ExerciseCategory | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [openGroups, setOpenGroups] = useState<Set<MuscleGroup>>(() => new Set());
   const [form, setForm] = useState<Form | null>(null);
@@ -63,18 +68,20 @@ export function ExercisePicker({
   const [formMessage, setFormMessage] = useState<string>();
   const [pending, startTransition] = useTransition();
 
+  // Die Art zählt nicht: Auch unter „Dehnen“ bleiben es viele Übungen, also weiter aufklappbare Abschnitte
   const filtering = normalizeSearch(query) !== "" || muscle !== null;
-  const results = useMemo(() => searchExercises(exercises, query, muscle), [exercises, query, muscle]);
-  const groups = useMemo(() => groupByMuscle(exercises), [exercises]);
+  const results = useMemo(() => searchExercises(exercises, query, muscle, category), [exercises, query, muscle, category]);
+  const groups = useMemo(() => groupByMuscle(category ? exercises.filter((e) => e.category === category) : exercises), [exercises, category]);
   const counts = useMemo(() => {
     const byMuscle = new Map<MuscleGroup, number>();
-    for (const m of MUSCLE_ORDER) byMuscle.set(m, searchExercises(exercises, query, m).length);
+    for (const m of MUSCLE_ORDER) byMuscle.set(m, searchExercises(exercises, query, m, category).length);
     return byMuscle;
-  }, [exercises, query]);
+  }, [exercises, query, category]);
 
   function reset() {
     setQuery("");
     setMuscle(null);
+    setCategory(null);
     setSelected([]);
     setOpenGroups(new Set());
     setForm(null);
@@ -110,6 +117,7 @@ export function ExercisePicker({
         muscle_group: form.muscle as MuscleGroup,
         equipment: form.equipment as Equipment,
         tracking: form.tracking,
+        category: form.category,
       });
       if (!result.ok) {
         setFormErrors(result.fieldErrors ?? {});
@@ -121,6 +129,7 @@ export function ExercisePicker({
       setFormErrors({});
       setQuery(result.exercise.name);
       setMuscle(null);
+      setCategory(null);
       if (mode === "replace") {
         onSelect([result.exercise]);
         close();
@@ -141,6 +150,7 @@ export function ExercisePicker({
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-2">
               <span className="truncate font-medium">{e.name}</span>
+              {e.category !== "training" ? <TagLabel tone="sage">{CATEGORY_LABELS[e.category]}</TagLabel> : null}
               {e.own ? <TagLabel>Eigene</TagLabel> : null}
             </span>
             <span className="block truncate text-sm text-muted-foreground">
@@ -193,6 +203,10 @@ export function ExercisePicker({
             aria-invalid={Boolean(formErrors.name) || undefined}
           />
           {formErrors.name ? <p className="mt-1 text-sm text-destructive">{formErrors.name[0]}</p> : null}
+        </div>
+        <div>
+          <FieldHeading>Art</FieldHeading>
+          <RadioSegments label="Art" value={form.category} options={CATEGORY_CHOICES} onChange={(category) => setForm({ ...form, category })} />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
@@ -254,7 +268,7 @@ export function ExercisePicker({
             type="button"
             variant="outline"
             className="h-12 flex-1"
-            onClick={() => setForm({ name: query.trim(), muscle: muscle ?? "", equipment: "", tracking: "weight_reps" })}
+            onClick={() => setForm({ name: query.trim(), muscle: muscle ?? "", equipment: "", tracking: "weight_reps", category: category ?? "training" })}
           >
             <Plus aria-hidden />
             Eigene Übung
@@ -270,8 +284,15 @@ export function ExercisePicker({
       {/* grid-cols-1 = eine Spalte mit minmax(0, 1fr): sonst wächst sie mit dem längsten Übungsnamen über den Rand */}
       <div className="grid grid-cols-1 gap-3">
         <SearchField value={query} onChange={setQuery} placeholder="Übung suchen …" label="Übung suchen" />
+        <ChipRow label="Art">
+          {CATEGORY_ORDER.map((c) => (
+            <CountChip key={c} active={category === c} count={searchExercises(exercises, query, muscle, c).length} onClick={() => setCategory(category === c ? null : c)}>
+              {CATEGORY_LABELS[c]}
+            </CountChip>
+          ))}
+        </ChipRow>
         <ChipRow label="Muskelgruppe">
-          <CountChip active={muscle === null} count={searchExercises(exercises, query).length} onClick={() => setMuscle(null)}>
+          <CountChip active={muscle === null} count={searchExercises(exercises, query, null, category).length} onClick={() => setMuscle(null)}>
             Alle
           </CountChip>
           {MUSCLE_ORDER.filter((m) => (counts.get(m) ?? 0) > 0 || m === muscle).map((m) => (
