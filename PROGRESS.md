@@ -2125,6 +2125,12 @@ bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Tes
 **Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `cccd866` (mit `ede5f0e`) → Deployment
 `dpl_AcbpzzZ8FsFc5oY2FAqgcJW8Zpqv` (`production`, `fra1`, `source: git`, „READY“; per Vercel-Connector geprüft).
 
+**Espresso-Mengen (05.11.2026, Wunsch des Nutzers):** Getränke, deren Name mit „Espresso“ beginnt, haben die
+Schnellmengen 30 ml (Einfach) und 60 ml (Doppelt) statt Glas, Dose und Flasche (`quickAmountsFor`, keine Migration); im
+Sheet ist 30 ml vorgeschlagen, eine noch unveränderte Menge wandert beim Getränkewechsel mit. Mengen unter 100 ml stehen
+als „30 ml“ statt in Litern (`formatAmount`: Einträge, Toast, Eintragen-Knopf, Rangliste der Statistik); Summen bleiben
+in Litern. Geprüft mit Tests und Vorschau; das Eintragen mit Login hat der Nutzer vor dem Push nicht ausprobiert.
+
 **Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
 unter `drinks`). Per SQL geprüft (zurückgerollt, danach 0 Getränke, 0 Einträge, kein Ziel gesetzt): `drink_days` ordnet
 23:30 Uhr dem Tag selbst und 00:30 Uhr dem nächsten Tag zu (deutsche Zeit), doppelter Name abgelehnt, Ziel 100 ml

@@ -7,6 +7,7 @@ import {
   drinkFacts,
   drinkRanking,
   entryValues,
+  formatAmount,
   formatLiters,
   goalStreak,
   longDate,
@@ -18,6 +19,7 @@ import {
   periodRange,
   periodSummary,
   personalTips,
+  quickAmountsFor,
   quickLabel,
   shiftPeriod,
   slotOf,
@@ -65,6 +67,28 @@ describe("Anzeige", () => {
     expect(quickLabel(250)).toBe("0,25");
     expect(quickLabel(330)).toBe("0,33");
     expect(quickLabel(1000)).toBe("1,0");
+  });
+
+  it("kleine Mengen in ml", () => {
+    expect(quickLabel(30)).toBe("30 ml");
+    expect(formatAmount(30)).toBe("30 ml");
+    expect(formatAmount(45)).toBe("45 ml");
+    expect(formatAmount(100)).toBe("0,10 l");
+    expect(formatAmount(250)).toBe("0,25 l");
+  });
+
+  it("Espresso hat eigene Schnellmengen, alle anderen die üblichen", () => {
+    expect(quickAmountsFor("Espresso").map((q) => q.ml)).toEqual([30, 60]);
+    expect(quickAmountsFor(" espresso doppio").map((q) => q.ml)).toEqual([30, 60]);
+    expect(quickAmountsFor("Kaffee").map((q) => q.ml)).toEqual([250, 330, 500, 750, 1000]);
+    expect(quickAmountsFor("Flexpresso").map((q) => q.ml)).toEqual([250, 330, 500, 750, 1000]);
+    expect(quickAmountsFor(null).map((q) => q.ml)).toEqual([250, 330, 500, 750, 1000]);
+  });
+
+  it("Koffein für einen einfachen und einen doppelten Espresso", () => {
+    const espresso = { caffeinePer100: 130, sugarPer100: 0, waterPercent: 0 };
+    expect(entryValues(espresso, 30).caffeine).toBe(39);
+    expect(entryValues(espresso, 60).caffeine).toBe(78);
   });
 
   it("Koffein und Zucker pro 100 ml", () => {

@@ -10,6 +10,7 @@ import { ChipRow } from "@/components/layout/list-blocks";
 import { Button } from "@/components/ui/button";
 import {
   entryValues,
+  formatAmount,
   formatLiters,
   formatMg,
   longDate,
@@ -17,7 +18,7 @@ import {
   paceStatus,
   paceTarget,
   paceText,
-  QUICK_AMOUNTS,
+  quickAmountsFor,
   quickLabel,
   sumEntries,
   type Drink,
@@ -57,6 +58,7 @@ export function TodayView({ goalMl, drinks, entries, today, initialMinutes }: { 
   const [optimistic, addOptimistic] = useOptimistic(entries, (list: DrinkEntry[], entry: DrinkEntry) => [...list, entry]);
   const [, startTransition] = useTransition();
   const selected = drinks.find((d) => d.id === drinkId) ?? drinks[0] ?? null;
+  const amounts = quickAmountsFor(selected?.name);
 
   // Zuletzt gewähltes Getränk merken (nur auf diesem Gerät)
   useEffect(() => {
@@ -103,7 +105,7 @@ export function TodayView({ goalMl, drinks, entries, today, initialMinutes }: { 
         toast.error(result.message);
         return;
       }
-      toast.success(`${formatLiters(ml)} ${selected.name} eingetragen`, {
+      toast.success(`${formatAmount(ml)} ${selected.name} eingetragen`, {
         action: {
           label: "Rückgängig",
           onClick: () => {
@@ -181,13 +183,13 @@ export function TodayView({ goalMl, drinks, entries, today, initialMinutes }: { 
                 <DrinkChip key={d.id} name={d.name} color={d.color} active={selected?.id === d.id} onClick={() => choose(d.id)} />
               ))}
             </ChipRow>
-            <div className="grid grid-cols-5 gap-2">
-              {QUICK_AMOUNTS.map((q) => (
+            <div className={cn("grid gap-2", amounts.length < 5 ? "grid-cols-2" : "grid-cols-5")}>
+              {amounts.map((q) => (
                 <button
                   key={q.ml}
                   type="button"
                   onClick={() => quickAdd(q.ml)}
-                  aria-label={`${quickLabel(q.ml)} Liter ${selected?.name ?? ""} eintragen`}
+                  aria-label={`${q.ml < 100 ? `${q.ml} Milliliter` : `${quickLabel(q.ml)} Liter`} ${selected?.name ?? ""} eintragen`}
                   className="flex min-h-16 flex-col items-center justify-center rounded-2xl border bg-card px-1 py-2 transition hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none active:translate-y-px"
                 >
                   <span className="text-lg font-semibold tabular-nums">{quickLabel(q.ml)}</span>

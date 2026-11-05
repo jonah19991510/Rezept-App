@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
-import { clock, drinkColor, formatLiters, type DrinkEntry } from "@/lib/domain/drinks";
+import { clock, drinkColor, formatAmount, type DrinkEntry } from "@/lib/domain/drinks";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +67,7 @@ export function EntryList({ entries, onSelect, empty }: { entries: DrinkEntry[];
                 </span>
               ) : null}
             </span>
-            <span className="shrink-0 font-semibold tabular-nums">{formatLiters(e.ml)}</span>
+            <span className="shrink-0 font-semibold tabular-nums">{formatAmount(e.ml)}</span>
             {onSelect ? <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden /> : null}
           </>
         );

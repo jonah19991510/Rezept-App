@@ -50,6 +50,16 @@ export const QUICK_AMOUNTS = [
   { ml: 1000, label: "Liter" },
 ] as const;
 
+export const ESPRESSO_AMOUNTS = [
+  { ml: 30, label: "Einfach" },
+  { ml: 60, label: "Doppelt" },
+] as const;
+
+/** Schnellmengen eines Getränks: Espresso kommt in Tassen statt in Gläsern und Flaschen. */
+export function quickAmountsFor(drinkName: string | null | undefined): readonly { ml: number; label: string }[] {
+  return drinkName?.trim().toLowerCase().startsWith("espresso") ? ESPRESSO_AMOUNTS : QUICK_AMOUNTS;
+}
+
 /** Orientierung für Koffein: bis 400 mg am Tag gelten für gesunde Erwachsene als unbedenklich (EFSA). */
 export const CAFFEINE_LIMIT_MG = 400;
 
@@ -126,8 +136,14 @@ export function formatLiters(ml: number, digits = 2): string {
   return `${new Intl.NumberFormat("de-DE", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(ml / 1000)} l`;
 }
 
-/** Schnellmenge als „0,25“ (ohne Einheit). */
+/** Menge eines Eintrags: „30 ml“ unter 100 ml (in Litern wäre das ungenau), sonst „0,25 l“. */
+export function formatAmount(ml: number): string {
+  return ml < 100 ? `${ml} ml` : formatLiters(ml);
+}
+
+/** Schnellmenge als „0,25“ (ohne Einheit), kleine Mengen als „30 ml“. */
 export function quickLabel(ml: number): string {
+  if (ml < 100) return `${ml} ml`;
   return new Intl.NumberFormat("de-DE", { minimumFractionDigits: ml % 1000 === 0 ? 1 : 2, maximumFractionDigits: 2 }).format(ml / 1000);
 }
 

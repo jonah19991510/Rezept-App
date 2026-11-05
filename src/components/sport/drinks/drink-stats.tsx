@@ -15,6 +15,7 @@ import {
   drinkColor,
   drinkRanking,
   entryKey,
+  formatAmount,
   formatLiters,
   formatMg,
   periodLabel,
@@ -245,7 +246,7 @@ export function DrinkStats({
                       <span className="truncate">{r.name}</span>
                     </span>
                     <span className="text-sm text-muted-foreground tabular-nums">
-                      {r.count}× · <span className="font-semibold text-foreground">{formatLiters(r.ml)}</span> · {pct(r.share)}
+                      {r.count}× · <span className="font-semibold text-foreground">{formatAmount(r.ml)}</span> · {pct(r.share)}
                     </span>
                     <span className="col-span-2 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
                       <span className="block h-full rounded-full" style={{ width: `${r.share * 100}%`, background: drinkColor(r.color) }} />

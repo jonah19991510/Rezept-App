@@ -9,7 +9,7 @@ import { chipClass } from "@/components/recipes/chip-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { clock, formatLiters, longDate, QUICK_AMOUNTS, quickLabel, type Drink, type DrinkEntry } from "@/lib/domain/drinks";
+import { clock, formatAmount, longDate, quickAmountsFor, quickLabel, type Drink, type DrinkEntry } from "@/lib/domain/drinks";
 import { berlinParts } from "@/lib/domain/workout";
 import { DrinkChip } from "./drink-parts";
 
@@ -18,6 +18,11 @@ export type EntrySheetState = { mode: "add"; date: string; drinkId: string | nul
 
 type Form = { drinkId: string; ml: string; date: string; time: string };
 
+/** Vorgeschlagene Menge eines Getränks: die kleinste seiner Schnellmengen (Espresso 30 ml, sonst 250 ml). */
+function startMl(drinks: Drink[], drinkId: string): string {
+  return String(quickAmountsFor(drinks.find((d) => d.id === drinkId)?.name)[0].ml);
+}
+
 function initialForm(state: NonNullable<EntrySheetState>, drinks: Drink[], today: string): Form {
   if (state.mode === "edit") {
     const e = state.entry;
@@ -25,7 +30,8 @@ function initialForm(state: NonNullable<EntrySheetState>, drinks: Drink[], today
   }
   const now = berlinParts(new Date().toISOString());
   // Für frühere Tage 12 Uhr vorschlagen, heute die aktuelle Uhrzeit
-  return { drinkId: state.drinkId ?? drinks[0]?.id ?? "", ml: "250", date: state.date, time: state.date === today ? now.time : "12:00" };
+  const drinkId = state.drinkId ?? drinks[0]?.id ?? "";
+  return { drinkId, ml: startMl(drinks, drinkId), date: state.date, time: state.date === today ? now.time : "12:00" };
 }
 
 /**
@@ -46,6 +52,12 @@ function EntrySheetInner({ state, onClose, drinks, today }: { state: NonNullable
   const orphan = edit && !edit.drinkId ? edit : null;
   const ml = Number.parseInt(form.ml, 10);
   const valid = ml >= 1 && ml <= 5000 && (form.drinkId !== "" || orphan) && form.date && form.time;
+  const amounts = quickAmountsFor(drinks.find((d) => d.id === form.drinkId)?.name ?? orphan?.name);
+
+  /** Beim Eintragen wandert eine noch unveränderte Menge mit (250 ml Wasser → 30 ml Espresso); Eingetipptes bleibt. */
+  function pickDrink(drinkId: string) {
+    setForm((f) => ({ ...f, drinkId, ml: !edit && f.ml === startMl(drinks, f.drinkId) ? startMl(drinks, drinkId) : f.ml }));
+  }
 
   function close() {
     setOpen(false);
@@ -63,7 +75,7 @@ function EntrySheetInner({ state, onClose, drinks, today }: { state: NonNullable
         toast.error(result.message);
         return;
       }
-      toast.success(edit ? "Eintrag gespeichert" : `${formatLiters(result.entry.ml)} ${result.entry.name} eingetragen`);
+      toast.success(edit ? "Eintrag gespeichert" : `${formatAmount(result.entry.ml)} ${result.entry.name} eingetragen`);
       close();
     });
   }
@@ -102,7 +114,7 @@ function EntrySheetInner({ state, onClose, drinks, today }: { state: NonNullable
           ) : null}
           {!confirmDelete ? (
             <Button type="submit" size="lg" disabled={!valid || pending} className="flex-1">
-              {edit ? "Speichern" : `${Number.isFinite(ml) ? formatLiters(ml) : ""} eintragen`}
+              {edit ? "Speichern" : `${Number.isFinite(ml) ? formatAmount(ml) : ""} eintragen`}
             </Button>
           ) : (
             <Button type="button" variant="outline" size="lg" onClick={() => setConfirmDelete(false)}>
@@ -117,7 +129,7 @@ function EntrySheetInner({ state, onClose, drinks, today }: { state: NonNullable
         <div className="flex flex-wrap gap-2">
           {orphan ? <DrinkChip name={`${orphan.name} (gelöscht)`} color={orphan.color} active={form.drinkId === ""} onClick={() => setForm((f) => ({ ...f, drinkId: "" }))} /> : null}
           {drinks.map((d) => (
-            <DrinkChip key={d.id} name={d.name} color={d.color} active={form.drinkId === d.id} onClick={() => setForm((f) => ({ ...f, drinkId: d.id }))} />
+            <DrinkChip key={d.id} name={d.name} color={d.color} active={form.drinkId === d.id} onClick={() => pickDrink(d.id)} />
           ))}
         </div>
       </section>
@@ -133,9 +145,9 @@ function EntrySheetInner({ state, onClose, drinks, today }: { state: NonNullable
           aria-invalid={form.ml !== "" && !(ml >= 1 && ml <= 5000)}
         />
         <div className="mt-2 flex flex-wrap gap-2">
-          {QUICK_AMOUNTS.map((q) => (
+          {amounts.map((q) => (
             <button key={q.ml} type="button" aria-pressed={ml === q.ml} onClick={() => setForm((f) => ({ ...f, ml: String(q.ml) }))} className={chipClass(ml === q.ml)}>
-              {quickLabel(q.ml)} l
+              {q.ml < 100 ? quickLabel(q.ml) : `${quickLabel(q.ml)} l`}
             </button>
           ))}
         </div>
