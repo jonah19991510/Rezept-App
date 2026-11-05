@@ -2129,7 +2129,8 @@ bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Tes
 Schnellmengen 30 ml (Einfach) und 60 ml (Doppelt) statt Glas, Dose und Flasche (`quickAmountsFor`, keine Migration); im
 Sheet ist 30 ml vorgeschlagen, eine noch unveränderte Menge wandert beim Getränkewechsel mit. Mengen unter 100 ml stehen
 als „30 ml“ statt in Litern (`formatAmount`: Einträge, Toast, Eintragen-Knopf, Rangliste der Statistik); Summen bleiben
-in Litern. Geprüft mit Tests und Vorschau; das Eintragen mit Login hat der Nutzer vor dem Push nicht ausprobiert.
+in Litern. Von Claude geprüft mit Tests und Vorschau ohne Login, nicht das Eintragen mit Konto. Live: Push `7d83ce2` →
+Deployment `dpl_Bz1zxcqMH8umYqPm9NzK8SD74dvo` (`production`, `fra1`, „READY“; per Vercel-Connector geprüft).
 
 **Migration eingespielt** am 27.10.2026 von Claude über die Supabase-Verbindung (mit Freigabe des Nutzers; in Supabase
 unter `drinks`). Per SQL geprüft (zurückgerollt, danach 0 Getränke, 0 Einträge, kein Ziel gesetzt): `drink_days` ordnet
