@@ -2120,6 +2120,25 @@ Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, 
 bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
 über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
 
+### Eigene Challenge-Regeln und Intervall-Timer (06.11.2026, Wunsch des Nutzers)
+
+**Stand:** gebaut, noch nicht committet. Die Migration `…20261106134011_challenge_extra_rules` ist seit 06.11.2026 in der
+Datenbank (additiv, nach ausdrücklichem OK des Nutzers über die Supabase-Integration eingespielt; die Live-Version läuft
+unverändert weiter). Security-Advisor: nichts Neues durch diese Spalte.
+
+- **Eigene Regeln:** Spalte `challenges.extra_rules` (Freitext, höchstens 1000 Zeichen, additiv), im Challenge-Editor
+  „Eigene Regeln“, eine je Zeile (`extraRuleList`). Auf der Regel-Karte als „Außerdem gilt“, für Ersteller und Admins mit
+  „Bearbeiten“ (springt zu `#eigene-regeln`). Bewusst nicht in der Regel-Sperre (`private.challenges_guard`): Sie zählen
+  nicht für die Wertung und bleiben änderbar, auch wenn schon andere mitmachen. Die Wertungsregeln bleiben dann gesperrt.
+- **Intervall-Timer:** Knopf auf der Planseite, eigene Seite `/training/intervall/[Plan-ID]` ohne Navigation. Mit den
+  Übungen eines Trainingstags (je Runde alle Übungen, feste Zeiten aus dem Plan gehen vor) oder ohne Übungen; Vorlagen,
+  Belastung, Pause, Runden, Vorbereitung. Letzte Einstellungen je Plan im `localStorage` des Geräts. Ablauf im Vollbild
+  mit Pause, Zurück, Überspringen, Ton, Vibration, Bildschirm bleibt an. Rechnet mit Zeitpunkten (`interval-timer.ts`,
+  mit Tests). Schreibt nichts in den Trainingsverlauf, keine Migration.
+- 585 Tests, Typcheck, Lint, Build grün. Timer, Regel-Karte und Editor-Abschnitt über eine temporäre Vorschauseite
+  (gelöscht) geprüft. **Nicht geprüft:** alles mit Login (Knopf auf der Planseite, Speichern der Regeln, gesperrte
+  Challenge), Ton und Vibration am echten Handy.
+
 ### Getränketracker (27.10.2026)
 
 **Live** seit 27.10.2026: vom Nutzer am LAN-Server getestet („passt alles“); Push `cccd866` (mit `ede5f0e`) → Deployment

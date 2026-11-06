@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Flame, Pencil, PartyPopper } from "lucide-react";
+import { ChevronLeft, Flame, Pencil, PartyPopper, Timer } from "lucide-react";
 import { PlanMenu } from "@/components/sport/plan-menu";
 import { ForkPlanButton, PlanPublishToggle } from "@/components/sport/plan-publish";
 import { ActiveWorkoutBanner } from "@/components/sport/active-workout-banner";
@@ -77,6 +77,10 @@ export default async function PlanPage({ params, searchParams }: PageProps<"/spo
           days={plan.days.map((d) => ({ id: d.id, name: d.name, focus: d.focus, exerciseCount: d.exercises.length }))}
           nextDayId={nextDay?.id ?? null}
         />
+        <Link href={`/training/intervall/${plan.id}`} className={cn(buttonVariants({ variant: "outline" }), "h-12 rounded-full px-5")}>
+          <Timer aria-hidden />
+          Intervall-Timer
+        </Link>
         {plan.isOwn ? (
           <Link href={`/sport/plaene/${plan.id}/bearbeiten`} className={cn(buttonVariants({ variant: "outline" }), "h-12 rounded-full px-5")}>
             <Pencil aria-hidden />
