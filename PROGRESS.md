@@ -2122,7 +2122,8 @@ bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Tes
 
 ### Eigene Challenge-Regeln und Intervall-Timer (06.11.2026, Wunsch des Nutzers)
 
-**Stand:** gebaut, noch nicht committet. Die Migration `…20261106134011_challenge_extra_rules` ist seit 06.11.2026 in der
+**Live** seit 06.11.2026: vom Nutzer getestet; Push `5729976` (mit `61c22ef`) → Deployment
+`dpl_8XiEo2gUAKf61WDEhkHTRhE8d7Bb` (`production`, „READY“; per Vercel-Connector geprüft). Die Migration `…20261106134011_challenge_extra_rules` ist seit 06.11.2026 in der
 Datenbank (additiv, nach ausdrücklichem OK des Nutzers über die Supabase-Integration eingespielt; die Live-Version läuft
 unverändert weiter). Security-Advisor: nichts Neues durch diese Spalte.
 
@@ -2136,8 +2137,7 @@ unverändert weiter). Security-Advisor: nichts Neues durch diese Spalte.
   mit Pause, Zurück, Überspringen, Ton, Vibration, Bildschirm bleibt an. Rechnet mit Zeitpunkten (`interval-timer.ts`,
   mit Tests). Schreibt nichts in den Trainingsverlauf, keine Migration.
 - 585 Tests, Typcheck, Lint, Build grün. Timer, Regel-Karte und Editor-Abschnitt über eine temporäre Vorschauseite
-  (gelöscht) geprüft. **Nicht geprüft:** alles mit Login (Knopf auf der Planseite, Speichern der Regeln, gesperrte
-  Challenge), Ton und Vibration am echten Handy.
+  (gelöscht) geprüft; mit Login vom Nutzer getestet.
 
 ### Getränketracker (27.10.2026)
 
