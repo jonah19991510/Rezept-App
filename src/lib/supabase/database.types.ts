@@ -147,6 +147,7 @@ export type Database = {
           days_per_week: number | null
           description: string | null
           duration_days: number
+          extra_rules: string | null
           frequency: string
           icon: string
           id: string
@@ -175,6 +176,7 @@ export type Database = {
           days_per_week?: number | null
           description?: string | null
           duration_days: number
+          extra_rules?: string | null
           frequency?: string
           icon: string
           id?: string
@@ -203,6 +205,7 @@ export type Database = {
           days_per_week?: number | null
           description?: string | null
           duration_days?: number
+          extra_rules?: string | null
           frequency?: string
           icon?: string
           id?: string

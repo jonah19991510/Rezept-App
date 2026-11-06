@@ -47,6 +47,8 @@ export type Challenge = ChallengeRules & {
   createdAt: string;
   /** privat: nur für die Person sichtbar, die sie angelegt hat; zählt nicht für die Gesamtrangliste */
   isPublic: boolean;
+  /** eigene Regeln als Freitext, eine je Zeile; zählen nicht für die Wertung und bleiben deshalb immer änderbar */
+  extraRules: string | null;
 };
 
 export type Participant = { userId: string; name: string; startDate: string; joinedAt: string };
@@ -683,6 +685,14 @@ export const MISSED_RULES: { key: MissedRule; label: string; hint: string }[] = 
 ];
 
 export type RuleLine = { key: "goal" | "time" | "missed" | "done" | "backfill" | "points"; title: string; text: string };
+
+/** Eigene Regeln als Liste: eine je Zeile, ohne Leerzeilen und ohne getippte Aufzählungszeichen. */
+export function extraRuleList(text: string | null | undefined): string[] {
+  return (text ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*[-–•*]\s+/, "").trim())
+    .filter(Boolean);
+}
 
 /** Die Regel-Karte in Klartext, Zeile für Zeile. */
 export function ruleLines(r: ChallengeRules): RuleLine[] {

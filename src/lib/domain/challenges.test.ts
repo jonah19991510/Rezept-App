@@ -22,6 +22,7 @@ import {
   type ChallengeRules,
   withPlaceBonus,
   type DayValues,
+  extraRuleList,
 } from "./challenges";
 import { addDays } from "./week";
 
@@ -376,5 +377,17 @@ describe("Runden: bis Monats-/Jahresende und Wiederholung", () => {
     expect(nov.map((x) => x.person.id)).toEqual(["a"]);
     expect(nov[0].progress).toMatchObject({ from: "2026-11-18", to: "2026-11-30", metDays: 1 });
     expect(progressInRound(month, people, roundAt(month, 1), () => new Map(), "2026-12-10")).toHaveLength(2);
+  });
+});
+
+describe("extraRuleList", () => {
+  it("macht aus dem Freitext eine Liste ohne Leerzeilen und Aufzählungszeichen", () => {
+    expect(extraRuleList("Auch Kniestand zählt\r\n\n- Bis Mitternacht eintragen\n  • Ehrlich bleiben  ")).toEqual(["Auch Kniestand zählt", "Bis Mitternacht eintragen", "Ehrlich bleiben"]);
+  });
+
+  it("ist ohne Text leer und lässt Bindestriche im Satz stehen", () => {
+    expect(extraRuleList(null)).toEqual([]);
+    expect(extraRuleList("   \n ")).toEqual([]);
+    expect(extraRuleList("Kniestand-Liegestütze zählen")).toEqual(["Kniestand-Liegestütze zählen"]);
   });
 });

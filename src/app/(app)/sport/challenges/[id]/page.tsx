@@ -143,7 +143,7 @@ export default async function ChallengePage({ params, searchParams }: PageProps<
         <ChallengeBoard rules={rules} board={board} today={today} />
         <div className="space-y-6">
           {history.length ? <RoundHistory challenge={c} history={history} selected={selected} /> : null}
-          <RuleCard lines={ruleLines(c)} />
+          <RuleCard lines={ruleLines(c)} extra={c.extraRules} editHref={isOwn || isAdmin ? `/sport/challenges/${c.id}/bearbeiten#eigene-regeln` : undefined} />
           {board.length ? <ChallengeStatsCard rules={rules} stats={stats} color={c.color} today={today} /> : null}
         </div>
       </div>

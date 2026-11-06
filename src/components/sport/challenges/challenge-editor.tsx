@@ -41,6 +41,7 @@ type Kind = "check" | "daily" | "total" | "most" | "workouts";
 type Form = {
   title: string;
   description: string;
+  extraRules: string;
   icon: ChallengeIconKey;
   color: DrinkColor;
   kind: Kind;
@@ -92,6 +93,7 @@ function formFrom(c: Challenge | null, today: string): Form {
     return {
       title: "",
       description: "",
+      extraRules: "",
       icon: "trophy",
       color: "orange",
       kind: "check",
@@ -120,6 +122,7 @@ function formFrom(c: Challenge | null, today: string): Form {
   return {
     title: c.title,
     description: c.description ?? "",
+    extraRules: c.extraRules ?? "",
     icon: (CHALLENGE_ICONS as readonly string[]).includes(c.icon) ? (c.icon as ChallengeIconKey) : "trophy",
     color: (DRINK_COLOR_KEYS as string[]).includes(c.color) ? (c.color as DrinkColor) : "orange",
     kind: c.source === "workouts" ? "workouts" : c.metric,
@@ -258,6 +261,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
       const result = await saveChallengeAction(challenge?.id ?? null, {
         title: form.title,
         description: form.description,
+        extraRules: form.extraRules,
         icon: form.icon,
         color: form.color,
         metric: rules.metric,
@@ -349,7 +353,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
             onChange={(e) => patch({ description: e.target.value })}
             maxLength={2000}
             rows={2}
-            placeholder="Worum geht es, was zählt dazu (z. B. „auch Kniestand-Liegestütze“), warum mitmachen?"
+            placeholder="Worum geht es, warum mitmachen?"
             className="mt-1 block min-h-14 w-full resize-none bg-transparent text-base outline-none [field-sizing:content] placeholder:text-muted-foreground/70"
           />
         </div>
@@ -441,7 +445,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
           <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
           <span>
             <span className="block font-semibold">Regeln gesperrt</span>
-            Es machen schon andere mit. Damit es fair bleibt, lassen sich nur noch Name, Beschreibung, Symbol und Farbe ändern.
+            Es machen schon andere mit. Damit die Wertung fair bleibt, lassen sich nur noch Name, Beschreibung, Symbol, Farbe und die eigenen Regeln weiter unten ändern.
           </span>
         </p>
       ) : null}
@@ -745,6 +749,25 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
         ) : null}
       </fieldset>
 
+      <section id="eigene-regeln" className="scroll-mt-20">
+        <FieldHeading>Eigene Regeln</FieldHeading>
+        <textarea
+          id="challenge-extra-rules"
+          aria-label="Eigene Regeln"
+          value={form.extraRules}
+          onChange={(e) => patch({ extraRules: e.target.value })}
+          maxLength={1000}
+          rows={3}
+          placeholder={"z. B. Auch Kniestand-Liegestütze zählen\nEintragen bitte bis Mitternacht"}
+          aria-invalid={Boolean(err("extraRules")) || undefined}
+          className="block min-h-24 w-full resize-none rounded-2xl border bg-card px-4 py-3 text-base outline-none [field-sizing:content] placeholder:text-muted-foreground/70 focus-visible:ring-3 focus-visible:ring-ring/50"
+        />
+        {err("extraRules") ? <p className="mt-1 text-sm text-destructive">{err("extraRules")}</p> : null}
+        <p className="mt-2 px-0.5 text-sm text-muted-foreground">
+          Alles, was die Regeln oben nicht abdecken, eine Regel pro Zeile. Sie stehen für alle auf der Regel-Karte, zählen aber nicht automatisch für die Wertung. Du kannst sie jederzeit ändern, auch wenn schon andere mitmachen.
+        </p>
+      </section>
+
       {!challenge ? (
         <label className="flex min-h-14 items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-2">
           <span>
@@ -755,7 +778,7 @@ export function ChallengeEditor({ challenge, locked, today }: { challenge: Chall
         </label>
       ) : null}
 
-      <RuleCard lines={ruleLines(preview)} title="So sehen es die anderen" className="bg-muted/30" />
+      <RuleCard lines={ruleLines(preview)} extra={form.extraRules} title="So sehen es die anderen" className="bg-muted/30" />
 
       {/* Speicherleiste: am Handy fest unten (Navigation ist ausgeblendet), am Desktop mitlaufend unten im Inhalt */}
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t bg-background/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:sticky md:bottom-4 md:rounded-2xl md:border md:p-3 md:shadow-lg">

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Apple,
   Bike,
@@ -13,8 +14,10 @@ import {
   Footprints,
   Heart,
   History,
+  ListPlus,
   Lock,
   Moon,
+  Pencil,
   ShieldAlert,
   Smartphone,
   Snowflake,
@@ -29,7 +32,7 @@ import {
 } from "lucide-react";
 import { drinkColor } from "@/lib/domain/drinks";
 import type { ChallengePhase, ParticipationStatus, RuleLine } from "@/lib/domain/challenges";
-import { dateLabel } from "@/lib/domain/challenges";
+import { dateLabel, extraRuleList } from "@/lib/domain/challenges";
 import { cn } from "@/lib/utils";
 
 // Kleine Bausteine der Challenges: Symbol, Status, Fortschrittsbalken, Regel-Karte.
@@ -157,11 +160,27 @@ const RULE_ICONS: Record<RuleLine["key"], LucideIcon> = {
   points: Sparkles,
 };
 
-/** Regel-Karte: jede Regel als Zeile mit Symbol, Überschrift und Klartext. */
-export function RuleCard({ lines, className, title = "Regeln" }: { lines: RuleLine[]; className?: string; title?: string }) {
+/**
+ * Regel-Karte: jede Regel als Zeile mit Symbol, Überschrift und Klartext, darunter die eigenen Regeln. Mit `editHref`
+ * (Ersteller und Admins) führt „Bearbeiten“ zu den Einstellungen.
+ */
+export function RuleCard({ lines, extra, editHref, className, title = "Regeln" }: { lines: RuleLine[]; extra?: string | null; editHref?: string; className?: string; title?: string }) {
+  const extras = extraRuleList(extra);
   return (
     <section className={cn("rounded-3xl border bg-card p-4 md:p-5", className)} aria-label={title}>
-      <h2 className="mb-3 font-heading text-xl font-semibold">{title}</h2>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="font-heading text-xl font-semibold">{title}</h2>
+        {editHref ? (
+          <Link
+            href={editHref}
+            aria-label="Regeln bearbeiten"
+            className="-my-1 inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-muted px-3.5 text-sm font-medium transition-colors hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+          >
+            <Pencil className="size-4" aria-hidden />
+            Bearbeiten
+          </Link>
+        ) : null}
+      </div>
       <ul className="space-y-3">
         {lines.map((l) => {
           const Icon = RULE_ICONS[l.key];
@@ -177,6 +196,25 @@ export function RuleCard({ lines, className, title = "Regeln" }: { lines: RuleLi
             </li>
           );
         })}
+        {extras.length ? (
+          <li className="flex gap-3">
+            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-sport-soft text-sport" aria-hidden>
+              <ListPlus className="size-4" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold">Außerdem gilt</span>
+              {extras.length === 1 ? (
+                <span className="block text-sm wrap-anywhere text-muted-foreground">{extras[0]}</span>
+              ) : (
+                <ul className="list-disc space-y-0.5 pl-4 text-sm wrap-anywhere text-muted-foreground">
+                  {extras.map((rule, i) => (
+                    <li key={i}>{rule}</li>
+                  ))}
+                </ul>
+              )}
+            </span>
+          </li>
+        ) : null}
       </ul>
     </section>
   );

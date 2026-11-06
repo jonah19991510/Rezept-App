@@ -33,7 +33,7 @@ import { createClient } from "@/lib/supabase/server";
 // Trainings zählt die Datenbank-Funktion `challenge_workout_days` (nur Anzahl je Tag).
 
 const CHALLENGE_COLUMNS =
-  "id, title, description, icon, color, metric, source, unit, daily_target, total_target, frequency, days_per_week, duration_days, start_mode, starts_on, late_join_days, missed_rule, jokers, min_periods, backfill_days, period_kind, repeats, is_public, created_by, created_at, profiles!challenges_created_by_fkey(display_name)";
+  "id, title, description, extra_rules, icon, color, metric, source, unit, daily_target, total_target, frequency, days_per_week, duration_days, start_mode, starts_on, late_join_days, missed_rule, jokers, min_periods, backfill_days, period_kind, repeats, is_public, created_by, created_at, profiles!challenges_created_by_fkey(display_name)";
 
 type ChallengeRow = Omit<Tables<"challenges">, "updated_at"> & { profiles: { display_name: string } | null };
 
@@ -42,6 +42,7 @@ function toChallenge(row: ChallengeRow): Challenge {
     id: row.id,
     title: row.title,
     description: row.description,
+    extraRules: row.extra_rules,
     icon: row.icon,
     color: row.color,
     createdBy: row.created_by,

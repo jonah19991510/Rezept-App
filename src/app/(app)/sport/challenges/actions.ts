@@ -30,11 +30,12 @@ export async function saveChallengeAction(challengeId: string | null, input: Cha
   if (challengeId && !idSchema.safeParse(challengeId).success) return { ok: false, message: "Ungültige Challenge." };
   const parsed = challengeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, fieldErrors: flattenIssues(parsed.error) };
-  const { title, description, icon, color, isPublic, join, rules } = parsed.data;
+  const { title, description, extraRules, icon, color, isPublic, join, rules } = parsed.data;
   const row = {
     title,
     is_public: isPublic,
     description,
+    extra_rules: extraRules,
     icon,
     color,
     metric: rules.metric,

@@ -18,6 +18,8 @@ export const challengeInputSchema = z
   .object({
     title: z.string().trim().min(1, "Bitte einen Namen eingeben.").max(60, "Höchstens 60 Zeichen."),
     description: optionalText(2000),
+    /** eigene Regeln (Freitext), auch änderbar, wenn schon andere mitmachen */
+    extraRules: optionalText(1000),
     icon: z.enum(CHALLENGE_ICONS as unknown as [ChallengeIcon, ...ChallengeIcon[]]),
     color: z.enum(DRINK_COLOR_KEYS as [DrinkColor, ...DrinkColor[]]),
     metric: z.enum(["check", "daily", "total", "most"]),
@@ -93,7 +95,7 @@ export const challengeInputSchema = z
       period: v.period,
       repeats: v.repeats,
     };
-    return { title: v.title, description: v.description, icon: v.icon, color: v.color, isPublic: v.isPublic, join: v.join, rules };
+    return { title: v.title, description: v.description, extraRules: v.extraRules, icon: v.icon, color: v.color, isPublic: v.isPublic, join: v.join, rules };
   });
 export type ChallengeInput = z.input<typeof challengeInputSchema>;
 
