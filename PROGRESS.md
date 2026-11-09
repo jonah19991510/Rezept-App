@@ -2122,7 +2122,8 @@ bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Tes
 
 ### Morgen- und Abendroutine im Habit Tracker (09.11.2026, Wunsch des Nutzers)
 
-**Noch nicht committet:** am LAN-Server über eine temporäre Vorschauseite (gelöscht) geprüft, mit Login noch vom
+**Live** seit 09.11.2026: Push `04e7db2` → Deployment `dpl_DVKZ7Gd3yvX7Grr6ApTzFcyEwhp4` (`production`, „READY“;
+per Vercel-Connector geprüft). Am LAN-Server über eine temporäre Vorschauseite (gelöscht) geprüft, mit Login noch vom
 Nutzer zu testen. Die Migration `…20261109120000_habit_routines` ist seit 09.11.2026 in der Datenbank (additiv, nach
 ausdrücklichem OK des Nutzers über die Supabase-Integration eingespielt; die Live-Version liest die Spalte nicht und
 läuft unverändert). Security-Advisor: nichts Neues.
