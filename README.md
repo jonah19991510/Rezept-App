@@ -5,13 +5,20 @@
 Private Web-App für Rezepte, Makronährstoffe, Training, Wochenplan und Einkaufsliste – für Freunde und Familie.
 Läuft auf Handy und Desktop, Daten liegen in Supabase (Frankfurt), Registrierung nur auf Einladung.
 
-**Stand:** Phase 12 (Preise und Kosten pro Portion, Koch-Log mit Bewertungen, „Lange nicht gekocht“, Rezept-Versionen, Statistiken dazu; davor: Trainingstage mit eigenem Ziel, Lücken-Hinweis, Meal Prep, Reste-Vorschläge, Vorratsschrank, „Was kann ich kochen?“, Vorrat in der Einkaufsliste, Text-Export, Kochmodus mit Timern, Portionen skalieren, Einheiten-Umrechnung, Rezepte mit Makros und Open-Food-Facts-Suche, Wochenplan mit Tageszielen, Einkaufsliste, Statistiken, Community mit Entdecken, Fotos, Import per Link, installierbar als App, Einstellungen mit Datenexport und Account löschen, Deployment auf Vercel). Live: <https://unser-rezeptbuch.vercel.app>. Details in [PROGRESS.md](PROGRESS.md),
-die vollständige Anforderung in [SPEC.md](SPEC.md).
+**Stand (09.11.2026):** Alle 15 Phasen der SPEC sind fertig und live, dazu der zweite Bereich **Sport & Gesundheit**
+(Trainingspläne, Training im Gym, Intervall-Timer, Getränke, Habits, Statistik, Challenges, Trainings-Feed, Übungen,
+Körpermaße, Energiebedarfsrechner, Lexikon) und eine anpassbare **Startseite**. Live: <https://unser-rezeptbuch.vercel.app>.
+
+- Alle Funktionen nach Bereichen: [docs/FUNKTIONEN.md](docs/FUNKTIONEN.md)
+- Verlauf, Entscheidungen, offene Punkte: [PROGRESS.md](PROGRESS.md)
+- Ursprüngliche Anforderung (Essen & Trinken): [SPEC.md](SPEC.md)
+
+Die App hat drei Bereiche, umschaltbar oben links: **Start**, **Essen & Trinken**, **Sport & Gesundheit**.
 
 ## Tech-Stack
 
 Next.js 16 (App Router, TypeScript strict) · Supabase (Auth, Postgres, Storage, RLS) · Tailwind CSS 4 +
-shadcn/ui (Base UI) · lucide-react · Zod · Vitest. Deployment später auf Vercel (Region `fra1`).
+shadcn/ui (Base UI) · lucide-react · Recharts · dnd-kit · Zod · Vitest. Deployment auf Vercel (Region `fra1`).
 
 ## Lokal starten
 
@@ -40,7 +47,7 @@ Die App läuft unter <http://localhost:3000>.
 
 ### Auf dem Handy testen
 
-Bis zum Deployment (Phase 8) läuft die App nur auf deinem PC. Im selben WLAN geht es trotzdem:
+Der Entwicklungsserver läuft nur auf deinem PC. Im selben WLAN geht es trotzdem:
 
 1. Statt `npm run dev` den Befehl `npm run dev:lan` starten.
 2. Fragt Windows nach der Firewall, Zugriff für **private Netzwerke** erlauben (nicht für öffentliche).
@@ -154,7 +161,21 @@ Profilmenü → **Nutzerverwaltung** → E-Mail-Adresse eingeben → **Einladung
 eine Mail, setzt über den Link Anzeigenamen und Passwort und ist drin. In der Liste siehst du alle
 Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts löschen (inklusive aller Daten).
 
-## Rezepte und Zutaten
+## Startseite
+
+- Begrüßung mit Datum und Widgets: **Heute** (Ringe für kcal und Protein laut Wochenplan sowie Trinken), **Als Nächstes**
+  (nächste Mahlzeit, nächstes Training), Bereichskarten Essen & Trinken und Sport & Gesundheit, Habits heute und diese
+  Woche, Challenges, Training geplant. Wählbar: Heute geplant, Einkaufsliste, Was kann ich kochen?, Training diese
+  Woche, Läuft bald ab, Lange nicht gekocht.
+- **Startseite anpassen:** Widgets per Ziehen sortieren und ein-/ausblenden. Die Anordnung liegt im Konto (gleich auf PC
+  und Handy).
+
+## Essen & Trinken
+
+Untere Leiste: Rezepte (Küche | Bar) · Wochenplan · Einkauf · Statistik · Entdecken. Im Profilmenü: Zutaten, Preise,
+Umrechner.
+
+### Rezepte und Zutaten
 
 - **Rezepte** unter „Rezepte“ anlegen, bearbeiten, duplizieren, löschen und als Favorit markieren.
   Suche und Filter (Kategorie, Tags, Protein ab, Zeit bis, Kosten pro Portion, Bewertung, „lange nicht gekocht“)
@@ -170,11 +191,16 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
 - **Auto-Tags:** High Protein (≥ 30 g Protein pro Portion oder ≥ 30 % der kcal aus Protein),
   Vegetarisch, Vegan, Low Carb (≤ 20 g Kohlenhydrate pro Portion), Meal-Prep (Schalter im Rezept).
   Schwellenwerte ändern: neue Migration, die `app_config` aktualisiert.
+- **Kategorien** hat jeder selbst (Einstellungen → Kategorien: anlegen, umbenennen, löschen mit Verschieben der Rezepte).
+- **Optionale Zutaten** (Schalter im Editor) zählen nicht in Nährwerten, Kosten und Einkaufsliste. **Beilagen**
+  („Passt dazu“) sind freie Texte; heißt eine Beilage wie ein eigenes Rezept, wird sie verlinkt.
+- **Zutaten** (Profilmenü): alle eigenen und genutzten Zutaten mit Preis; selbst angelegte lassen sich bearbeiten
+  (Gramm in allen Rezepten werden neu berechnet) und, wenn ungenutzt, löschen.
 
 - **Fotos** auf der Rezeptseite hinzufügen, ändern oder entfernen. Der Browser verkleinert das Foto vorher
   (1600 px, Vorschaubild 800 px) und entfernt dabei alle Kameradaten wie den GPS-Standort. Gespeichert wird in
   einem privaten Storage-Bucket; die App liefert Fotos über `/foto/…` nur an Leute aus, die das Rezept sehen dürfen.
-- **Import per Link** („Aus Link“ in Rezepte): Die App lädt die Seite selbst und liest das Rezept aus dem
+- **Import per Link** (Einstellungen → Deine Daten → Rezepte importieren): Die App lädt die Seite selbst und liest das Rezept aus dem
   schema.org-Format, das fast alle Rezeptseiten haben. In der Bestätigungsansicht ordnest du die Zutaten zu,
   danach geht es in den normalen Editor. Amerikanische Einheiten (cup, oz, lb) werden umgerechnet, Fotos der Seite
   nicht übernommen. Manche Seiten sperren automatische Abrufe; dann hilft nur von Hand anlegen.
@@ -199,11 +225,12 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
 - **Einheiten-Umrechner** (Profilmenü): cup, tbsp, tsp, fl oz, pint, quart, oz, lb, stick → g/ml (cups zutatenabhängig
   über die Dichte, z. B. 1 cup Mehl ≈ 127 g, 1 cup Zucker ≈ 204 g), °F ↔ °C. Dieselbe Umrechnung nutzt der Import.
 
-## Wochenplan
+### Wochenplan
 
 - **Wochenplan** mit Frühstück, Mittag, Abend und Snack. Am Handy ein Tag pro Ansicht (wischen oder die
   Tagesleiste antippen), am PC die ganze Woche. Portionen pro Eintrag in halben Schritten.
-- **Tagesziele** unter Einstellungen → Tagesziele. Der Plan zeigt pro Tag Soll gegen Ist; bei kcal,
+- **Eigene Einträge** ohne Rezept (Reiter „Eigenes“, z. B. „Restaurant“): ohne Nährwerte, Kosten und Einkaufsliste.
+- **Tagesziele** unter Einstellungen → Tagesziele (oder aus dem Energiebedarfsrechner übernehmen). Der Plan zeigt pro Tag Soll gegen Ist; bei kcal,
   Kohlenhydraten und Fett gilt mehr als 110 % als „über dem Ziel“, Protein darf drüber.
 - **Woche kopieren** in die nächste oder eine beliebige Woche, ergänzend oder ersetzend.
 - **Trainingstage:** Unter Einstellungen → Trainingstage die Standard-Wochentage und ein eigenes Ziel festlegen
@@ -215,7 +242,7 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
 - **Reste-Vorschläge:** Nach einem Gericht mit Reis, Nudeln oder Kartoffeln schlägt der Plan für die nächsten zwei
   Tage eigene Rezepte mit derselben Basis vor (z. B. Bratreis).
 
-## Einkaufsliste
+### Einkaufsliste
 
 - **Aus dem Wochenplan** für einen wählbaren Zeitraum erstellen. Gleiche Zutaten werden zusammengerechnet
   (im Verhältnis geplante Portionen zu Rezeptportionen) und nach Supermarkt-Abteilung sortiert.
@@ -226,9 +253,9 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
 - **In Vorrat übernehmen:** Abgehakte Einkäufe wandern mit einem Tipp in den Vorratsschrank.
 - **Als Text kopieren** oder **Teilen** (Teilen-Menü des Handys): nur, was noch gekauft werden muss.
 
-## Vorrat und „Was kann ich kochen?“
+### Vorrat und „Was kann ich kochen?“
 
-- Einkauf → **Vorrat**: Zutaten in den Bereichen Küche und Bar. Menge und „Haltbar bis“ sind freiwillig, ohne Menge
+- Einkauf → **Vorrat**: Zutaten in den Bereichen Küche und Bar, Zutaten aus den eigenen Rezepten zum Abhaken. Menge und „Haltbar bis“ sind freiwillig, ohne Menge
   gilt eine Zutat als vorhanden. Was abgelaufen ist oder in höchstens 3 Tagen abläuft, steht oben als „Bald
   verbrauchen“.
 - Einkauf → **Was kochen?**: eigene Rezepte sortiert nach „Alles da“, „Fehlt 1 Zutat“, „Fehlen 2–3 Zutaten“
@@ -236,7 +263,7 @@ Nutzer mit Anzeigename, E-Mail und Registrierungsdatum und kannst Accounts lösc
   fehlenden Zutaten auf die Einkaufsliste.
 - Nach „Gekocht!“ im Kochmodus bietet die App an, die verbrauchten Mengen vom Vorrat abzuziehen.
 
-## Statistik
+### Statistik
 
 Diagramme zum eigenen Rezeptbuch und Wochenplan (Kategorien, Auto-Tags, Protein gegen kcal, Zusammensetzung,
 Makroverteilung, Verlauf gegen Tagesziele mit Trainingstagen, meistgeplant, meistgekocht mit Bewertung,
@@ -246,7 +273,7 @@ filtert die Rezeptliste darunter. Jedes Diagramm hat eine Tabellenansicht.
 Die Diagrammfarben sind auf Farbsehschwäche und Kontrast geprüft (hell und dunkel). Neue Farben bitte vorher
 ebenso prüfen statt nach Gefühl wählen.
 
-## Entdecken (Community)
+### Entdecken (Community)
 
 - Rezepte sind zuerst **privat**. Auf der Rezeptseite schaltet „Öffentlich“ ein Rezept für alle aus der Runde frei,
   sofort und jederzeit umkehrbar. Ein Globus auf der Karte im eigenen Buch zeigt veröffentlichte Rezepte.
@@ -257,6 +284,60 @@ ebenso prüfen statt nach Gefühl wählen.
 - **Im Wochenplan** gibt es beim Einplanen den Umschalter „Mein Buch | Entdecken“: Öffentliche Rezepte anderer lassen
   sich direkt einplanen, ohne Kopie. Macht der Autor ein eingeplantes Rezept wieder privat, steht im Plan
   „Rezept nicht mehr verfügbar“ (zählt nicht mehr mit, lässt sich entfernen); Woche kopieren überspringt solche Einträge.
+
+### Bar (Cocktails)
+
+- Umschalter **Küche | Bar** in Rezepte, Entdecken und Statistik. Cocktails haben Glas, Methode, Eis und Garnitur.
+- **Alkoholgehalt** (% vol und Gramm pro Drink) rechnet die App aus den Zutaten plus Verdünnung je Methode.
+- Einkauf → **Was mixen?**: wie „Was kochen?“, dazu welche **eine** Flasche die meisten neuen Cocktails freischaltet.
+- Der Kochmodus heißt hier „Mixen starten“; die Bar-Statistik zeigt Cocktails nach Spirituose, Methode und Stärke.
+
+### Teilen, Import und Export
+
+- **Link teilen** auf der Rezeptseite: öffentliche Karte `/r/<token>` ohne Login (auch für private Rezepte, jederzeit
+  widerrufbar), mit Vorschaubild für Messenger, Druckansicht und Bild im Story-Format. Eingeloggte können sie übernehmen.
+- **Markdown:** einzelnes Rezept (Rezeptmenü) oder das ganze Buch (Einstellungen) als `.md`; eine Markdown-Sammlung
+  lässt sich mit Vorschau und Auswahl importieren.
+
+## Sport & Gesundheit
+
+Untere Leiste: Pläne (mit Verlauf) · Getränke · Habits · Statistik · Entdecken. Im Profilmenü: Übungen, Körpermaße,
+Energie, Lexikon.
+
+### Trainingspläne und Training
+
+- **Pläne** mit Trainingstagen und Übungen (Sätze, Wdh. von–bis oder Zeit, Pause, Aufwärmsätze, Notiz) im Editor per
+  Ziehen sortieren; duplizieren, ausblenden, privat oder öffentlich.
+- **Training starten** wählt den nächsten Tag der Reihe vor (oder freies Training). Im Vollbild: Werte vom letzten Mal
+  hell in den Feldern, Aufwärmsätze automatisch, Pausentimer mit Ton und Vibration, Übungen tauschen und verschieben,
+  bei Ausdauer km/h, Strecke, Zeit und Ø Herzfrequenz. Am Ende „Änderungen in den Plan übernehmen?“.
+- **Ohne Netz:** Jeder Satz wird zuerst auf dem Handy gespeichert und hochgeladen, sobald Netz da ist.
+- **Intervall-Timer** auf der Planseite: mit den Übungen eines Tages oder frei (Belastung, Pause, Runden).
+- **Verlauf:** alle Trainings, nachtragen, bearbeiten, löschen, im Feed teilen.
+
+### Getränke und Habits
+
+- **Getränke:** Tagesziel mit Tempo-Balken, Schnellmengen, eigene Getränke und Mischgetränke (Koffein, Zucker,
+  Wasseranteil), Statistik pro Woche/Monat, Tipps und Verlauf.
+- **Habits:** Gewohnheiten und Supplemente (täglich, wöchentlich, monatlich), heute abhaken, Trainings-Wochenplan mit
+  Uhrzeiten, Statistik mit Quote und Serien.
+
+### Statistik, Entdecken und Challenges
+
+- **Statistik:** Trainings, Dauer, Volumen und Serie; je Übung geschätztes 1RM und Bestwerte; Sätze pro Muskelgruppe;
+  Kalender der Trainingstage. Zeitraum von einer Kalenderwoche bis „Alles“.
+- **Entdecken:** Feed geteilter Trainings mit Kudos, Kommentaren und „Nachmachen“; Challenges; Gesamtrangliste
+  (ausblendbar); öffentliche Pläne zum Trainieren oder Übernehmen.
+- **Challenges** legt jeder an: abhaken, Menge pro Tag, Gesamtmenge, Trainings oder „Wer schafft mehr?“; täglich oder
+  x-mal pro Woche, bis Monats-/Jahresende, auf Wunsch wiederholend; Joker, Punkte, Rangliste, öffentlich oder privat,
+  eigene Regeln als Freitext.
+
+### Übungen, Körper, Energie, Lexikon
+
+- **Übungen:** rund 210 Übungen (Training, Dehnen, Reha) mit Anleitung; eigene anlegen, Admins bearbeiten den Grundbestand.
+- **Körpermaße:** Gewicht und Umfänge, Trend, BMI, Taille-Hüft-Verhältnis, Körperfett nach der Navy-Methode.
+- **Energie:** Grund- und Gesamtumsatz (Mifflin, Henry, Katch-McArdle), Makros, Übernahme als Tagesziel.
+- **Lexikon:** Nachschlagewerk zu Gesundheitsthemen mit Querverweisen; schreiben dürfen Admins.
 
 ## Registrierungsmodus
 
@@ -295,28 +376,44 @@ im SQL-Editor ausführen (oder mit der Supabase-CLI: `npx supabase link` und `np
 
 ```
 src/app/(auth)/        Login, Passwort vergessen/setzen, Registrieren (nur bei SIGNUP_MODE=open)
-src/app/(app)/         Rezepte, Wochenplan, Einkauf, Statistik, Entdecken, Einstellungen, Admin
+src/app/(app)/         Startseite, Rezepte, Wochenplan, Einkauf, Statistik, Entdecken, Zutaten, Preise, Umrechner,
+                       Einstellungen, Admin
+src/app/(app)/sport/   Sport & Gesundheit: Pläne, Verlauf, Getränke, Habits, Statistik, Entdecken, Challenges,
+                       Übungen, Körpermaße, Energie, Lexikon
+src/app/kochen/        Kochmodus (Vollbild, ohne App-Rahmen)
+src/app/training/      Training im Gym und Intervall-Timer (Vollbild, ohne App-Rahmen)
+src/app/r/[token]/     Geteilte Rezeptkarte (öffentlich), Vorschau- und Story-Bild
 src/app/(legal)/       Impressum, Datenschutz (Platzhalter)
 src/app/auth/confirm/  Ziel der Links aus Einladungs- und Passwort-Mails
 src/app/foto/          Auslieferung der Rezeptfotos (mit den Rechten des Nutzers)
+src/app/api/keep-alive Täglicher Aufruf (Vercel Cron), damit Supabase nicht pausiert
 src/app/icons/, icon.tsx, apple-icon.tsx, manifest.ts   App-Icons und Web-App-Manifest (PWA)
 public/sw.js, public/offline.html                        Service Worker und Offline-Seite
 src/proxy.ts           Session-Erneuerung und Login-Pflicht (früher „Middleware“)
-src/components/        ui/ (shadcn), layout/ (Navigation, Seitenleiste), forms/
+src/components/        ui/ (shadcn), layout/ (Navigation, Seitenleiste), forms/, je Bereich eigene Ordner
+                       (recipes/, plan/, shopping/, stats/, home/, sport/ …)
+src/lib/domain/        Reine Logik mit Tests (Makros, Einheiten, Kosten, Challenges, Training …)
+src/lib/server/        Datenabfragen je Bereich (nur Server)
 src/lib/supabase/      Clients: server.ts, client.ts, admin.ts (nur Server, Secret Key)
 src/lib/validation/    Zod-Schemas (Client und Server)
 supabase/migrations/   Datenbankschema
 supabase/scripts/      Einmalige Skripte (Beispielrezepte)
 supabase/tests/        SQL-Prüfungen (RLS)
+docs/                  Funktionsübersicht (FUNKTIONEN.md), RLS-Prüfanleitung
 ```
 
 ## Einstellungen
 
+Die Seite zeigt je Bereich die passenden Abschnitte (von der Startseite aus alle).
+
 - **Profil:** Anzeigename ändern (so sehen dich andere), Passwort ändern.
-- **Tagesziele** für den Wochenplan.
+- **Essen & Trinken:** Tagesziele, Trainingstage mit eigenem Ziel, Kategorien, Schwelle für „Lange nicht gekocht“.
+- **Sport & Gesundheit:** in der Gesamtrangliste zeigen; **Trainingsdaten** exportieren und importieren (eigenes Format,
+  auch der Export der früheren Gym-App).
 - **Meine Daten herunterladen:** alles, was die App über dich speichert, als JSON-Datei (Profil, Rezepte mit
   Zutaten/Schritten/Versionen, Wochenpläne, Ziele, Einkaufsliste, Vorrat, Preise, Koch-Log, Favoriten,
-  selbst angelegte Zutaten, Liste der Fotos).
+  selbst angelegte Zutaten, Liste der Fotos; dazu alle Sport-Daten: Pläne, eigene Übungen, Trainings, Getränke,
+  Habits, Körpermaße, Energieprofil, Challenges, geteilte Trainings, Kudos, Kommentare, Lexikon-Einträge).
 - **Rezepte sichern / Sicherung importieren:** alle eigenen Rezepte als JSON, die sich hier wieder einspielen lässt
   (legt die Rezepte zusätzlich und privat an; fehlende Zutaten werden mit ihren Nährwerten neu angelegt; ohne Fotos).
 - **Account löschen:** mit Bestätigung (Anzeigename eintippen). Löscht Fotos, Zugang und per Cascade alle Daten.
