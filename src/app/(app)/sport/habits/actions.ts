@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { ROUTINES } from "@/lib/domain/habits";
 import { todayInBerlin } from "@/lib/domain/week";
 import { createClient } from "@/lib/supabase/server";
 import { habitCheckSchema, habitInputSchema, scheduleInputSchema, type HabitInput, type ScheduleInput } from "@/lib/validation/habits";
@@ -43,6 +44,8 @@ export async function saveHabitAction(habitId: string | null, input: HabitInput)
   const parsed = habitInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, fieldErrors: flattenIssues(parsed.error) };
   const d = parsed.data;
+  // Punkte einer Routine: Tageszeit folgt der Routine, keine eigene Uhrzeit
+  const routine = d.frequency === "daily" ? d.routine : null;
   const row = {
     name: d.name,
     kind: d.kind,
@@ -50,8 +53,9 @@ export async function saveHabitAction(habitId: string | null, input: HabitInput)
     target: d.target,
     // Wochentage gibt es nur bei täglichen; alle sieben = jeden Tag
     weekdays: d.frequency === "daily" && d.weekdays.length < 7 ? [...d.weekdays].sort((a, b) => a - b) : [],
-    daytime: d.daytime,
-    at_time: d.atTime,
+    daytime: routine ? (ROUTINES.find((r) => r.key === routine)?.daytime ?? d.daytime) : d.daytime,
+    at_time: routine ? null : d.atTime,
+    routine,
     dose: d.kind === "supplement" ? d.dose : null,
     notes: d.notes,
     color: d.color,

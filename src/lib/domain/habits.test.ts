@@ -12,6 +12,8 @@ import {
   nextCount,
   periodKpis,
   periodProgress,
+  reorderWithin,
+  routineProgress,
   scheduleLabel,
   scheduleSummary,
   sortSchedule,
@@ -36,6 +38,7 @@ const habit = (patch: Partial<Habit> = {}): Habit => ({
   notes: null,
   color: "blau",
   position: 0,
+  routine: null,
   startDate: "2026-10-01",
   pausedOn: null,
   ...patch,
@@ -108,6 +111,51 @@ describe("fällig und Fortschritt", () => {
     ]);
     const index = checkIndex([...checks("b", ["2026-11-02"]), ...checks("c", ["2026-11-02"])]);
     expect(daySummary(list, index, "2026-11-02")).toEqual({ done: 2, due: 3 });
+  });
+});
+
+describe("Routinen", () => {
+  it("stellt Morgen- und Abendroutine als eigene Gruppen an ihren Platz", () => {
+    const list = [
+      habit({ id: "wasser", routine: "morgen", daytime: "morgens", position: 2 }),
+      habit({ id: "dehnen", routine: "morgen", daytime: "morgens", position: 0 }),
+      habit({ id: "kreatin", daytime: "morgens", position: 1 }),
+      habit({ id: "lesen", routine: "abend", daytime: "abends", position: 3 }),
+      habit({ id: "zaehne", daytime: "abends", position: 4 }),
+      habit({ id: "spaet", daytime: "nachts", position: 5 }),
+      habit({ id: "laufen", routine: "morgen", weekdays: [2], position: 6 }), // dienstags, heute nicht dran
+    ];
+    const groups = todayGroups(list, "2026-11-02");
+    expect(groups.map((g) => [g.key, g.routine ?? null, g.habits.map((h) => h.id)])).toEqual([
+      ["routine-morgen", "morgen", ["dehnen", "wasser"]],
+      ["morgens", null, ["kreatin"]],
+      ["abends", null, ["zaehne"]],
+      ["routine-abend", "abend", ["lesen"]],
+      ["nachts", null, ["spaet"]],
+    ]);
+  });
+
+  it("zählt erledigte Punkte (mit Ziel des Tages)", () => {
+    const items = [habit({ id: "a" }), habit({ id: "b", target: 2 }), habit({ id: "c" })];
+    const index = checkIndex([...checks("a", ["2026-11-02"]), ...checks("b", ["2026-11-02"])]);
+    expect(routineProgress(items, index, "2026-11-02")).toEqual({ done: 1, total: 3, complete: false });
+    const all = checkIndex([...checks("a", ["2026-11-02"]), ...checks("b", ["2026-11-02"], 2), ...checks("c", ["2026-11-02"])]);
+    expect(routineProgress(items, all, "2026-11-02").complete).toBe(true);
+    expect(routineProgress([], all, "2026-11-02").complete).toBe(false);
+  });
+
+  it("verschiebt nur innerhalb der Teilliste, der Rest bleibt an seinem Platz", () => {
+    const all = [
+      { id: "a", position: 0 },
+      { id: "r1", position: 1 },
+      { id: "b", position: 2 },
+      { id: "r2", position: 3 },
+      { id: "r3", position: 4 },
+      { id: "c", position: 5 },
+    ];
+    expect(reorderWithin(all, ["r3", "r1", "r2"])).toEqual(["a", "r3", "b", "r1", "r2", "c"]);
+    // unbekannte IDs werden ignoriert
+    expect(reorderWithin(all, ["r2", "x", "r1"])).toEqual(["a", "r2", "b", "r1", "r3", "c"]);
   });
 });
 

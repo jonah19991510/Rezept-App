@@ -2120,6 +2120,25 @@ Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, 
 bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
 über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
 
+### Morgen- und Abendroutine im Habit Tracker (09.11.2026, Wunsch des Nutzers)
+
+**Noch nicht committet:** am LAN-Server über eine temporäre Vorschauseite (gelöscht) geprüft, mit Login noch vom
+Nutzer zu testen. Die Migration `…20261109120000_habit_routines` ist seit 09.11.2026 in der Datenbank (additiv, nach
+ausdrücklichem OK des Nutzers über die Supabase-Integration eingespielt; die Live-Version liest die Spalte nicht und
+läuft unverändert). Security-Advisor: nichts Neues.
+
+- **Datenmodell:** Spalte `habits.routine` (`morgen`/`abend`, null = keine), Check: nur bei täglichen. Ein Punkt einer
+  Routine ist ein normales Habit: Abhaken (`habit_checks`), Serien, Statistik, Pausieren wie gehabt. Reihenfolge = die
+  bestehende `position`; `reorderWithin` verschiebt nur innerhalb der Teilliste, alle anderen behalten ihre Plätze.
+  Beim Speichern folgt die Tageszeit der Routine (morgens/abends), die Uhrzeit fällt weg.
+- **Heute:** Routinen als eigene Karten (Morgenroutine ganz oben, Abendroutine vor „Nachts“), Ziehgriff je Punkt,
+  Punkte einzeln abhaken, großer Knopf im Kopf hakt alle offenen ab bzw. nimmt alle Häkchen weg, wenn komplett.
+  „Punkt hinzufügen“ öffnet das Habit-Sheet mit vorgewählter Routine (eigene Vorschläge je Routine). Fehlt eine Routine
+  noch, unten ein Knopf zum Anlegen. Widget „Habits heute“ zeigt die Punkte mit „Morgenroutine“/„Abendroutine“.
+- **Habit-Sheet:** Auswahl „Routine“ (nur täglich); mit Routine ohne Tageszeit/Uhrzeit.
+- **Tab Habits:** Listen Morgenroutine · Abendroutine · Weitere Habits, je eigenes Drag & Drop.
+- 588 Tests (neu: Routinen-Gruppen, Fortschritt, `reorderWithin`), Typcheck, Lint grün.
+
 ### Eigene Challenge-Regeln und Intervall-Timer (06.11.2026, Wunsch des Nutzers)
 
 **Live** seit 06.11.2026: vom Nutzer getestet; Push `5729976` (mit `61c22ef`) → Deployment

@@ -11,6 +11,7 @@ import { addDays, isoWeekday, mondayOf } from "./week";
 export type HabitKind = "habit" | "supplement";
 export type HabitFrequency = "daily" | "weekly" | "monthly";
 export type Daytime = "morgens" | "mittags" | "nachmittags" | "abends" | "nachts";
+export type Routine = "morgen" | "abend";
 
 export const HABIT_KINDS: { key: HabitKind; label: string; plural: string }[] = [
   { key: "habit", label: "Gewohnheit", plural: "Gewohnheiten" },
@@ -51,6 +52,17 @@ export function timeKey(daytime: Daytime | null, atTime: string | null): string 
   return d ? `${String(d.from).padStart(2, "0")}:00` : "99:99";
 }
 
+/** Morgen- und Abendroutine: Punkte sind tägliche Habits, die Tageszeit folgt der Routine. */
+export const ROUTINES: { key: Routine; label: string; daytime: Daytime }[] = [
+  { key: "morgen", label: "Morgenroutine", daytime: "morgens" },
+  { key: "abend", label: "Abendroutine", daytime: "abends" },
+];
+export const ROUTINE_KEYS = ROUTINES.map((r) => r.key);
+
+export function routineLabel(key: Routine): string {
+  return ROUTINES.find((r) => r.key === key)?.label ?? key;
+}
+
 export const WEEKDAYS = [
   { n: 1, short: "Mo", long: "Montag" },
   { n: 2, short: "Di", long: "Dienstag" },
@@ -76,6 +88,8 @@ export type Habit = {
   notes: string | null;
   color: string;
   position: number;
+  /** Punkt der Morgen- oder Abendroutine (nur täglich); null = keine Routine */
+  routine: Routine | null;
   /** angelegt am (deutsche Zeit): davor zählt nichts */
   startDate: string;
   /** pausiert ab diesem Tag (einschließlich); null = aktiv */
@@ -104,6 +118,12 @@ export const HABIT_PRESETS: Record<HabitKind, { name: string; dose?: string; day
   ],
 };
 
+/** Vorschläge für Punkte einer Routine. */
+export const ROUTINE_PRESETS: Record<Routine, { name: string; dose?: string; daytime?: Daytime }[]> = {
+  morgen: [{ name: "Glas Wasser" }, { name: "Bett machen" }, { name: "Dehnen" }, { name: "Kalt duschen" }, { name: "Zähne putzen" }, { name: "Tag planen" }],
+  abend: [{ name: "Handy weglegen" }, { name: "Zähne putzen" }, { name: "Tagebuch" }, { name: "Lesen" }, { name: "Morgen vorbereiten" }, { name: "Dehnen" }],
+};
+
 /** „Mo, Mi, Fr“ (in Wochenreihenfolge). */
 export function weekdayList(days: number[]): string {
   return [...days]
@@ -124,8 +144,9 @@ export function frequencyLabel(h: Pick<Habit, "frequency" | "target" | "weekdays
   return h.target > 1 ? `${h.target}× pro Monat` : "Monatlich";
 }
 
-/** „Täglich · Morgens · 07:30“ */
-export function scheduleLabel(h: Pick<Habit, "frequency" | "target" | "weekdays" | "daytime" | "atTime">): string {
+/** „Täglich · Morgens · 07:30“ bzw. „Mo, Mi, Fr · Morgenroutine“ */
+export function scheduleLabel(h: Pick<Habit, "frequency" | "target" | "weekdays" | "daytime" | "atTime"> & { routine?: Routine | null }): string {
+  if (h.routine) return [frequencyLabel(h), routineLabel(h.routine)].join(" · ");
   return [frequencyLabel(h), h.daytime ? daytimeLabel(h.daytime) : null, h.atTime].filter(Boolean).join(" · ");
 }
 
@@ -200,22 +221,48 @@ function activeBetween(h: Pick<Habit, "startDate" | "pausedOn">, from: string, t
 // Heute
 // ---------------------------------------------------------------------------
 
-export type TodayGroup = { key: string; label: string; habits: Habit[] };
+export type TodayGroup = { key: string; label: string; habits: Habit[]; routine?: Routine };
 
 /**
- * Gruppen für „Heute“: tägliche Gewohnheiten nach Tageszeit (ohne Tageszeit: „Jederzeit“, zuerst), danach
- * „Diese Woche“ und „Diesen Monat“. In jeder Gruppe gilt die eigene Reihenfolge (Drag & Drop).
+ * Gruppen für „Heute“: zuerst die Morgenroutine, dann tägliche Gewohnheiten nach Tageszeit (ohne Tageszeit:
+ * „Jederzeit“), die Abendroutine vor „Nachts“, danach „Diese Woche“ und „Diesen Monat“. In jeder Gruppe gilt die
+ * eigene Reihenfolge (Drag & Drop).
  */
 export function todayGroups(habits: Habit[], date: string): TodayGroup[] {
   const due = habits.filter((h) => isDueOn(h, date)).sort((a, b) => a.position - b.position);
-  const daily = due.filter((h) => h.frequency === "daily");
+  const daily = due.filter((h) => h.frequency === "daily" && h.routine == null);
+  const routine = (key: Routine): TodayGroup => ({ key: `routine-${key}`, label: routineLabel(key), routine: key, habits: due.filter((h) => h.frequency === "daily" && h.routine === key) });
+  const daytime = (key: Daytime): TodayGroup => ({ key, label: daytimeLabel(key), habits: daily.filter((h) => h.daytime === key) });
   const groups: TodayGroup[] = [
+    routine("morgen"),
     { key: "jederzeit", label: "Jederzeit", habits: daily.filter((h) => h.daytime == null) },
-    ...DAYTIMES.map((d) => ({ key: d.key, label: d.label, habits: daily.filter((h) => h.daytime === d.key) })),
+    daytime("morgens"),
+    daytime("mittags"),
+    daytime("nachmittags"),
+    daytime("abends"),
+    routine("abend"),
+    daytime("nachts"),
     { key: "woche", label: "Diese Woche", habits: due.filter((h) => h.frequency === "weekly") },
     { key: "monat", label: "Diesen Monat", habits: due.filter((h) => h.frequency === "monthly") },
   ];
   return groups.filter((g) => g.habits.length > 0);
+}
+
+/** Stand einer Routine an einem Tag: wie viele Punkte erledigt (Ziel des Tages erreicht) und ob alle. */
+export function routineProgress(items: Habit[], index: CheckIndex, date: string): { done: number; total: number; complete: boolean } {
+  const done = items.filter((h) => countOn(index, h.id, date) >= h.target).length;
+  return { done, total: items.length, complete: items.length > 0 && done === items.length };
+}
+
+/**
+ * Neue Gesamtreihenfolge (IDs) nach dem Verschieben innerhalb einer Teilliste (z. B. einer Routine): die Teilliste
+ * belegt dieselben Plätze wie vorher, nur in neuer Reihenfolge; alle anderen Habits bleiben, wo sie sind.
+ */
+export function reorderWithin(all: Pick<Habit, "id" | "position">[], subsetIds: string[]): string[] {
+  const sorted = [...all].sort((a, b) => a.position - b.position);
+  const subset = new Set(subsetIds);
+  const queue = subsetIds.filter((id) => sorted.some((h) => h.id === id));
+  return sorted.map((h) => (subset.has(h.id) ? (queue.shift() ?? h.id) : h.id));
 }
 
 /** Wie viele der heute fälligen täglichen Gewohnheiten erledigt sind (Ziel erreicht). */

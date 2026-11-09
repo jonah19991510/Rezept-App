@@ -1,11 +1,11 @@
 import "server-only";
-import type { Daytime, Habit, HabitCheck, HabitFrequency, HabitKind, ScheduleCategory, ScheduleEntry } from "@/lib/domain/habits";
+import type { Daytime, Habit, HabitCheck, HabitFrequency, HabitKind, Routine, ScheduleCategory, ScheduleEntry } from "@/lib/domain/habits";
 import { berlinParts } from "@/lib/domain/workout";
 import { createClient } from "@/lib/supabase/server";
 
 // Habit Tracker und Trainings-Wochenplan lesen. Alles mit dem Client des Nutzers (RLS: nur eigene Daten).
 
-export const HABIT_COLUMNS = "id, name, kind, frequency, target, weekdays, daytime, at_time, dose, notes, color, position, paused_at, created_at";
+export const HABIT_COLUMNS = "id, name, kind, frequency, target, weekdays, daytime, at_time, dose, notes, color, position, routine, paused_at, created_at";
 export const SCHEDULE_COLUMNS = "id, weekday, daytime, at_time, title, category, duration_min, notes";
 
 type HabitRow = {
@@ -21,6 +21,7 @@ type HabitRow = {
   notes: string | null;
   color: string;
   position: number;
+  routine: string | null;
   paused_at: string | null;
   created_at: string;
 };
@@ -51,6 +52,7 @@ export function toHabit(row: HabitRow): Habit {
     notes: row.notes,
     color: row.color,
     position: row.position,
+    routine: row.routine as Routine | null,
     startDate: berlinParts(row.created_at).date,
     pausedOn: row.paused_at ? berlinParts(row.paused_at).date : null,
   };

@@ -14,22 +14,24 @@ import {
   formatDuration,
   nextCount,
   periodProgress,
+  ROUTINES,
   slotLabel,
   todayGroups,
   type Habit,
   type HabitCheck,
-  type HabitKind,
   type ScheduleEntry,
 } from "@/lib/domain/habits";
 import { addDays } from "@/lib/domain/week";
 import { cn } from "@/lib/utils";
 import { CheckButton, HabitIcon } from "./habit-parts";
-import { HabitSheet } from "./habit-sheet";
+import { HabitSheet, type HabitDraft } from "./habit-sheet";
+import { ROUTINE_STYLE, RoutineCard } from "./routine-card";
 import { useHabitCounts } from "./use-habit-counts";
 
 /**
  * Tab „Heute“: Fortschritt des Tages, geplantes Training aus dem Wochenplan, fällige Gewohnheiten und Supplemente
- * nach Tageszeit (dann „Diese Woche“, „Diesen Monat“), dazu die eigenen Challenges. Antippen des Kreises hakt ab, antippen des Namens bearbeitet.
+ * nach Tageszeit (dann „Diese Woche“, „Diesen Monat“), Morgen- und Abendroutine als eigene Karten (Reihenfolge per
+ * Drag & Drop, einzeln oder alle auf einmal abhaken), dazu die eigenen Challenges. Antippen des Kreises hakt ab, antippen des Namens bearbeitet.
  * Mit den Pfeilen lassen sich frühere Tage nachtragen.
  */
 export function HabitToday({
@@ -52,12 +54,14 @@ export function HabitToday({
   const router = useRouter();
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
-  const [editing, setEditing] = useState<Habit | HabitKind | null>(null);
+  const [editing, setEditing] = useState<Habit | HabitDraft | null>(null);
   const { index, setCount } = useHabitCounts(checks);
   const groups = todayGroups(habits, date);
   const summary = daySummary(habits, index, date);
   const active = habits.filter((h) => h.pausedOn == null);
   const isToday = date === today;
+  // Routinen ohne Punkte: Knopf zum Anlegen des ersten Punkts
+  const missingRoutines = ROUTINES.filter((r) => !active.some((h) => h.routine === r.key));
 
   function go(next: string) {
     startTransition(() => router.push(next === today ? pathname : `${pathname}?datum=${next}`, { scroll: false }));
@@ -68,6 +72,10 @@ export function HabitToday({
     const next = nextCount(current, h.target, h.frequency);
     if (next >= h.target && current < h.target) navigator.vibrate?.(12);
     setCount(h.id, date, next, current);
+  }
+
+  function setTo(h: Habit, next: number) {
+    setCount(h.id, date, next, countOn(index, h.id, date));
   }
 
   const dayTitle = isToday ? "Heute" : date === addDays(today, -1) ? "Gestern" : longDate(date);
@@ -138,80 +146,110 @@ export function HabitToday({
       ) : groups.length === 0 ? (
         <p className="rounded-3xl border border-dashed p-5 text-center text-sm text-muted-foreground">An diesem Tag ist nichts dran.</p>
       ) : (
-        groups.map((g) => (
-          <section key={g.key} aria-label={g.label}>
-            <GroupHeading
-              aside={
-                g.key === "woche" || g.key === "monat"
-                  ? `${g.habits.filter((h) => periodProgress(h, index, date).met).length}/${g.habits.length} geschafft`
-                  : `${g.habits.filter((h) => countOn(index, h.id, date) >= h.target).length}/${g.habits.length}`
-              }
-            >
-              {g.label}
-            </GroupHeading>
-            <ul className="divide-y overflow-hidden rounded-3xl border bg-card">
-              {g.habits.map((h) => {
-                const count = countOn(index, h.id, date);
-                const progress = periodProgress(h, index, date);
-                const periodic = h.frequency !== "daily";
-                const detail = [
-                  h.dose,
-                  h.atTime,
-                  periodic ? `${progress.done}/${progress.target} ${h.frequency === "weekly" ? "diese Woche" : "diesen Monat"}` : h.target > 1 ? `${h.target}× am Tag` : null,
-                ].filter(Boolean);
-                return (
-                  <li key={h.id} className="flex items-center gap-3 py-2.5 pr-3 pl-3">
-                    <button type="button" onClick={() => setEditing(h)} className="flex min-h-12 min-w-0 flex-1 items-center gap-3 text-left" aria-label={`${h.name} bearbeiten`}>
-                      <HabitIcon kind={h.kind} color={h.color} />
-                      <span className="min-w-0 flex-1">
-                        <span className={cn("block truncate font-medium", count >= h.target && "text-muted-foreground line-through decoration-1")}>{h.name}</span>
-                        {detail.length ? <span className="block truncate text-sm text-muted-foreground tabular-nums">{detail.join(" · ")}</span> : null}
-                        {h.notes ? (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <NotebookPen className="size-3 shrink-0" aria-hidden />
-                            <span className="truncate">{h.notes}</span>
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
-                    <CheckButton
-                      count={count}
-                      target={periodic ? 1 : h.target}
-                      color={h.color}
-                      periodMet={periodic && progress.met}
-                      onClick={() => tap(h)}
-                      label={
-                        periodic
-                          ? `${h.name} ${count > 0 ? "nicht mehr abhaken" : "abhaken"} (${progress.done} von ${progress.target})`
-                          : h.target > 1
-                            ? `${h.name}: ${count} von ${h.target}, antippen zählt hoch`
-                            : `${h.name} ${count > 0 ? "nicht mehr abhaken" : "abhaken"}`
-                      }
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))
+        groups.map((g) =>
+          g.routine ? (
+            <RoutineCard
+              key={g.key}
+              routine={g.routine}
+              items={g.habits}
+              habits={habits}
+              index={index}
+              date={date}
+              onSetCount={setTo}
+              onTap={tap}
+              onEdit={setEditing}
+              onAdd={() => setEditing({ kind: "habit", routine: g.routine })}
+            />
+          ) : (
+            <section key={g.key} aria-label={g.label}>
+              <GroupHeading
+                aside={
+                  g.key === "woche" || g.key === "monat"
+                    ? `${g.habits.filter((h) => periodProgress(h, index, date).met).length}/${g.habits.length} geschafft`
+                    : `${g.habits.filter((h) => countOn(index, h.id, date) >= h.target).length}/${g.habits.length}`
+                }
+              >
+                {g.label}
+              </GroupHeading>
+              <ul className="divide-y overflow-hidden rounded-3xl border bg-card">
+                {g.habits.map((h) => {
+                  const count = countOn(index, h.id, date);
+                  const progress = periodProgress(h, index, date);
+                  const periodic = h.frequency !== "daily";
+                  const detail = [
+                    h.dose,
+                    h.atTime,
+                    periodic ? `${progress.done}/${progress.target} ${h.frequency === "weekly" ? "diese Woche" : "diesen Monat"}` : h.target > 1 ? `${h.target}× am Tag` : null,
+                  ].filter(Boolean);
+                  return (
+                    <li key={h.id} className="flex items-center gap-3 py-2.5 pr-3 pl-3">
+                      <button type="button" onClick={() => setEditing(h)} className="flex min-h-12 min-w-0 flex-1 items-center gap-3 text-left" aria-label={`${h.name} bearbeiten`}>
+                        <HabitIcon kind={h.kind} color={h.color} />
+                        <span className="min-w-0 flex-1">
+                          <span className={cn("block truncate font-medium", count >= h.target && "text-muted-foreground line-through decoration-1")}>{h.name}</span>
+                          {detail.length ? <span className="block truncate text-sm text-muted-foreground tabular-nums">{detail.join(" · ")}</span> : null}
+                          {h.notes ? (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <NotebookPen className="size-3 shrink-0" aria-hidden />
+                              <span className="truncate">{h.notes}</span>
+                            </span>
+                          ) : null}
+                        </span>
+                      </button>
+                      <CheckButton
+                        count={count}
+                        target={periodic ? 1 : h.target}
+                        color={h.color}
+                        periodMet={periodic && progress.met}
+                        onClick={() => tap(h)}
+                        label={
+                          periodic
+                            ? `${h.name} ${count > 0 ? "nicht mehr abhaken" : "abhaken"} (${progress.done} von ${progress.target})`
+                            : h.target > 1
+                              ? `${h.name}: ${count} von ${h.target}, antippen zählt hoch`
+                              : `${h.name} ${count > 0 ? "nicht mehr abhaken" : "abhaken"}`
+                        }
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ),
+        )
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <Button type="button" variant="outline" className="h-12 rounded-full" onClick={() => setEditing("habit")}>
+        <Button type="button" variant="outline" className="h-12 rounded-full" onClick={() => setEditing({ kind: "habit" })}>
           <Plus aria-hidden />
           Gewohnheit
         </Button>
-        <Button type="button" variant="outline" className="h-12 rounded-full" onClick={() => setEditing("supplement")}>
+        <Button type="button" variant="outline" className="h-12 rounded-full" onClick={() => setEditing({ kind: "supplement" })}>
           <Plus aria-hidden />
           Supplement
         </Button>
       </div>
 
+      {missingRoutines.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3">
+          {missingRoutines.map((r) => {
+            const Icon = ROUTINE_STYLE[r.key].icon;
+            return (
+              <Button key={r.key} type="button" variant="ghost" className="h-12 rounded-full border border-dashed" onClick={() => setEditing({ kind: "habit", routine: r.key })}>
+                <Icon aria-hidden />
+                {r.label}
+              </Button>
+            );
+          })}
+        </div>
+      ) : null}
+
       {editing ? (
         <HabitSheet
-          key={typeof editing === "string" ? editing : editing.id}
-          habit={typeof editing === "string" ? null : editing}
-          defaultKind={typeof editing === "string" ? editing : undefined}
+          key={"id" in editing ? editing.id : `${editing.kind}-${editing.routine ?? ""}`}
+          habit={"id" in editing ? editing : null}
+          defaultKind={"id" in editing ? undefined : editing.kind}
+          defaultRoutine={"id" in editing ? undefined : editing.routine}
           habits={habits}
           onClose={() => setEditing(null)}
         />

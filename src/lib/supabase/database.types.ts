@@ -607,6 +607,7 @@ export type Database = {
           notes: string | null
           paused_at: string | null
           position: number
+          routine: string | null
           target: number
           updated_at: string
           user_id: string
@@ -625,6 +626,7 @@ export type Database = {
           notes?: string | null
           paused_at?: string | null
           position?: number
+          routine?: string | null
           target?: number
           updated_at?: string
           user_id?: string
@@ -643,6 +645,7 @@ export type Database = {
           notes?: string | null
           paused_at?: string | null
           position?: number
+          routine?: string | null
           target?: number
           updated_at?: string
           user_id?: string

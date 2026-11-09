@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DRINK_COLOR_KEYS, type DrinkColor } from "@/lib/domain/drinks";
-import { DAYTIME_KEYS, FREQUENCIES, SCHEDULE_CATEGORY_KEYS, type Daytime, type ScheduleCategory } from "@/lib/domain/habits";
+import { DAYTIME_KEYS, FREQUENCIES, ROUTINE_KEYS, SCHEDULE_CATEGORY_KEYS, type Daytime, type Routine, type ScheduleCategory } from "@/lib/domain/habits";
 
 // Habit Tracker und Trainings-Wochenplan: Eingaben.
 
@@ -25,6 +25,8 @@ export const habitInputSchema = z
     weekdays: z.array(weekday).max(7),
     daytime: daytime.nullable(),
     atTime: time.nullable(),
+    /** Morgen- oder Abendroutine (nur täglich); fehlt = keine */
+    routine: z.enum(ROUTINE_KEYS as [Routine, ...Routine[]]).nullable().default(null),
     dose: optionalText(40),
     notes: optionalText(1000),
     color: z.enum(DRINK_COLOR_KEYS as [DrinkColor, ...DrinkColor[]]),
@@ -33,6 +35,7 @@ export const habitInputSchema = z
   .superRefine((v, ctx) => {
     const max = FREQUENCIES.find((f) => f.key === v.frequency)?.max ?? 1;
     if (v.target > max) ctx.addIssue({ code: "custom", path: ["target"], message: `Höchstens ${max}×.` });
+    if (v.routine && v.frequency !== "daily") ctx.addIssue({ code: "custom", path: ["routine"], message: "Routinen gibt es nur bei täglichen Habits." });
     if (new Set(v.weekdays).size !== v.weekdays.length) ctx.addIssue({ code: "custom", path: ["weekdays"], message: "Jeden Tag nur einmal." });
   });
 export type HabitInput = z.input<typeof habitInputSchema>;

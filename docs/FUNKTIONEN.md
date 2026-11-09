@@ -1,6 +1,6 @@
 # Topform – Funktionsübersicht
 
-Stand: 09.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`, letzter Commit `d6fff0c`).
+Stand: 09.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Morgen- und Abendroutine).
 Live: <https://unser-rezeptbuch.vercel.app> · Next.js 16 · Supabase (Frankfurt) · Vercel (`fra1`)
 
 Die App hat **drei Bereiche** (Umschalter oben links): **Start**, **Essen & Trinken**, **Sport & Gesundheit**.
@@ -195,10 +195,11 @@ Topform
 
 ### 3.6 Habits (`/sport/habits`, Tabs Heute · Wochenplan · Statistik · Habits)
 - Gewohnheiten **und Supplemente**, täglich/wöchentlich/monatlich, Ziel je Zeitraum, Wochentage, Tageszeit/Uhrzeit, Dosis, Notizen, Farbe, Pausieren
-- **Heute:** Fortschritt, „Training heute“, Gruppen nach Tageszeit, abhaken/hochzählen, nachtragen, aktive Challenges abhaken
+- **Morgen- und Abendroutine:** tägliche Habits als Punkte einer Routine (im Habit-Sheet wählbar, eigene Vorschläge), Reihenfolge per Drag & Drop, Punkte einzeln oder alle auf einmal abhaken; zählen in Statistik und Serien wie alle Habits
+- **Heute:** Fortschritt, „Training heute“, Routinen-Karten (Morgenroutine oben, Abendroutine vor „Nachts“), Gruppen nach Tageszeit, abhaken/hochzählen, nachtragen, aktive Challenges abhaken
 - **Wochenplan:** Trainings-Wochenplan mit Tageszeit/Uhrzeit, Art (Kraft, Ausdauer, Mobility, Sport, Erholung), Dauer
 - **Statistik:** Woche/Monat, Quote, Serien, perfekte Tage, Kästchen-Übersicht je Habit, Wochentage der letzten 12 Wochen
-- **Habits:** Liste mit Drag & Drop, pausierte unten
+- **Habits:** Listen Morgenroutine · Abendroutine · Weitere Habits, je mit Drag & Drop, pausierte unten
 
 ### 3.7 Statistik Gym (`/sport/statistik`)
 - Zeitraum KW (blätterbar) · 4 Wochen · 3 Monate · 1 Jahr · Alles
@@ -269,6 +270,7 @@ Aus `PROGRESS.md` („Offene Punkte“):
 - Kochmodus: Timer überleben kein Neuladen, klingeln im Ruhezustand erst beim Aufwecken
 - Datenexport: Fotos nur als Liste (kein ZIP)
 - Feed zeigt nur die letzten 50 Posts (kein Nachladen)
+- Habit-Routinen: keine eigene Statistik je Routine (Quote/Serie „Routine komplett“), keine Startzeit je Routine
 - Offen beim Nutzer: Einladungs-Mail sagt noch „Rezeptbuch“; erster Challenge-Rundenwechsel am 01.12.2026 ansehen
 
 Bei der Analyse aufgefallen:
