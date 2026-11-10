@@ -2122,7 +2122,8 @@ bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Tes
 
 ### Eigene Routinen, ein Habit in mehreren Routinen, Statistik je Routine, Wochenplan sortierbar (10.11.2026, Wunsch des Nutzers)
 
-**Noch nicht live**, wartet auf den Test des Nutzers am Gerät (LAN-Server). Die Migrationen
+**Live** seit 10.11.2026: vom Nutzer am eigenen Gerät über den LAN-Server getestet; Push `abccb99` → Deployment
+`dpl_GX2rAHTN8GdKiMs8M2Zpa4pXfwyn` (`production`, `fra1`, nach ca. 63 s „READY“; per Vercel-Connector geprüft). Die Migrationen
 `…20261110120000_habit_routine_tables` und `…20261110120100_merge_duplicate_routine_habits` sind seit 10.11.2026 in der
 Datenbank (nach ausdrücklichem OK des Nutzers über die Supabase-Integration eingespielt). Die erste ist additiv, die
 Live-Version liest die neuen Tabellen nicht und läuft weiter (sie sieht Routinen noch über `habits.routine`). Die
