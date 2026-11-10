@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Check, Pill, Sparkles, Trash2, X } from "lucide-react";
+import { Pill, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { deleteHabitAction, saveHabitAction } from "@/app/(app)/sport/habits/actions";
+import { deleteHabitAction, saveHabitAction, saveRoutineAction } from "@/app/(app)/sport/habits/actions";
 import { SegmentToggle } from "@/components/layout/list-blocks";
 import { chipClass } from "@/components/recipes/chip-select";
 import { EditorSheet, FieldHeading, RadioSegments } from "@/components/recipes/editor/editor-parts";
@@ -12,26 +12,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { DRINK_COLOR_KEYS, DRINK_COLORS, type DrinkColor } from "@/lib/domain/drinks";
+import { DRINK_COLOR_KEYS, type DrinkColor } from "@/lib/domain/drinks";
 import {
   DAYTIMES,
   daytimeOfTime,
   FREQUENCIES,
   HABIT_PRESETS,
-  ROUTINE_PRESETS,
-  ROUTINES,
+  routinePresets,
+  targetForRoutines,
   WEEKDAYS,
   type Daytime,
   type Habit,
   type HabitFrequency,
   type HabitKind,
-  type Routine,
+  type HabitRoutine,
 } from "@/lib/domain/habits";
 import { cn } from "@/lib/utils";
-import { CountStepper } from "./habit-parts";
+import { ColorChoice, CountStepper, HabitIcon } from "./habit-parts";
 
 /** Neues Habit: Art und optional die Routine, zu der es gehört. */
-export type HabitDraft = { kind: HabitKind; routine?: Routine | null };
+export type HabitDraft = { kind: HabitKind; routineId?: string | null };
 
 type Form = {
   kind: HabitKind;
@@ -42,18 +42,19 @@ type Form = {
   weekdays: number[];
   daytime: Daytime | null;
   atTime: string;
-  routine: Routine | null;
+  routineIds: string[];
   color: string;
   notes: string;
   paused: boolean;
 };
 
 const ALL_DAYS = WEEKDAYS.map((w) => w.n);
+const norm = (name: string) => name.trim().toLocaleLowerCase("de");
 
-function initialForm(habit: Habit | null, usedColors: string[], kind: HabitKind, routine: Routine | null): Form {
+function initialForm(habit: Habit | null, usedColors: string[], kind: HabitKind, routineId: string | null): Form {
   if (!habit) {
     const color = DRINK_COLOR_KEYS.find((c) => !usedColors.includes(c)) ?? "blau";
-    return { kind, name: "", dose: "", frequency: "daily", target: 1, weekdays: ALL_DAYS, daytime: null, atTime: "", routine, color, notes: "", paused: false };
+    return { kind, name: "", dose: "", frequency: "daily", target: 1, weekdays: ALL_DAYS, daytime: null, atTime: "", routineIds: routineId ? [routineId] : [], color, notes: "", paused: false };
   }
   return {
     kind: habit.kind,
@@ -64,7 +65,7 @@ function initialForm(habit: Habit | null, usedColors: string[], kind: HabitKind,
     weekdays: habit.weekdays.length ? habit.weekdays : ALL_DAYS,
     daytime: habit.daytime,
     atTime: habit.atTime ?? "",
-    routine: habit.routine,
+    routineIds: habit.routineIds,
     color: habit.color,
     notes: habit.notes ?? "",
     paused: habit.pausedOn != null,
@@ -73,25 +74,28 @@ function initialForm(habit: Habit | null, usedColors: string[], kind: HabitKind,
 
 /**
  * Gewohnheit oder Supplement anlegen bzw. bearbeiten: Art, Name (mit Vorschlägen), Dosis, Rhythmus und wie oft,
- * Wochentage (täglich), Routine (täglich, optional) oder Tageszeit und Uhrzeit (optional), Farbe, Notizen; beim
- * Bearbeiten Pausieren und Löschen.
+ * Wochentage (täglich), Routinen (täglich, optional, auch mehrere) oder Tageszeit und Uhrzeit (optional), Farbe,
+ * Notizen; beim Bearbeiten Pausieren und Löschen. Neuer Punkt einer Routine: Vorhandenes lässt sich direkt in die
+ * Routine übernehmen (statt es doppelt anzulegen).
  */
 export function HabitSheet({
   habit,
   habits,
+  routines,
   defaultKind = "habit",
-  defaultRoutine = null,
+  defaultRoutineId = null,
   onClose,
 }: {
   habit: Habit | null;
   habits: Habit[];
+  routines: HabitRoutine[];
   defaultKind?: HabitKind;
   /** neues Habit gleich als Punkt dieser Routine */
-  defaultRoutine?: Routine | null;
+  defaultRoutineId?: string | null;
   onClose: () => void;
 }) {
   const [open, setOpen] = useState(true);
-  const [form, setForm] = useState<Form>(() => initialForm(habit, habits.map((h) => h.color), defaultKind, defaultRoutine));
+  const [form, setForm] = useState<Form>(() => initialForm(habit, habits.map((h) => h.color), defaultKind, defaultRoutineId));
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -99,7 +103,13 @@ export function HabitSheet({
   const noDays = form.frequency === "daily" && form.weekdays.length === 0;
   const patch = (p: Partial<Form>) => setForm((f) => ({ ...f, ...p }));
   const err = (key: string) => errors[key]?.[0];
-  const usedNames = new Set(habits.map((h) => h.name.toLocaleLowerCase("de")));
+  const usedNames = new Set(habits.map((h) => norm(h.name)));
+  const draftRoutine = !habit && defaultRoutineId ? (routines.find((r) => r.id === defaultRoutineId) ?? null) : null;
+  const inRoutines = form.frequency === "daily" && form.routineIds.length > 0;
+  // Neuer Punkt einer Routine: tägliche Habits, die noch nicht drinstehen
+  const existing = draftRoutine ? habits.filter((h) => h.frequency === "daily" && h.pausedOn == null && !draftRoutine.habitIds.includes(h.id)) : [];
+  const sameName = !habit ? habits.find((h) => norm(h.name) === norm(form.name) && form.name.trim() !== "") : undefined;
+  const firstRoutine = routines.find((r) => form.routineIds.includes(r.id));
 
   function close() {
     setOpen(false);
@@ -109,7 +119,13 @@ export function HabitSheet({
   function setFrequency(next: HabitFrequency) {
     const max = FREQUENCIES.find((f) => f.key === next)?.max ?? 1;
     // Routinen gibt es nur bei täglichen
-    patch({ frequency: next, target: Math.min(form.target, max), routine: next === "daily" ? form.routine : null });
+    patch({ frequency: next, target: Math.min(form.target, max), routineIds: next === "daily" ? form.routineIds : [] });
+  }
+
+  function toggleRoutine(id: string) {
+    const next = form.routineIds.includes(id) ? form.routineIds.filter((r) => r !== id) : [...form.routineIds, id];
+    // Tagesziel folgt der Zahl der Routinen (je Routine ein Häkchen)
+    patch({ routineIds: next, target: Math.min(frequency.max, targetForRoutines(form.target, form.routineIds.length, next.length)) });
   }
 
   function toggleDay(n: number) {
@@ -121,6 +137,25 @@ export function HabitSheet({
     patch(value ? { atTime: value, daytime: daytimeOfTime(value) } : { atTime: "" });
   }
 
+  /** Vorhandenes Habit in die Routine übernehmen. */
+  function addExisting(h: Habit) {
+    if (!draftRoutine) return;
+    startTransition(async () => {
+      const result = await saveRoutineAction(draftRoutine.id, {
+        name: draftRoutine.name,
+        daytime: draftRoutine.daytime,
+        color: draftRoutine.color as DrinkColor,
+        habitIds: [...draftRoutine.habitIds, h.id],
+      });
+      if (!result.ok) {
+        toast.error(result.message ?? "Das konnte nicht gespeichert werden.");
+        return;
+      }
+      toast.success(`${h.name} steht jetzt auch in der Routine ${draftRoutine.name}`);
+      close();
+    });
+  }
+
   function save() {
     startTransition(async () => {
       const result = await saveHabitAction(habit?.id ?? null, {
@@ -130,8 +165,8 @@ export function HabitSheet({
         target: form.target,
         weekdays: form.frequency === "daily" ? form.weekdays : [],
         daytime: form.daytime,
-        atTime: form.routine ? null : form.atTime || null,
-        routine: form.frequency === "daily" ? form.routine : null,
+        atTime: inRoutines ? null : form.atTime || null,
+        routineIds: form.frequency === "daily" ? form.routineIds : [],
         dose: form.kind === "supplement" ? form.dose : null,
         notes: form.notes,
         color: form.color as DrinkColor,
@@ -164,8 +199,8 @@ export function HabitSheet({
     <EditorSheet
       open={open}
       onOpenChange={(o) => (o ? setOpen(true) : close())}
-      title={habit ? habit.name : defaultRoutine ? `Punkt für die ${ROUTINES.find((r) => r.key === defaultRoutine)?.label}` : form.kind === "supplement" ? "Supplement hinzufügen" : "Gewohnheit hinzufügen"}
-      description={habit ? "Änderungen gelten ab sofort; Abgehaktes bleibt." : defaultRoutine ? "Neue Punkte kommen ans Ende der Routine." : "Was möchtest du regelmäßig tun oder nehmen?"}
+      title={habit ? habit.name : draftRoutine ? `Punkt für „${draftRoutine.name}“` : form.kind === "supplement" ? "Supplement hinzufügen" : "Gewohnheit hinzufügen"}
+      description={habit ? "Änderungen gelten ab sofort; Abgehaktes bleibt." : draftRoutine ? "Neue Punkte kommen ans Ende der Routine." : "Was möchtest du regelmäßig tun oder nehmen?"}
       footer={
         <>
           {habit ? (
@@ -194,8 +229,24 @@ export function HabitSheet({
     >
       {confirmDelete ? (
         <p className="rounded-2xl bg-destructive/10 p-3 text-sm">
-          Damit verschwinden auch alle Häkchen von {habit?.name} aus Verlauf und Statistik. Wenn du nur aufhören willst: lieber pausieren.
+          Damit verschwinden auch alle Häkchen von {habit?.name} aus Verlauf und Statistik
+          {habit && habit.routineIds.length ? ", und es fällt aus seinen Routinen" : ""}. Wenn du nur aufhören willst: lieber pausieren.
         </p>
+      ) : null}
+
+      {existing.length > 0 ? (
+        <section>
+          <FieldHeading aside="steht dann in beiden">Vorhandenes übernehmen</FieldHeading>
+          <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {existing.map((h) => (
+              <button key={h.id} type="button" onClick={() => addExisting(h)} disabled={pending} className={chipClass(false)}>
+                <HabitIcon kind={h.kind} color={h.color} className="size-5 rounded-md [&_svg]:size-3" />
+                {h.name}
+                <Plus className="size-3.5 text-muted-foreground" aria-hidden />
+              </button>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <SegmentToggle
@@ -212,8 +263,8 @@ export function HabitSheet({
         <section>
           <FieldHeading>Vorschläge</FieldHeading>
           <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {(form.kind === "habit" && form.routine ? ROUTINE_PRESETS[form.routine] : HABIT_PRESETS[form.kind])
-              .filter((p) => !usedNames.has(p.name.toLocaleLowerCase("de")))
+            {(form.kind === "habit" && firstRoutine ? routinePresets(firstRoutine.daytime) : HABIT_PRESETS[form.kind])
+              .filter((p) => !usedNames.has(norm(p.name)))
               .map((p) => (
                 <button
                   key={p.name}
@@ -251,11 +302,24 @@ export function HabitSheet({
         ) : null}
         {err("name") ? <p className="text-sm text-destructive">{err("name")}</p> : null}
       </div>
+      {sameName ? (
+        <p className="-mt-2 rounded-2xl bg-muted/60 p-3 text-sm">
+          {sameName.name} gibt es schon.{" "}
+          {draftRoutine && existing.some((h) => h.id === sameName.id) ? (
+            <button type="button" onClick={() => addExisting(sameName)} className="font-medium text-primary hover:underline">
+              In „{draftRoutine.name}“ übernehmen
+            </button>
+          ) : (
+            "Ein Habit kann in mehreren Routinen stehen und zählt dann nur einmal."
+          )}
+        </p>
+      ) : null}
 
       <section className="space-y-3">
         <FieldHeading>Rhythmus</FieldHeading>
         <RadioSegments label="Rhythmus" value={form.frequency} onChange={setFrequency} options={FREQUENCIES.map((f) => ({ value: f.key, label: f.label }))} />
-        <CountStepper value={form.target} min={1} max={frequency.max} onChange={(target) => patch({ target })} unit={frequency.unit} label="Wie oft" />
+        <CountStepper value={form.target} min={inRoutines ? form.routineIds.length : 1} max={frequency.max} onChange={(target) => patch({ target })} unit={frequency.unit} label="Wie oft" />
+        {inRoutines && form.routineIds.length > 1 ? <p className="text-sm text-muted-foreground">Mindestens {form.routineIds.length}×: in jeder Routine ein Häkchen.</p> : null}
         {err("target") ? <p className="text-sm text-destructive">{err("target")}</p> : null}
       </section>
 
@@ -286,79 +350,61 @@ export function HabitSheet({
         </section>
       ) : null}
 
-      {form.frequency === "daily" ? (
+      {form.frequency === "daily" && routines.length > 0 ? (
         <section>
-          <FieldHeading aside="optional">Routine</FieldHeading>
+          <FieldHeading aside="optional, auch mehrere">Routinen</FieldHeading>
           <div className="flex flex-wrap gap-2">
-            <button type="button" aria-pressed={form.routine == null} onClick={() => patch({ routine: null })} className={chipClass(form.routine == null)}>
-              Keine
-            </button>
-            {ROUTINES.map((r) => (
-              <button key={r.key} type="button" aria-pressed={form.routine === r.key} onClick={() => patch({ routine: r.key })} className={chipClass(form.routine === r.key)}>
-                {r.label}
+            {routines.map((r) => (
+              <button key={r.id} type="button" aria-pressed={form.routineIds.includes(r.id)} onClick={() => toggleRoutine(r.id)} className={chipClass(form.routineIds.includes(r.id))}>
+                {r.name}
               </button>
             ))}
           </div>
-          {form.routine ? <p className="mt-2 text-sm text-muted-foreground">Steht unter „Heute“ in der {ROUTINES.find((r) => r.key === form.routine)?.label}, dort per Drag & Drop sortierbar.</p> : null}
+          {inRoutines ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Steht unter „Heute“ in {form.routineIds.length > 1 ? "diesen Routinen" : "dieser Routine"}, dort per Drag & Drop sortierbar. In der Statistik zählt es einmal.
+            </p>
+          ) : null}
         </section>
       ) : null}
 
-      {form.routine == null || form.frequency !== "daily" ? (
-      <section>
-        <FieldHeading aside="optional">Tageszeit</FieldHeading>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" aria-pressed={form.daytime == null} onClick={() => patch({ daytime: null, atTime: "" })} className={chipClass(form.daytime == null)}>
-            Jederzeit
-          </button>
-          {DAYTIMES.map((d) => (
-            <button
-              key={d.key}
-              type="button"
-              aria-pressed={form.daytime === d.key}
-              // Andere Tageszeit als die Uhrzeit: Uhrzeit verwerfen
-              onClick={() => patch({ daytime: d.key, atTime: form.atTime && daytimeOfTime(form.atTime) !== d.key ? "" : form.atTime })}
-              className={chipClass(form.daytime === d.key)}
-            >
-              {d.label}
+      {!inRoutines ? (
+        <section>
+          <FieldHeading aside="optional">Tageszeit</FieldHeading>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" aria-pressed={form.daytime == null} onClick={() => patch({ daytime: null, atTime: "" })} className={chipClass(form.daytime == null)}>
+              Jederzeit
             </button>
-          ))}
-        </div>
-        <div className="mt-3 flex items-center gap-2">
-          <Label htmlFor="habit-time" className="w-20 shrink-0">
-            Uhrzeit
-          </Label>
-          <Input id="habit-time" type="time" value={form.atTime} onChange={(e) => setTime(e.target.value)} className="h-12 max-w-40 min-w-0 px-3 text-base" />
-          {form.atTime ? (
-            <Button type="button" variant="ghost" size="icon" onClick={() => setTime("")} aria-label="Uhrzeit entfernen">
-              <X aria-hidden />
-            </Button>
-          ) : null}
-        </div>
-      </section>
+            {DAYTIMES.map((d) => (
+              <button
+                key={d.key}
+                type="button"
+                aria-pressed={form.daytime === d.key}
+                // Andere Tageszeit als die Uhrzeit: Uhrzeit verwerfen
+                onClick={() => patch({ daytime: d.key, atTime: form.atTime && daytimeOfTime(form.atTime) !== d.key ? "" : form.atTime })}
+                className={chipClass(form.daytime === d.key)}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <Label htmlFor="habit-time" className="w-20 shrink-0">
+              Uhrzeit
+            </Label>
+            <Input id="habit-time" type="time" value={form.atTime} onChange={(e) => setTime(e.target.value)} className="h-12 max-w-40 min-w-0 px-3 text-base" />
+            {form.atTime ? (
+              <Button type="button" variant="ghost" size="icon" onClick={() => setTime("")} aria-label="Uhrzeit entfernen">
+                <X aria-hidden />
+              </Button>
+            ) : null}
+          </div>
+        </section>
       ) : null}
 
       <section>
         <FieldHeading>Farbe</FieldHeading>
-        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Farbe">
-          {DRINK_COLOR_KEYS.map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="radio"
-              aria-checked={form.color === key}
-              aria-label={DRINK_COLORS[key].label}
-              title={DRINK_COLORS[key].label}
-              onClick={() => patch({ color: key })}
-              className={cn(
-                "grid size-11 place-items-center rounded-full ring-offset-2 ring-offset-popover transition focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-                form.color === key && "ring-2 ring-foreground",
-              )}
-              style={{ background: DRINK_COLORS[key].value }}
-            >
-              {form.color === key ? <Check className="size-5 text-white drop-shadow" aria-hidden /> : null}
-            </button>
-          ))}
-        </div>
+        <ColorChoice value={form.color} onChange={(color) => patch({ color })} />
       </section>
 
       <div className="grid gap-1.5">

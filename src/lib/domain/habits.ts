@@ -11,7 +11,6 @@ import { addDays, isoWeekday, mondayOf } from "./week";
 export type HabitKind = "habit" | "supplement";
 export type HabitFrequency = "daily" | "weekly" | "monthly";
 export type Daytime = "morgens" | "mittags" | "nachmittags" | "abends" | "nachts";
-export type Routine = "morgen" | "abend";
 
 export const HABIT_KINDS: { key: HabitKind; label: string; plural: string }[] = [
   { key: "habit", label: "Gewohnheit", plural: "Gewohnheiten" },
@@ -52,15 +51,51 @@ export function timeKey(daytime: Daytime | null, atTime: string | null): string 
   return d ? `${String(d.from).padStart(2, "0")}:00` : "99:99";
 }
 
-/** Morgen- und Abendroutine: Punkte sind tägliche Habits, die Tageszeit folgt der Routine. */
-export const ROUTINES: { key: Routine; label: string; daytime: Daytime }[] = [
-  { key: "morgen", label: "Morgenroutine", daytime: "morgens" },
-  { key: "abend", label: "Abendroutine", daytime: "abends" },
-];
-export const ROUTINE_KEYS = ROUTINES.map((r) => r.key);
+/**
+ * Routine (z. B. Morgen- oder Abendroutine, eigene wie „Nach dem Training“): geordnete Liste täglicher Habits. Ein
+ * Habit kann in mehreren Routinen stehen; sein Tagesziel ist dann mindestens die Zahl seiner Routinen (Zähneputzen
+ * morgens und abends = 2× am Tag), und je Routine gibt es ein eigenes Häkchen.
+ */
+export type HabitRoutine = {
+  id: string;
+  name: string;
+  /** Platz unter „Heute“ */
+  daytime: Daytime;
+  color: string;
+  position: number;
+  /** Punkte in eigener Reihenfolge */
+  habitIds: string[];
+};
 
-export function routineLabel(key: Routine): string {
-  return ROUTINES.find((r) => r.key === key)?.label ?? key;
+/** In welcher Routine ein Habit an einem Tag abgehakt wurde. */
+export type RoutineCheck = { routineId: string; habitId: string; date: string };
+
+/** Vorschläge für eine neue Routine. */
+export const ROUTINE_SUGGESTIONS: { name: string; daytime: Daytime; color: string }[] = [
+  { name: "Morgenroutine", daytime: "morgens", color: "orange" },
+  { name: "Abendroutine", daytime: "abends", color: "lila" },
+  { name: "Mittagspause", daytime: "mittags", color: "gruen" },
+  { name: "Nach dem Training", daytime: "nachmittags", color: "blau" },
+];
+
+/** Reihenfolge der Routinen: nach Tageszeit, dann eigene Reihenfolge. */
+export function sortRoutines<T extends Pick<HabitRoutine, "daytime" | "position" | "name">>(routines: T[]): T[] {
+  const at = (d: Daytime) => DAYTIME_KEYS.indexOf(d);
+  return [...routines].sort((a, b) => at(a.daytime) - at(b.daytime) || a.position - b.position || a.name.localeCompare(b.name, "de"));
+}
+
+/** Namen der Routinen eines Habits (in Routinen-Reihenfolge). */
+export function routineNames(h: Pick<Habit, "routineIds">, routines: Pick<HabitRoutine, "id" | "name">[]): string[] {
+  return h.routineIds.map((id) => routines.find((r) => r.id === id)?.name).filter((n): n is string => n != null);
+}
+
+/**
+ * Tagesziel nach einer Änderung der Routinen eines Habits: folgte es bisher nur den Routinen (höchstens so hoch wie
+ * ihre Zahl), folgt es weiter (2 Routinen → 2×); ein höheres eigenes Ziel bleibt, nie unter der Zahl der Routinen.
+ */
+export function targetForRoutines(target: number, before: number, after: number): number {
+  if (target <= Math.max(before, 1)) return Math.max(after, 1);
+  return Math.max(target, after);
 }
 
 export const WEEKDAYS = [
@@ -88,8 +123,8 @@ export type Habit = {
   notes: string | null;
   color: string;
   position: number;
-  /** Punkt der Morgen- oder Abendroutine (nur täglich); null = keine Routine */
-  routine: Routine | null;
+  /** Routinen, in denen das Habit steht (nur täglich), in Routinen-Reihenfolge; leer = keine */
+  routineIds: string[];
   /** angelegt am (deutsche Zeit): davor zählt nichts */
   startDate: string;
   /** pausiert ab diesem Tag (einschließlich); null = aktiv */
@@ -118,11 +153,13 @@ export const HABIT_PRESETS: Record<HabitKind, { name: string; dose?: string; day
   ],
 };
 
-/** Vorschläge für Punkte einer Routine. */
-export const ROUTINE_PRESETS: Record<Routine, { name: string; dose?: string; daytime?: Daytime }[]> = {
-  morgen: [{ name: "Glas Wasser" }, { name: "Bett machen" }, { name: "Dehnen" }, { name: "Kalt duschen" }, { name: "Zähne putzen" }, { name: "Tag planen" }],
-  abend: [{ name: "Handy weglegen" }, { name: "Zähne putzen" }, { name: "Tagebuch" }, { name: "Lesen" }, { name: "Morgen vorbereiten" }, { name: "Dehnen" }],
-};
+/** Vorschläge für Punkte einer Routine (nach ihrer Tageszeit). */
+export function routinePresets(daytime: Daytime): { name: string; dose?: string; daytime?: Daytime }[] {
+  if (daytime === "morgens") return [{ name: "Glas Wasser" }, { name: "Bett machen" }, { name: "Dehnen" }, { name: "Kalt duschen" }, { name: "Zähne putzen" }, { name: "Tag planen" }];
+  if (daytime === "abends" || daytime === "nachts")
+    return [{ name: "Handy weglegen" }, { name: "Zähne putzen" }, { name: "Tagebuch" }, { name: "Lesen" }, { name: "Morgen vorbereiten" }, { name: "Dehnen" }];
+  return [{ name: "Glas Wasser" }, { name: "Dehnen" }, { name: "Spaziergang" }, { name: "Kurz durchatmen" }, { name: "Proteinshake" }];
+}
 
 /** „Mo, Mi, Fr“ (in Wochenreihenfolge). */
 export function weekdayList(days: number[]): string {
@@ -144,9 +181,9 @@ export function frequencyLabel(h: Pick<Habit, "frequency" | "target" | "weekdays
   return h.target > 1 ? `${h.target}× pro Monat` : "Monatlich";
 }
 
-/** „Täglich · Morgens · 07:30“ bzw. „Mo, Mi, Fr · Morgenroutine“ */
-export function scheduleLabel(h: Pick<Habit, "frequency" | "target" | "weekdays" | "daytime" | "atTime"> & { routine?: Routine | null }): string {
-  if (h.routine) return [frequencyLabel(h), routineLabel(h.routine)].join(" · ");
+/** „Täglich · Morgens · 07:30“ bzw. „2× täglich · Morgenroutine, Abendroutine“ (mit den Namen der Routinen) */
+export function scheduleLabel(h: Pick<Habit, "frequency" | "target" | "weekdays" | "daytime" | "atTime">, routines: string[] = []): string {
+  if (routines.length) return [frequencyLabel(h), routines.join(", ")].join(" · ");
   return [frequencyLabel(h), h.daytime ? daytimeLabel(h.daytime) : null, h.atTime].filter(Boolean).join(" · ");
 }
 
@@ -221,41 +258,167 @@ function activeBetween(h: Pick<Habit, "startDate" | "pausedOn">, from: string, t
 // Heute
 // ---------------------------------------------------------------------------
 
-export type TodayGroup = { key: string; label: string; habits: Habit[]; routine?: Routine };
+export type TodayGroup = { key: string; label: string; habits: Habit[]; routine?: HabitRoutine };
 
 /**
- * Gruppen für „Heute“: zuerst die Morgenroutine, dann tägliche Gewohnheiten nach Tageszeit (ohne Tageszeit:
- * „Jederzeit“), die Abendroutine vor „Nachts“, danach „Diese Woche“ und „Diesen Monat“. In jeder Gruppe gilt die
- * eigene Reihenfolge (Drag & Drop).
+ * Gruppen für „Heute“: tägliche Gewohnheiten nach Tageszeit (ohne Tageszeit: „Jederzeit“), danach „Diese Woche“ und
+ * „Diesen Monat“. Routinen stehen als eigene Gruppen an ihrer Tageszeit: vor deren Habits, Morgenroutinen ganz oben
+ * (vor „Jederzeit“), Abendroutinen nach den Habits von abends. Habits in Routinen stehen nur dort. In jeder Gruppe
+ * gilt die eigene Reihenfolge (Drag & Drop). Routinen ohne aktive Punkte (z. B. gerade angelegt) stehen leer an
+ * ihrem Platz, damit man sie füllen kann; Routinen, deren Punkte nur heute nicht dran sind, fehlen.
  */
-export function todayGroups(habits: Habit[], date: string): TodayGroup[] {
+export function todayGroups(habits: Habit[], routines: HabitRoutine[], date: string): TodayGroup[] {
   const due = habits.filter((h) => isDueOn(h, date)).sort((a, b) => a.position - b.position);
-  const daily = due.filter((h) => h.frequency === "daily" && h.routine == null);
-  const routine = (key: Routine): TodayGroup => ({ key: `routine-${key}`, label: routineLabel(key), routine: key, habits: due.filter((h) => h.frequency === "daily" && h.routine === key) });
+  const daily = due.filter((h) => h.frequency === "daily" && h.routineIds.length === 0);
+  const sorted = sortRoutines(routines);
+  const routinesAt = (d: Daytime): TodayGroup[] =>
+    sorted
+      .filter((r) => r.daytime === d)
+      .map((r) => ({
+        key: `routine-${r.id}`,
+        label: r.name,
+        routine: r,
+        habits: r.habitIds.map((id) => due.find((h) => h.id === id && h.frequency === "daily")).filter((h): h is Habit => h != null),
+      }));
   const daytime = (key: Daytime): TodayGroup => ({ key, label: daytimeLabel(key), habits: daily.filter((h) => h.daytime === key) });
   const groups: TodayGroup[] = [
-    routine("morgen"),
+    ...routinesAt("morgens"),
     { key: "jederzeit", label: "Jederzeit", habits: daily.filter((h) => h.daytime == null) },
     daytime("morgens"),
+    ...routinesAt("mittags"),
     daytime("mittags"),
+    ...routinesAt("nachmittags"),
     daytime("nachmittags"),
     daytime("abends"),
-    routine("abend"),
+    ...routinesAt("abends"),
+    ...routinesAt("nachts"),
     daytime("nachts"),
     { key: "woche", label: "Diese Woche", habits: due.filter((h) => h.frequency === "weekly") },
     { key: "monat", label: "Diesen Monat", habits: due.filter((h) => h.frequency === "monthly") },
   ];
-  return groups.filter((g) => g.habits.length > 0);
+  const empty = (r: HabitRoutine) => !r.habitIds.some((id) => habits.some((h) => h.id === id && h.pausedOn == null));
+  return groups.filter((g) => g.habits.length > 0 || (g.routine != null && empty(g.routine)));
 }
 
-/** Stand einer Routine an einem Tag: wie viele Punkte erledigt (Ziel des Tages erreicht) und ob alle. */
-export function routineProgress(items: Habit[], index: CheckIndex, date: string): { done: number; total: number; complete: boolean } {
-  const done = items.filter((h) => countOn(index, h.id, date) >= h.target).length;
+// ---------------------------------------------------------------------------
+// Häkchen je Routine
+// ---------------------------------------------------------------------------
+
+/** Abgehakte Routinen je Habit und Tag („habitId|date“ → Routinen-IDs). */
+export type RoutineCheckIndex = Map<string, Set<string>>;
+
+export function routineCheckIndex(checks: RoutineCheck[]): RoutineCheckIndex {
+  const index: RoutineCheckIndex = new Map();
+  for (const c of checks) {
+    const key = `${c.habitId}|${c.date}`;
+    let set = index.get(key);
+    if (!set) index.set(key, (set = new Set()));
+    set.add(c.routineId);
+  }
+  return index;
+}
+
+/**
+ * In welchen Routinen ein Habit an einem Tag erledigt ist. Ausdrücklich in einer Routine Abgehaktes zählt dort; was
+ * die Zahl des Tages darüber hinaus hergibt (z. B. in der Statistik abgehakt), füllt die übrigen Routinen der Reihe
+ * nach (morgens vor abends).
+ */
+export function routinesDone(h: Pick<Habit, "id" | "routineIds">, index: CheckIndex, routineIndex: RoutineCheckIndex, date: string): Set<string> {
+  const marked = routineIndex.get(`${h.id}|${date}`) ?? new Set<string>();
+  const done = new Set(h.routineIds.filter((id) => marked.has(id)));
+  let rest = countOn(index, h.id, date) - done.size;
+  for (const id of h.routineIds) {
+    if (rest <= 0) break;
+    if (done.has(id)) continue;
+    done.add(id);
+    rest--;
+  }
+  return done;
+}
+
+/** Neuer Stand eines Punkts an einem Tag: Zahl des Tages und die Routinen, in denen er abgehakt ist. */
+export type RoutineDayUpdate = { habitId: string; date: string; count: number; routineIds: string[] };
+
+/** Punkt in Routine `routineId` abhaken (`done` true) oder das Häkchen wegnehmen; die Zahl des Tages folgt. Ohne Änderung: null. */
+export function setRoutineItem(
+  h: Pick<Habit, "id" | "routineIds">,
+  routineId: string,
+  done: boolean,
+  index: CheckIndex,
+  routineIndex: RoutineCheckIndex,
+  date: string,
+): RoutineDayUpdate | null {
+  const current = routinesDone(h, index, routineIndex, date);
+  if (current.has(routineId) === done) return null;
+  const next = new Set(current);
+  if (done) next.add(routineId);
+  else next.delete(routineId);
+  const count = countOn(index, h.id, date) + (done ? 1 : -1);
+  return { habitId: h.id, date, count: Math.max(0, Math.min(99, count)), routineIds: h.routineIds.filter((id) => next.has(id)) };
+}
+
+/** Stand einer Routine an einem Tag: wie viele Punkte in dieser Routine erledigt sind und ob alle. */
+export function routineProgress(
+  routineId: string,
+  items: Pick<Habit, "id" | "routineIds">[],
+  index: CheckIndex,
+  routineIndex: RoutineCheckIndex,
+  date: string,
+): { done: number; total: number; complete: boolean } {
+  const done = items.filter((h) => routinesDone(h, index, routineIndex, date).has(routineId)).length;
   return { done, total: items.length, complete: items.length > 0 && done === items.length };
 }
 
 /**
- * Neue Gesamtreihenfolge (IDs) nach dem Verschieben innerhalb einer Teilliste (z. B. einer Routine): die Teilliste
+ * Eine Routine als eigene Statistik: ihre Punkte mit Ziel 1 je Tag und der Zahl 1 an Tagen, an denen sie in dieser
+ * Routine erledigt sind (von `from` bis `to`). Damit rechnen Quote, Serien und Kästchen wie bei Habits.
+ */
+export function routineView(
+  routine: Pick<HabitRoutine, "id" | "habitIds">,
+  habits: Habit[],
+  index: CheckIndex,
+  routineIndex: RoutineCheckIndex,
+  from: string,
+  to: string,
+): { habits: Habit[]; index: CheckIndex } {
+  const items = routine.habitIds.map((id) => habits.find((h) => h.id === id && h.frequency === "daily")).filter((h): h is Habit => h != null);
+  const view: CheckIndex = new Map();
+  for (const h of items) {
+    const days = new Map<string, number>();
+    for (let d = from; d <= to; d = addDays(d, 1)) if (routinesDone(h, index, routineIndex, d).has(routine.id)) days.set(d, 1);
+    view.set(h.id, days);
+  }
+  return { habits: items.map((h) => ({ ...h, target: 1 })), index: view };
+}
+
+/**
+ * Serie ganzer Tage: Tage am Stück, an denen alles Fällige der Habits erledigt war (z. B. eine Routine komplett).
+ * Tage ohne Fälliges überspringt sie, heute zählt erst, wenn geschafft.
+ */
+export function completeDayStreak(habits: Habit[], index: CheckIndex, today: string, historyFrom: string): { current: number; best: number } {
+  const rates = dayRates(habits, index, historyFrom, today, today).reverse();
+  let current = 0;
+  let run = 0;
+  let best = 0;
+  let open = true;
+  for (const r of rates) {
+    if (r.due === 0) continue;
+    if (r.done >= r.due) {
+      run++;
+      if (open) current = run;
+    } else if (r.date === today) {
+      continue;
+    } else {
+      open = false;
+      best = Math.max(best, run);
+      run = 0;
+    }
+  }
+  return { current, best: Math.max(best, run) };
+}
+
+/**
+ * Neue Gesamtreihenfolge (IDs) nach dem Verschieben innerhalb einer Teilliste (z. B. „Weitere Habits“): die Teilliste
  * belegt dieselben Plätze wie vorher, nur in neuer Reihenfolge; alle anderen Habits bleiben, wo sie sind.
  */
 export function reorderWithin(all: Pick<Habit, "id" | "position">[], subsetIds: string[]): string[] {
@@ -491,18 +654,25 @@ export const SCHEDULE_PRESETS: { title: string; category: ScheduleCategory }[] =
 export type ScheduleEntry = {
   id: string;
   weekday: number;
-  daytime: Daytime;
+  /** optional wie die Uhrzeit */
+  daytime: Daytime | null;
   atTime: string | null;
   title: string;
   category: ScheduleCategory;
   durationMin: number | null;
   notes: string | null;
+  /** Reihenfolge innerhalb des Tages (Drag & Drop) */
+  position: number;
 };
 
-/** Nach Wochentag, dann Uhrzeit (bzw. Beginn der Tageszeit), dann Titel. */
-export function sortSchedule<T extends Pick<ScheduleEntry, "weekday" | "daytime" | "atTime" | "title">>(entries: T[]): T[] {
+/** Nach Wochentag, dann eigener Reihenfolge; bei gleicher Stelle nach Uhrzeit (bzw. Beginn der Tageszeit) und Titel. */
+export function sortSchedule<T extends Pick<ScheduleEntry, "weekday" | "daytime" | "atTime" | "title" | "position">>(entries: T[]): T[] {
   return [...entries].sort(
-    (a, b) => a.weekday - b.weekday || timeKey(a.daytime, a.atTime).localeCompare(timeKey(b.daytime, b.atTime)) || a.title.localeCompare(b.title, "de"),
+    (a, b) =>
+      a.weekday - b.weekday ||
+      a.position - b.position ||
+      timeKey(a.daytime, a.atTime).localeCompare(timeKey(b.daytime, b.atTime)) ||
+      a.title.localeCompare(b.title, "de"),
   );
 }
 
@@ -529,7 +699,7 @@ export function formatDuration(minutes: number): string {
   return m ? `${h} h ${m} min` : `${h} h`;
 }
 
-/** „Morgens · 07:00“ bzw. „Abends“ */
+/** „Morgens · 07:00“, „Abends“, „07:00“ bzw. leer (ohne Tageszeit und Uhrzeit) */
 export function slotLabel(e: Pick<ScheduleEntry, "daytime" | "atTime">): string {
-  return e.atTime ? `${daytimeLabel(e.daytime)} · ${e.atTime}` : daytimeLabel(e.daytime);
+  return [e.daytime ? daytimeLabel(e.daytime) : null, e.atTime].filter(Boolean).join(" · ");
 }

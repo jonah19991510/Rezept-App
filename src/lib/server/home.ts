@@ -1,7 +1,7 @@
 import "server-only";
 import { longNotCooked } from "@/lib/domain/cooklog";
 import { DEFAULT_GOAL_ML, periodRange } from "@/lib/domain/drinks";
-import type { Habit, HabitCheck } from "@/lib/domain/habits";
+import type { Habit, HabitCheck, HabitRoutine, RoutineCheck } from "@/lib/domain/habits";
 import { normalizeHomeLayout, type HomeWidget } from "@/lib/domain/home";
 import { expiryStatus } from "@/lib/domain/pantry";
 import { entryMacros, sumMacros, type DayMacros, type Goals } from "@/lib/domain/plan";
@@ -10,7 +10,7 @@ import { mondayOf, todayInBerlin } from "@/lib/domain/week";
 import { nextPlanDay } from "@/lib/domain/workout";
 import { createClient } from "@/lib/supabase/server";
 import { getDrinkEntries } from "./drinks";
-import { getHabitChecks, getHabits } from "./habits";
+import { getHabitChecks, getHabitsAndRoutines, getRoutineChecks } from "./habits";
 import { getCookLogs, getLongNotCookedWeeks } from "./kitchen-log";
 import { getPantry } from "./pantry";
 import { getAllGoals, getTrainingDays, getWeekEntries, type PlanEntry } from "./plan";
@@ -133,7 +133,7 @@ export async function getDrinkToday(userId: string, today: string): Promise<Drin
   }
 }
 
-export type HabitHome = { habits: Habit[]; checks: HabitCheck[] };
+export type HabitHome = { habits: Habit[]; routines: HabitRoutine[]; checks: HabitCheck[]; routineChecks: RoutineCheck[] };
 
 /**
  * Habit Tracker auf der Startseite: alle Habits und die Häkchen der laufenden Woche und des Monats (für „2/3 diese
@@ -143,11 +143,12 @@ export async function getHabitHome(userId: string, today: string): Promise<Habit
   const week = periodRange("woche", today);
   const month = periodRange("monat", today);
   try {
-    const [habits, checks] = await Promise.all([
-      getHabits(userId),
+    const [{ habits, routines }, checks, routineChecks] = await Promise.all([
+      getHabitsAndRoutines(userId),
       getHabitChecks(userId, week.from < month.from ? week.from : month.from, week.to > month.to ? week.to : month.to),
+      getRoutineChecks(userId, today, today),
     ]);
-    return { habits, checks };
+    return { habits, routines, checks, routineChecks };
   } catch {
     return null;
   }

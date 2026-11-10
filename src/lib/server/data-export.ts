@@ -64,13 +64,31 @@ async function allHabitChecks(supabase: Awaited<ReturnType<typeof createClient>>
   }
 }
 
+/** Alle Häkchen je Routine; seitenweise wie die Häkchen. */
+async function allRoutineChecks(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const rows: Record<string, unknown>[] = [];
+  for (let page = 0; ; page++) {
+    const { data, error } = await supabase
+      .from("habit_routine_checks")
+      .select("*")
+      .eq("user_id", userId)
+      .order("day")
+      .order("habit_id")
+      .order("routine_id")
+      .range(page * 1000, page * 1000 + 999);
+    if (error) return { data: null, error };
+    rows.push(...data);
+    if (data.length < 1000) return { data: rows, error: null };
+  }
+}
+
 /** Vollständiger Export aller personenbezogenen Daten des Nutzers als ein JSON-Objekt. */
 export async function buildPersonalDataExport(user: CurrentUser) {
   const supabase = await createClient();
   const id = user.id;
   const [
     profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
-    trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements, habits, habitChecks, schedule, lexicon,
+    trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements, habits, habitChecks, routines, routineItems, routineChecks, schedule, lexicon,
     ownChallenges, challengeParticipations, challengeEntries, posts, kudos, comments,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, hide_from_leaderboard, created_at").eq("id", id).maybeSingle(),
@@ -117,7 +135,10 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     // Habit Tracker und Trainings-Wochenplan
     supabase.from("habits").select("*").eq("user_id", id).order("position"),
     allHabitChecks(supabase, id),
-    supabase.from("training_schedule").select("*").eq("user_id", id).order("weekday"),
+    supabase.from("habit_routines").select("*").eq("user_id", id).order("position"),
+    supabase.from("habit_routine_items").select("*").eq("user_id", id).order("routine_id").order("position"),
+    allRoutineChecks(supabase, id),
+    supabase.from("training_schedule").select("*").eq("user_id", id).order("weekday").order("position"),
     // Lexikon: selbst geschriebene Einträge
     supabase.from("lexicon_entries").select("*, lexicon_entry_categories(lexicon_categories(name))").eq("created_by", id).order("term"),
     // Challenges: selbst angelegte, eigene Teilnahmen und Einträge
@@ -157,6 +178,9 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     koerpermasse: must(bodyMeasurements, "Körpermaße"),
     habits: must(habits, "Habits"),
     habits_abgehakt: must(habitChecks, "Abgehakte Habits"),
+    routinen: must(routines, "Routinen"),
+    routinen_punkte: must(routineItems, "Punkte der Routinen"),
+    routinen_abgehakt: must(routineChecks, "Abgehakte Routinen-Punkte"),
     trainings_wochenplan: must(schedule, "Trainings-Wochenplan"),
     lexikon_eintraege: must(lexicon, "Lexikon-Einträge"),
     challenges_angelegt: must(ownChallenges, "Challenges"),

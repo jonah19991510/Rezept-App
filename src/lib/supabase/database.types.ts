@@ -700,15 +700,145 @@ export type Database = {
           },
         ]
       }
+      habit_routines: {
+        Row: {
+          color: string
+          created_at: string
+          daytime: string
+          id: string
+          legacy_key: string | null
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          daytime: string
+          id?: string
+          legacy_key?: string | null
+          name: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          daytime?: string
+          id?: string
+          legacy_key?: string | null
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_routines_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habit_routine_items: {
+        Row: {
+          created_at: string
+          habit_id: string
+          position: number
+          routine_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          habit_id: string
+          position?: number
+          routine_id: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          habit_id?: string
+          position?: number
+          routine_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_routine_items_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_routine_items_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "habit_routines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_routine_items_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habit_routine_checks: {
+        Row: {
+          created_at: string
+          day: string
+          habit_id: string
+          routine_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          habit_id: string
+          routine_id: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          habit_id?: string
+          routine_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_routine_checks_routine_id_habit_id_fkey"
+            columns: ["routine_id", "habit_id"]
+            isOneToOne: false
+            referencedRelation: "habit_routine_items"
+            referencedColumns: ["routine_id", "habit_id"]
+          },
+          {
+            foreignKeyName: "habit_routine_checks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_schedule: {
         Row: {
           at_time: string | null
           category: string
           created_at: string
-          daytime: string
+          daytime: string | null
           duration_min: number | null
           id: string
           notes: string | null
+          position: number
           title: string
           updated_at: string
           user_id: string
@@ -718,10 +848,11 @@ export type Database = {
           at_time?: string | null
           category?: string
           created_at?: string
-          daytime: string
+          daytime?: string | null
           duration_min?: number | null
           id?: string
           notes?: string | null
+          position?: number
           title: string
           updated_at?: string
           user_id?: string
@@ -731,10 +862,11 @@ export type Database = {
           at_time?: string | null
           category?: string
           created_at?: string
-          daytime?: string
+          daytime?: string | null
           duration_min?: number | null
           id?: string
           notes?: string | null
+          position?: number
           title?: string
           updated_at?: string
           user_id?: string

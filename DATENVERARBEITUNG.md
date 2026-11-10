@@ -64,7 +64,10 @@ Alle Zeilen hängen über `user_id` bzw. `owner_id` am Nutzer und werden beim L�
 | Browser (`localStorage`, Schlüssel `getraenke:zuletzt`) | zuletzt gewähltes Getränk auf „Heute“ | Getränketracker (27.10.2026) | nur das Gerät |
 | `habits` | Gewohnheiten und Supplemente: Name, Art, Rhythmus und Ziel, Wochentage, Tageszeit, Uhrzeit, Dosis, Notizen, Farbe, Reihenfolge, pausiert seit | Habit Tracker (02.11.2026) | nur Nutzer selbst |
 | `habit_checks` | an welchem Tag eine Gewohnheit wie oft erledigt wurde | Habit Tracker (02.11.2026) | nur Nutzer selbst |
-| `training_schedule` | Trainings-Wochenplan: Wochentag, Tageszeit, Uhrzeit, Titel, Art, Dauer, Notiz | Habit Tracker (02.11.2026) | nur Nutzer selbst |
+| `habit_routines` | Routinen: Name, Platz unter „Heute“ (Tageszeit), Farbe, Reihenfolge | Routinen (10.11.2026) | nur Nutzer selbst |
+| `habit_routine_items` | welche Habits in welcher Routine stehen, mit Reihenfolge | Routinen (10.11.2026) | nur Nutzer selbst |
+| `habit_routine_checks` | an welchem Tag ein Habit in welcher Routine abgehakt wurde | Routinen (10.11.2026) | nur Nutzer selbst |
+| `training_schedule` | Trainings-Wochenplan: Wochentag, Tageszeit (optional), Uhrzeit, Titel, Art, Dauer, Notiz, Reihenfolge am Tag | Habit Tracker (02.11.2026) | nur Nutzer selbst |
 | `lexicon_entries` (Spalte `created_by`, + `lexicon_entry_categories`) | selbst geschriebene Lexikon-Einträge: Begriff, Fakten, Texte, Tabellen, Stichworte, Quelle, öffentlich ja/nein | Lexikon (02.11.2026) | öffentliche Einträge alle Eingeloggten, Entwürfe nur Ersteller und Admins; schreiben vorerst nur Admins; `created_by` wird beim Löschen des Accounts auf leer gesetzt (Einträge bleiben) |
 | `challenges` (Spalte `created_by`) | selbst angelegte Challenges: Name, Beschreibung, Symbol, Farbe, Regeln, öffentlich/privat | Challenges (03.11.2026) | öffentliche: alle Eingeloggten lesen, private: nur wer sie angelegt hat; ändern Ersteller und Admins; `created_by` wird beim Löschen des Accounts auf leer gesetzt (die Challenge bleibt für die anderen) |
 | `workout_posts` | geteilte Trainings: eigener Text und Zusammenfassung (Titel, Dauer, Übungen mit bestem Satz, Sätze, Volumen, Strecke, neue Bestwerte), Trainingszeitpunkt | Feed C3 (03.11.2026) | alle Eingeloggten; ändern/löschen selbst (Admins löschen); Training gelöscht = Post weg; Cascade am Profil |
@@ -148,6 +151,11 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **10.11.2026, Routinen:** Neue Tabellen `habit_routines`, `habit_routine_items` und `habit_routine_checks` (RLS nur
+  der Nutzer, Cascade am Profil; Punkte nur aus eigenen Habits). Die bisherige Morgen- und Abendroutine wurde
+  übernommen, gleichnamige doppelte Punkte mit OK des Nutzers zu einem Habit zusammengeführt. Wochenplan: Spalte
+  `training_schedule.position`, Tageszeit optional. Im Datenexport als `routinen`, `routinen_punkte` und
+  `routinen_abgehakt`. Keine neuen Dienstleister.
 - **04.11.2026, Herzfrequenz:** Neue Spalte `workout_sets.avg_heart_rate` (optional, RLS wie bisher nur der Nutzer). Sie
   steht im Verlauf, in der Statistik und in der Sport-Sicherung, aber nie in geteilten Trainings. Die Herzfrequenz ist
   ein Gesundheitsdatum (Hinweis für die Datenschutzerklärung). Keine neuen Dienstleister.

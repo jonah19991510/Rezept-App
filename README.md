@@ -319,8 +319,8 @@ Energie, Lexikon.
 
 - **Getränke:** Tagesziel mit Tempo-Balken, Schnellmengen, eigene Getränke und Mischgetränke (Koffein, Zucker,
   Wasseranteil), Statistik pro Woche/Monat, Tipps und Verlauf.
-- **Habits:** Gewohnheiten und Supplemente (täglich, wöchentlich, monatlich), heute abhaken, Trainings-Wochenplan mit
-  Uhrzeiten, Statistik mit Quote und Serien.
+- **Habits:** Gewohnheiten und Supplemente (täglich, wöchentlich, monatlich), heute abhaken, eigene Routinen (ein Habit
+  kann in mehreren stehen), sortierbarer Trainings-Wochenplan, Statistik mit Quote und Serien, auch je Routine.
 
 ### Statistik, Entdecken und Challenges
 

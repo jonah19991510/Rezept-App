@@ -5,12 +5,12 @@ import { usePathname } from "next/navigation";
 import { Check, Minus, Pill, Plus, Sparkles } from "lucide-react";
 import { isActivePath } from "@/components/layout/nav-items";
 import { Button } from "@/components/ui/button";
-import { drinkColor } from "@/lib/domain/drinks";
+import { DRINK_COLOR_KEYS, DRINK_COLORS, drinkColor } from "@/lib/domain/drinks";
 import type { HabitKind } from "@/lib/domain/habits";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-// Kleine Bausteine des Habit Trackers: Tabs, Symbol, Abhak-Knopf, Zähler.
+// Kleine Bausteine des Habit Trackers: Tabs, Symbol, Abhak-Knopf, Zähler, Farbwahl.
 
 const TABS = [
   { href: "/sport/habits", label: "Heute", exact: true },
@@ -136,3 +136,29 @@ export function CountStepper({ value, min, max, onChange, unit, label }: { value
 
 /** „67 %“ */
 export const percent = (share: number) => `${formatNumber(Math.round(share * 100), 0)} %`;
+
+/** Farbwahl aus der Palette der App (wie bei Getränken). */
+export function ColorChoice({ value, onChange }: { value: string; onChange: (key: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Farbe">
+      {DRINK_COLOR_KEYS.map((key) => (
+        <button
+          key={key}
+          type="button"
+          role="radio"
+          aria-checked={value === key}
+          aria-label={DRINK_COLORS[key].label}
+          title={DRINK_COLORS[key].label}
+          onClick={() => onChange(key)}
+          className={cn(
+            "grid size-11 place-items-center rounded-full ring-offset-2 ring-offset-popover transition focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            value === key && "ring-2 ring-foreground",
+          )}
+          style={{ background: DRINK_COLORS[key].value }}
+        >
+          {value === key ? <Check className="size-5 text-white drop-shadow" aria-hidden /> : null}
+        </button>
+      ))}
+    </div>
+  );
+}

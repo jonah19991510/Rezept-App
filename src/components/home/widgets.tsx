@@ -6,7 +6,7 @@ import {
   ChefHat,
   ChevronRight,
   Dumbbell,
-  Flame,
+  GlassWater,
   Hourglass,
   ListChecks,
   ListTodo,
@@ -267,7 +267,7 @@ export function FoodAreaWidget({ plan, shoppingCount }: { plan: TodayPlan | null
   );
 }
 
-/** Sport & Gesundheit: laufendes Training bzw. was heute noch zu trinken ist, Abkürzungen zu Training, Körper, Energie, Habits. */
+/** Sport & Gesundheit: laufendes Training bzw. was heute noch zu trinken ist, Abkürzungen zu Training, Körper, Getränke, Habits. */
 export function SportAreaWidget({ sport, drink }: { sport: SportSummary; drink: DrinkToday | null }) {
   const rest = drink ? drink.goalMl - drink.ml : null;
   const subtitle = sport.active
@@ -288,7 +288,7 @@ export function SportAreaWidget({ sport, drink }: { sport: SportSummary; drink: 
       tiles={[
         { href: sport.active ? `/training/${sport.active.id}` : "/sport/plaene", label: "Training", icon: Dumbbell },
         { href: "/sport/koerper", label: "Körper", icon: Ruler },
-        { href: "/sport/energie", label: "Energie", icon: Flame },
+        { href: "/sport/getraenke", label: "Getränke", icon: GlassWater },
         { href: "/sport/habits", label: "Habits", icon: ListChecks },
       ]}
     />

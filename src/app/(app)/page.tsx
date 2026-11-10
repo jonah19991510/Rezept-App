@@ -73,7 +73,7 @@ export default async function HomePage() {
     ready: dishes != null && cocktails != null ? <ReadyWidget dishes={dishes} cocktails={cocktails} /> : null,
     expiring: expiring ? <ExpiringWidget items={expiring} today={today} /> : null,
     longNotCooked: longAgo ? <LongNotCookedWidget items={longAgo.items} weeks={longAgo.weeks} /> : null,
-    habits: habits && visible.has("habits") ? <HabitsTodayWidget habits={habits.habits} checks={habits.checks} today={today} /> : null,
+    habits: habits && visible.has("habits") ? <HabitsTodayWidget habits={habits.habits} routines={habits.routines} checks={habits.checks} routineChecks={habits.routineChecks} today={today} /> : null,
     habitWeek: habits && visible.has("habitWeek") ? <HabitWeekWidget data={habits} today={today} /> : null,
     schedule: schedule ? <ScheduleWidget schedule={schedule} today={today} /> : null,
     challenges: challenges ? <ChallengesWidget items={challenges} today={today} /> : null,

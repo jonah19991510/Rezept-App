@@ -14,36 +14,43 @@ import {
   formatDuration,
   nextCount,
   periodProgress,
-  ROUTINES,
   slotLabel,
   todayGroups,
   type Habit,
   type HabitCheck,
+  type HabitRoutine,
+  type RoutineCheck,
   type ScheduleEntry,
 } from "@/lib/domain/habits";
 import { addDays } from "@/lib/domain/week";
 import { cn } from "@/lib/utils";
 import { CheckButton, HabitIcon } from "./habit-parts";
 import { HabitSheet, type HabitDraft } from "./habit-sheet";
-import { ROUTINE_STYLE, RoutineCard } from "./routine-card";
+import { RoutineCard } from "./routine-card";
+import { RoutineSheet } from "./routine-sheet";
 import { useHabitCounts } from "./use-habit-counts";
 
 /**
  * Tab „Heute“: Fortschritt des Tages, geplantes Training aus dem Wochenplan, fällige Gewohnheiten und Supplemente
- * nach Tageszeit (dann „Diese Woche“, „Diesen Monat“), Morgen- und Abendroutine als eigene Karten (Reihenfolge per
+ * nach Tageszeit (dann „Diese Woche“, „Diesen Monat“), Routinen als eigene Karten an ihrer Tageszeit (Reihenfolge per
  * Drag & Drop, einzeln oder alle auf einmal abhaken), dazu die eigenen Challenges. Antippen des Kreises hakt ab, antippen des Namens bearbeitet.
  * Mit den Pfeilen lassen sich frühere Tage nachtragen.
  */
 export function HabitToday({
   habits,
+  routines,
   checks,
+  routineChecks,
   schedule,
   date,
   today,
   challenges,
 }: {
   habits: Habit[];
+  routines: HabitRoutine[];
   checks: HabitCheck[];
+  /** Häkchen je Routine an `date` */
+  routineChecks: RoutineCheck[];
   /** Einheiten aus dem Wochenplan für den Wochentag von `date` */
   schedule: ScheduleEntry[];
   date: string;
@@ -55,13 +62,13 @@ export function HabitToday({
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState<Habit | HabitDraft | null>(null);
-  const { index, setCount } = useHabitCounts(checks);
-  const groups = todayGroups(habits, date);
+  // Routine bearbeiten (null = neue anlegen)
+  const [editingRoutine, setEditingRoutine] = useState<HabitRoutine | null | undefined>(undefined);
+  const { index, routineIndex, setCount, setRoutineDays } = useHabitCounts(checks, routineChecks);
+  const groups = todayGroups(habits, routines, date);
   const summary = daySummary(habits, index, date);
   const active = habits.filter((h) => h.pausedOn == null);
   const isToday = date === today;
-  // Routinen ohne Punkte: Knopf zum Anlegen des ersten Punkts
-  const missingRoutines = ROUTINES.filter((r) => !active.some((h) => h.routine === r.key));
 
   function go(next: string) {
     startTransition(() => router.push(next === today ? pathname : `${pathname}?datum=${next}`, { scroll: false }));
@@ -72,10 +79,6 @@ export function HabitToday({
     const next = nextCount(current, h.target, h.frequency);
     if (next >= h.target && current < h.target) navigator.vibrate?.(12);
     setCount(h.id, date, next, current);
-  }
-
-  function setTo(h: Habit, next: number) {
-    setCount(h.id, date, next, countOn(index, h.id, date));
   }
 
   const dayTitle = isToday ? "Heute" : date === addDays(today, -1) ? "Gestern" : longDate(date);
@@ -138,7 +141,7 @@ export function HabitToday({
 
       {challenges}
 
-      {active.length === 0 ? (
+      {active.length === 0 && routines.length === 0 ? (
         <div className="rounded-3xl border border-dashed p-6 text-center">
           <p className="font-medium">Noch keine Habits</p>
           <p className="mt-1 text-sm text-muted-foreground">Leg Gewohnheiten wie Dehnen oder Supplemente wie Kreatin an und hak sie hier jeden Tag ab.</p>
@@ -152,13 +155,13 @@ export function HabitToday({
               key={g.key}
               routine={g.routine}
               items={g.habits}
-              habits={habits}
               index={index}
+              routineIndex={routineIndex}
               date={date}
-              onSetCount={setTo}
-              onTap={tap}
+              onSetRoutineDays={setRoutineDays}
               onEdit={setEditing}
-              onAdd={() => setEditing({ kind: "habit", routine: g.routine })}
+              onEditRoutine={() => setEditingRoutine(g.routine)}
+              onAdd={() => setEditing({ kind: "habit", routineId: g.routine?.id })}
             />
           ) : (
             <section key={g.key} aria-label={g.label}>
@@ -230,29 +233,25 @@ export function HabitToday({
         </Button>
       </div>
 
-      {missingRoutines.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3">
-          {missingRoutines.map((r) => {
-            const Icon = ROUTINE_STYLE[r.key].icon;
-            return (
-              <Button key={r.key} type="button" variant="ghost" className="h-12 rounded-full border border-dashed" onClick={() => setEditing({ kind: "habit", routine: r.key })}>
-                <Icon aria-hidden />
-                {r.label}
-              </Button>
-            );
-          })}
-        </div>
-      ) : null}
+      <Button type="button" variant="ghost" className="h-12 w-full rounded-full border border-dashed" onClick={() => setEditingRoutine(null)}>
+        <Plus aria-hidden />
+        Routine anlegen
+      </Button>
 
       {editing ? (
         <HabitSheet
-          key={"id" in editing ? editing.id : `${editing.kind}-${editing.routine ?? ""}`}
+          key={"id" in editing ? editing.id : `${editing.kind}-${editing.routineId ?? ""}`}
           habit={"id" in editing ? editing : null}
           defaultKind={"id" in editing ? undefined : editing.kind}
-          defaultRoutine={"id" in editing ? undefined : editing.routine}
+          defaultRoutineId={"id" in editing ? undefined : editing.routineId}
           habits={habits}
+          routines={routines}
           onClose={() => setEditing(null)}
         />
+      ) : null}
+
+      {editingRoutine !== undefined ? (
+        <RoutineSheet key={editingRoutine?.id ?? "neu"} routine={editingRoutine} routines={routines} habits={habits} onClose={() => setEditingRoutine(undefined)} />
       ) : null}
     </div>
   );

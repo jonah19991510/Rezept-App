@@ -2120,6 +2120,49 @@ Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, 
 bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
 über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
 
+### Eigene Routinen, ein Habit in mehreren Routinen, Statistik je Routine, Wochenplan sortierbar (10.11.2026, Wunsch des Nutzers)
+
+**Noch nicht live**, wartet auf den Test des Nutzers am Gerät (LAN-Server). Die Migrationen
+`…20261110120000_habit_routine_tables` und `…20261110120100_merge_duplicate_routine_habits` sind seit 10.11.2026 in der
+Datenbank (nach ausdrücklichem OK des Nutzers über die Supabase-Integration eingespielt). Die erste ist additiv, die
+Live-Version liest die neuen Tabellen nicht und läuft weiter (sie sieht Routinen noch über `habits.routine`). Die
+zweite hat mit OK des Nutzers „Zähne putzen“/„Zähne Putzen“ und „Gesichtscreme“ (je Morgen + Abend) zu je einem Habit
+zusammengeführt (Ziel 2×, Häkchen je Tag addiert, je Routine übernommen). Security-Advisor: nichts Neues.
+
+- **Datenmodell:** `habit_routines` (Name, Tageszeit = Platz unter „Heute“, Farbe, Reihenfolge, `legacy_key` für die
+  übernommene Morgen-/Abendroutine), `habit_routine_items` (Routine ↔ Habit mit Reihenfolge), `habit_routine_checks`
+  (in welcher Routine ein Habit an einem Tag abgehakt wurde). Die Zahl des Tages steht weiter in `habit_checks`; ein
+  Habit in zwei Routinen hat das Tagesziel 2 (`targetForRoutines`), daher zählt es in Statistik und Fortschritt einmal
+  und ist bei 1 von 2 „teilweise“. `routinesDone`: ausdrücklich Abgehaktes zählt in seiner Routine, die übrige Zahl
+  (z. B. in der Statistik oder in der alten Live-Version abgehakt) füllt die anderen Routinen der Reihe nach.
+  `habits.routine` bleibt stehen, die neue Version schreibt dort `null`. Wochenplan: `training_schedule.position`
+  (Startwert aus der bisherigen Sortierung), `daytime` darf leer sein.
+- **Heute:** Routinen an ihrer Tageszeit (morgens ganz oben, abends nach den Habits von abends, sonst vor den Habits
+  der Tageszeit). Kopf antippen bearbeitet die Routine. Abhaken je Routine, „alle“ in einem Aufruf
+  (`setRoutineDaysAction`). Neue, noch leere Routinen stehen sofort als Karte an ihrem Platz (Wunsch des Nutzers: nicht nur als Knopf unten), darunter „Routine anlegen“. Widget „Habits heute“ hakt Routinen-Punkte in
+  ihrer Routine ab.
+- **Routinen-Sheet** (neu): Name mit Vorschlägen, Platz unter „Heute“, Farbe, Punkte mit Drag & Drop, entfernen,
+  vorhandene tägliche Habits hinzufügen („auch in …“), löschen (Habits bleiben). **Habit-Sheet:** Routinen
+  mehrfach wählbar, Tagesziel folgt; beim neuen Punkt einer Routine „Vorhandenes übernehmen“ und Hinweis bei gleichem
+  Namen, damit keine Doppelten entstehen.
+- **Tab Habits:** je Routine eine Liste (Stift, „Punkt hinzufügen“, Drag & Drop speichert die Reihenfolge der Routine),
+  „Weitere Habits“, „Routine anlegen“.
+- **Statistik:** Filter-Chips je Routine (`?routine=`): Punkte mit Ziel 1, abgehakt = in dieser Routine erledigt
+  (`routineView`), dazu „Komplette Tage“ und „Serie komplett“ (`completeDayStreak`); Abhaken im Tagesdetail hakt in
+  der Routine ab. Ohne Routinen-Filter eine Übersicht „Routinen“ mit Quote, kompletten Tagen und Serie. Teilweise
+  erledigte Kästchen füllen sich anteilig von unten (1 von 2 = halb).
+- **Wochenplan:** Einheiten eines Tages per Drag & Drop sortieren (`reorderScheduleAction`, neue kommen ans Ende des
+  Tages), Tageszeit optional („Keine“, erneut antippen nimmt sie weg).
+- **Startseite:** Kachel „Getränke“ statt „Energie“ (Wunsch: Habit-Tracker-Knopf; „Habits“ gab es schon, der Nutzer hat
+  sich für Getränke entschieden). Energiebedarfsrechner bleibt im Profilmenü.
+- Datenexport: `routinen`, `routinen_punkte`, `routinen_abgehakt`; `DATENVERARBEITUNG.md` ergänzt.
+- 601 Tests (neu: Routinen an ihrer Tageszeit, leere Routine sofort sichtbar, Häkchen je Routine, `setRoutineItem`, `routineView`,
+  `completeDayStreak`, `targetForRoutines`, Wochenplan-Reihenfolge, `slotLabel` ohne Tageszeit), Typcheck, Lint grün.
+  Im Browser nicht angemeldet geprüft (Login nötig, der Nutzer testet am Handy); der LAN-Server einer anderen Sitzung
+  lief bereits auf Port 3000 (0.0.0.0, Handy: http://192.168.178.47:3000).
+- **Hinweis für den Wechsel:** Wer bis zum Push in der Live-Version ein neues Habit einer Routine zuordnet, findet es
+  danach unter „Weitere Habits“ (die alte Version schreibt nur `habits.routine`).
+
 ### Intervall im Verlauf, Trainingstage antippbar, alle Übungen in der Statistik (10.11.2026, Wunsch des Nutzers)
 
 **Live** seit 10.11.2026: vom Nutzer am eigenen Gerät über den LAN-Server getestet; Push `610df38` → Deployment

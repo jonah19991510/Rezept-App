@@ -8,6 +8,7 @@ import { ChartCard, DataTable } from "@/components/stats/chart-card";
 import { Button } from "@/components/ui/button";
 import { daysOf, drinkColor, longDate, periodLabel, periodRange, shiftPeriod, shortDate, type StatsView } from "@/lib/domain/drinks";
 import {
+  completeDayStreak,
   countOn,
   dayRates,
   habitPeriodStats,
@@ -16,19 +17,28 @@ import {
   nextCount,
   periodKpis,
   periodProgress,
+  routineNames,
+  routinesDone,
+  routineView,
   scheduleLabel,
+  setRoutineItem,
   streakLabel,
   WEEKDAYS,
   weekdayRates,
   type CellState,
+  type CheckIndex,
   type Habit,
   type HabitCheck,
   type HabitKind,
+  type HabitRoutine,
+  type RoutineCheck,
+  type RoutineCheckIndex,
 } from "@/lib/domain/habits";
 import { addDays, isoWeekNumber, mondayOf, weekdayShort } from "@/lib/domain/week";
 import { cn } from "@/lib/utils";
 import { CheckButton, HabitIcon, percent } from "./habit-parts";
 import { HabitSheet } from "./habit-sheet";
+import { ROUTINE_ICONS } from "./routine-card";
 import { useHabitCounts } from "./use-habit-counts";
 
 type KindFilter = "alle" | HabitKind;
@@ -39,28 +49,53 @@ const KIND_FILTERS: { key: KindFilter; label: string }[] = [
 ];
 const dayName = (iso: string) => `${weekdayShort(iso)}, ${shortDate(iso)}`;
 
+/** Kennzahlen einer Routine im Zeitraum: Quote, komplette Tage, Serie kompletter Tage. */
+function routineSummary(
+  routine: HabitRoutine,
+  habits: Habit[],
+  index: CheckIndex,
+  routineIndex: RoutineCheckIndex,
+  range: { from: string; to: string; today: string; historyFrom: string },
+) {
+  const end = range.to > range.today ? range.to : range.today;
+  const rv = routineView(routine, habits, index, routineIndex, range.historyFrom < range.from ? range.historyFrom : range.from, end);
+  const items = rv.habits.filter((h) => h.startDate <= range.to && (h.pausedOn == null || h.pausedOn > range.from));
+  const stats = items.map((h) => habitPeriodStats(h, rv.index, range.from, range.to, range.today));
+  const kpis = periodKpis(stats, dayRates(items, rv.index, range.from, range.to, range.today), range.today);
+  return { routine, items: items.length, kpis, streak: completeDayStreak(rv.habits, rv.index, range.today, range.historyFrom) };
+}
+
 /**
- * Statistik des Habit Trackers für eine Woche oder einen Monat (`?ansicht=woche|monat&datum=…&habit=…`): Kennzahlen,
- * erledigt pro Tag (antippen wählt den Tag, Wischen wechselt den Zeitraum), der gewählte Tag zum Nachtragen, die
- * Übersicht aller Habits Tag für Tag (antippen filtert), Serien und Wochentage.
+ * Statistik des Habit Trackers für eine Woche oder einen Monat (`?ansicht=woche|monat&datum=…&habit=…&routine=…`):
+ * Kennzahlen, erledigt pro Tag (antippen wählt den Tag, Wischen wechselt den Zeitraum), der gewählte Tag zum
+ * Nachtragen, die Übersicht aller Habits Tag für Tag (antippen filtert), Serien und Wochentage. Filter: Gewohnheiten,
+ * Supplemente oder eine Routine; in der Routinen-Ansicht zählt je Punkt das Häkchen in dieser Routine (ein Supplement
+ * in einer Routine zählt in beiden Ansichten). Dazu eine Übersicht, wie gut jede Routine läuft.
  */
 export function HabitStats({
   view,
   date,
   today,
   habits,
+  routines,
   checks,
+  routineChecks,
   historyFrom,
   initialHabit,
+  initialRoutine,
 }: {
   view: StatsView;
   date: string;
   today: string;
   habits: Habit[];
+  routines: HabitRoutine[];
   /** Häkchen von `historyFrom` bis Ende des Zeitraums (für Serien und Wochentage) */
   checks: HabitCheck[];
+  /** Häkchen je Routine im selben Zeitraum */
+  routineChecks: RoutineCheck[];
   historyFrom: string;
   initialHabit: string | null;
+  initialRoutine: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -68,13 +103,23 @@ export function HabitStats({
   const [selected, setSelected] = useState(date);
   const [habitId, setHabitIdState] = useState<string | null>(initialHabit);
   const [kind, setKind] = useState<KindFilter>("alle");
+  const [routineId, setRoutineIdState] = useState<string | null>(initialRoutine && routines.some((r) => r.id === initialRoutine) ? initialRoutine : null);
   const [editing, setEditing] = useState<Habit | null>(null);
-  const { index, setCount } = useHabitCounts(checks);
+  const { index: baseIndex, routineIndex, setCount, setRoutineDays } = useHabitCounts(checks, routineChecks);
 
   const { from, to } = periodRange(view, date);
   const days = useMemo(() => daysOf(from, to), [from, to]);
+  const routine = routines.find((r) => r.id === routineId) ?? null;
+  // Routinen-Ansicht: Punkte mit Ziel 1, abgehakt = in dieser Routine erledigt
+  const rv = useMemo(
+    () => (routine ? routineView(routine, habits, baseIndex, routineIndex, historyFrom < from ? historyFrom : from, to > today ? to : today) : null),
+    [routine, habits, baseIndex, routineIndex, historyFrom, from, to, today],
+  );
+  const index = rv ? rv.index : baseIndex;
+  const original = (h: Habit) => habits.find((x) => x.id === h.id) ?? h;
+  const routineStats = routine ? [] : routines.map((r) => routineSummary(r, habits, baseIndex, routineIndex, { from, to, today, historyFrom })).filter((r) => r.items > 0);
   // Nur Habits, die im Zeitraum liefen
-  const inPeriod = habits.filter((h) => h.startDate <= to && (h.pausedOn == null || h.pausedOn > from));
+  const inPeriod = (rv ? rv.habits : habits).filter((h) => h.startDate <= to && (h.pausedOn == null || h.pausedOn > from));
   const byKind = inPeriod.filter((h) => kind === "alle" || h.kind === kind);
   const focus = byKind.find((h) => h.id === habitId) ?? null;
   const shown = focus ? [focus] : byKind;
@@ -89,6 +134,7 @@ export function HabitStats({
     .filter((s) => !focus || s.habit.id === focus.id)
     .sort((a, b) => b.current - a.current)[0];
   const weekdays = weekdayRates(shown, index, today);
+  const routineStreak = rv ? completeDayStreak(rv.habits, rv.index, today, historyFrom) : null;
 
   // Gewählte Gewohnheit wöchentlich/monatlich: Balken zeigen Häkchen je Tag statt Prozent
   const countMode = focus != null && focus.frequency !== "daily";
@@ -101,10 +147,20 @@ export function HabitStats({
   const avg = !countMode && elapsedRates.length ? (elapsedRates.reduce((s, r) => s + r.done / r.due, 0) / elapsedRates.length) * 100 : null;
 
   const nextPeriodBlocked = shiftPeriod(view, from, 1) > today;
-  const href = (v: StatsView, d: string, h: string | null) => `${pathname}?ansicht=${v}&datum=${d}${h ? `&habit=${h}` : ""}`;
+  const href = (v: StatsView, d: string, h: string | null, r: string | null = routineId) => `${pathname}?ansicht=${v}&datum=${d}${h ? `&habit=${h}` : ""}${r ? `&routine=${r}` : ""}`;
 
   function navigate(nextView: StatsView, nextDate: string) {
     startTransition(() => router.push(href(nextView, nextDate, habitId), { scroll: false }));
+  }
+
+  /** Routine wählen (null = keine); ein gewähltes Habit außerhalb der Routine fällt weg. */
+  function setRoutineId(next: string | null) {
+    const r = routines.find((x) => x.id === next);
+    const keepHabit = habitId && (!r || r.habitIds.includes(habitId)) ? habitId : null;
+    setRoutineIdState(next);
+    setKind("alle");
+    setHabitIdState(keepHabit);
+    window.history.replaceState(null, "", href(view, selected, keepHabit, next));
   }
 
   function selectDay(d: string) {
@@ -129,6 +185,14 @@ export function HabitStats({
   }
 
   function tap(h: Habit, d: string) {
+    if (routine) {
+      // Routinen-Ansicht: Häkchen in dieser Routine
+      const o = original(h);
+      const done = routinesDone(o, baseIndex, routineIndex, d).has(routine.id);
+      const update = setRoutineItem(o, routine.id, !done, baseIndex, routineIndex, d);
+      if (update) setRoutineDays([update]);
+      return;
+    }
     const current = countOn(index, h.id, d);
     setCount(h.id, d, nextCount(current, h.target, h.frequency), current);
   }
@@ -170,19 +234,38 @@ export function HabitStats({
           <button
             key={k.key}
             type="button"
-            aria-pressed={kind === k.key}
+            aria-pressed={!routine && kind === k.key}
             onClick={() => {
+              if (routine) setRoutineId(null);
               setKind(k.key);
               if (focus && k.key !== "alle" && focus.kind !== k.key) setHabitId(null);
             }}
             className={cn(
               "inline-flex h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium whitespace-nowrap transition focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-              kind === k.key ? "border-primary/60 bg-primary/15 text-primary" : "bg-card hover:bg-muted",
+              !routine && kind === k.key ? "border-primary/60 bg-primary/15 text-primary" : "bg-card hover:bg-muted",
             )}
           >
             {k.label}
           </button>
         ))}
+        {routines.map((r) => {
+          const Icon = ROUTINE_ICONS[r.daytime];
+          return (
+            <button
+              key={r.id}
+              type="button"
+              aria-pressed={routineId === r.id}
+              onClick={() => setRoutineId(routineId === r.id ? null : r.id)}
+              className={cn(
+                "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium whitespace-nowrap transition focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                routineId === r.id ? "border-primary/60 bg-primary/15 text-primary" : "bg-card hover:bg-muted",
+              )}
+            >
+              <Icon className="size-4" style={{ color: routineId === r.id ? undefined : drinkColor(r.color) }} aria-hidden />
+              {r.name}
+            </button>
+          );
+        })}
         {focus ? (
           <button type="button" onClick={() => setHabitId(null)} className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full border-2 border-primary/50 bg-primary/10 px-4 text-sm font-medium whitespace-nowrap text-primary">
             Nur {focus.name}
@@ -193,18 +276,24 @@ export function HabitStats({
       </div>
 
       {inPeriod.length === 0 ? (
-        <p className="rounded-3xl border border-dashed p-6 text-center text-sm text-muted-foreground">In diesem Zeitraum gab es noch keine Habits.</p>
+        <p className="rounded-3xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+          {routine ? `${routine.name} hatte in diesem Zeitraum noch keine Punkte.` : "In diesem Zeitraum gab es noch keine Habits."}
+        </p>
       ) : (
         <>
           <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Kpi label="Erfüllt" value={kpis.rate != null ? percent(kpis.rate) : "–"} sub="von allem, was bis heute dran ist" good={kpis.rate != null && kpis.rate >= 0.8} />
-            <Kpi label="Perfekte Tage" value={`${kpis.perfect}/${kpis.days}`} sub="alle Täglichen erledigt" />
-            <Kpi label="Abgehakt" value={`${kpis.total}×`} sub={focus ? focus.name : `${byKind.length} Habits`} />
-            <Kpi
-              label={focus ? "Serie" : "Beste laufende Serie"}
-              value={bestStreak ? streakLabel(bestStreak.current, bestStreak.unit) : "–"}
-              sub={bestStreak ? (focus ? `Rekord ${streakLabel(bestStreak.best, bestStreak.unit)}` : bestStreak.habit.name) : undefined}
-            />
+            <Kpi label={routine && !focus ? "Komplette Tage" : "Perfekte Tage"} value={`${kpis.perfect}/${kpis.days}`} sub={routine && !focus ? `${routine.name} ganz erledigt` : "alle Täglichen erledigt"} />
+            <Kpi label="Abgehakt" value={`${kpis.total}×`} sub={focus ? focus.name : routine ? `${byKind.length} Punkte` : `${byKind.length} Habits`} />
+            {routine && !focus && routineStreak ? (
+              <Kpi label="Serie komplett" value={streakLabel(routineStreak.current, "Tag")} sub={`Rekord ${streakLabel(routineStreak.best, "Tag")}`} />
+            ) : (
+              <Kpi
+                label={focus ? "Serie" : "Beste laufende Serie"}
+                value={bestStreak ? streakLabel(bestStreak.current, bestStreak.unit) : "–"}
+                sub={bestStreak ? (focus ? `Rekord ${streakLabel(bestStreak.best, bestStreak.unit)}` : bestStreak.habit.name) : undefined}
+              />
+            )}
           </dl>
 
           {focus ? (
@@ -215,10 +304,12 @@ export function HabitStats({
                   {focus.name}
                   {focus.dose ? <span className="font-normal text-muted-foreground"> · {focus.dose}</span> : null}
                 </span>
-                <span className="block truncate text-sm text-muted-foreground">{scheduleLabel(focus)}</span>
+                <span className="block truncate text-sm text-muted-foreground">
+                  {routine ? `in ${routine.name}` : scheduleLabel(original(focus), routineNames(focus, routines))}
+                </span>
                 {focus.notes ? <span className="block truncate text-xs text-muted-foreground">{focus.notes}</span> : null}
               </span>
-              <Button type="button" variant="outline" size="icon" className="rounded-full" onClick={() => setEditing(focus)} aria-label={`${focus.name} bearbeiten`}>
+              <Button type="button" variant="outline" size="icon" className="rounded-full" onClick={() => setEditing(original(focus))} aria-label={`${focus.name} bearbeiten`}>
                 <Pencil aria-hidden />
               </Button>
             </section>
@@ -229,7 +320,9 @@ export function HabitStats({
             description={
               countMode
                 ? "Wie oft an jedem Tag abgehakt. Tipp auf einen Balken zeigt den Tag, Wischen wechselt den Zeitraum."
-                : "Anteil der täglichen Habits, die an dem Tag dran waren; grün = alles geschafft. Tipp auf einen Balken zeigt den Tag, Wischen wechselt den Zeitraum."
+                : routine
+                  ? `Anteil der Punkte von ${routine.name}, die an dem Tag erledigt waren; grün = komplett. Tipp auf einen Balken zeigt den Tag, Wischen wechselt den Zeitraum.`
+                  : "Anteil der täglichen Habits, die an dem Tag dran waren; grün = alles geschafft. Tipp auf einen Balken zeigt den Tag, Wischen wechselt den Zeitraum."
             }
             table={
               <DataTable
@@ -262,7 +355,7 @@ export function HabitStats({
                 <h2 id="tag-detail" className="font-semibold">
                   {selected === today ? "Heute" : longDate(selected)}
                 </h2>
-                <p className="text-sm text-muted-foreground">Antippen hakt ab oder trägt nach</p>
+                <p className="text-sm text-muted-foreground">{routine ? `Antippen hakt in ${routine.name} ab oder trägt nach` : "Antippen hakt ab oder trägt nach"}</p>
               </div>
               <Button type="button" variant="ghost" size="icon" onClick={() => selectDay(addDays(selected, 1))} disabled={selected >= today} aria-label="Tag danach">
                 <ChevronRight aria-hidden />
@@ -305,7 +398,9 @@ export function HabitStats({
             <h2 id="uebersicht" className="text-lg font-semibold">
               {view === "woche" ? "Wochenübersicht" : "Monatsübersicht"}
             </h2>
-            <p className="mb-3 text-sm text-muted-foreground">Alle Habits Tag für Tag. Tipp auf einen Namen filtert die Statistik, auf ein Kästchen zeigt den Tag.</p>
+            <p className="mb-3 text-sm text-muted-foreground">
+              {routine ? `Die Punkte von ${routine.name}` : "Alle Habits"} Tag für Tag. Tipp auf einen Namen filtert die Statistik, auf ein Kästchen zeigt den Tag. Halb gefüllt: z. B. 1 von 2 am Tag.
+            </p>
             <Legend />
             {view === "woche" ? (
               <div className="mt-3 grid grid-cols-[minmax(0,1fr)_repeat(7,1.75rem)] items-center gap-x-1 sm:grid-cols-[minmax(0,1fr)_repeat(7,2.25rem)]" aria-hidden>
@@ -359,7 +454,7 @@ export function HabitStats({
                       c.date === selected && "ring-2 ring-foreground/70 ring-offset-1 ring-offset-card",
                       focus && !isFocus && "opacity-50",
                     )}
-                    style={cellStyle(c.state, h.color)}
+                    style={cellStyle(c.state, h.color, c.count / h.target)}
                   />
                 ));
                 return view === "woche" ? (
@@ -409,9 +504,43 @@ export function HabitStats({
             ) : null}
           </section>
 
+          {routineStats.length > 0 ? (
+            <section className="rounded-3xl border bg-card p-4 md:p-5" aria-labelledby="routinen">
+              <h2 id="routinen" className="text-lg font-semibold">
+                Routinen
+              </h2>
+              <p className="mb-2 text-sm text-muted-foreground">Wie gut jede Routine läuft. Tipp zeigt sie einzeln.</p>
+              <ul className="divide-y">
+                {routineStats.map(({ routine: r, kpis: k, streak }) => {
+                  const Icon = ROUTINE_ICONS[r.daytime];
+                  const rate = k.rate;
+                  return (
+                    <li key={r.id}>
+                      <button type="button" onClick={() => setRoutineId(r.id)} className="flex min-h-14 w-full items-center gap-3 rounded-xl py-2 text-left transition hover:bg-muted/50">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-xl" style={{ background: `color-mix(in srgb, ${drinkColor(r.color)} 15%, var(--card))`, color: drinkColor(r.color) }} aria-hidden>
+                          <Icon className="size-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{r.name}</span>
+                          <span className="block truncate text-xs text-muted-foreground tabular-nums">
+                            {k.perfect}/{k.days} Tage komplett{streak.current > 0 ? ` · Serie ${streakLabel(streak.current, "Tag")}` : ""}
+                          </span>
+                        </span>
+                        <span className="hidden h-2.5 w-24 overflow-hidden rounded-full bg-muted sm:block" aria-hidden>
+                          <span className={cn("block h-full rounded-full", rate != null && rate >= 0.8 ? "bg-sage" : "bg-sport")} style={{ width: `${(rate ?? 0) * 100}%` }} />
+                        </span>
+                        <span className={cn("w-14 text-right font-semibold tabular-nums", rate != null && rate >= 0.8 && "text-sage")}>{rate != null ? percent(rate) : "–"}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ) : null}
+
           <ChartCard
             title="Wochentage"
-            description="Erledigte tägliche Habits je Wochentag in den letzten 12 Wochen. Wo hakt es?"
+            description={routine ? `Erledigte Punkte von ${routine.name} je Wochentag in den letzten 12 Wochen. Wo hakt es?` : "Erledigte tägliche Habits je Wochentag in den letzten 12 Wochen. Wo hakt es?"}
             table={<DataTable head={["Tag", "Erledigt", "Anteil"]} rows={weekdays.map((w) => [WEEKDAYS[w.weekday - 1].long, `${w.done}/${w.due}`, w.rate != null ? percent(w.rate) : "–"])} />}
           >
             {weekdays.every((w) => w.rate == null) ? (
@@ -433,7 +562,7 @@ export function HabitStats({
         </>
       )}
 
-      {editing ? <HabitSheet key={editing.id} habit={editing} habits={habits} onClose={() => setEditing(null)} /> : null}
+      {editing ? <HabitSheet key={editing.id} habit={editing} habits={habits} routines={routines} onClose={() => setEditing(null)} /> : null}
     </div>
   );
 }
@@ -457,14 +586,17 @@ const CELL_LABELS: Record<CellState, string> = {
   future: "noch nicht",
 };
 
-function cellStyle(state: CellState, color: string): React.CSSProperties {
+/** Farbe eines Kästchens; teilweise erledigt füllt es sich von unten anteilig (1 von 2 = halb). */
+function cellStyle(state: CellState, color: string, share = 0.5): React.CSSProperties {
   const c = drinkColor(color);
   switch (state) {
     case "done":
     case "checked":
       return { background: c };
-    case "partial":
-      return { background: `color-mix(in srgb, ${c} 45%, var(--card))` };
+    case "partial": {
+      const pct = Math.round(Math.min(Math.max(share, 0.15), 0.85) * 100);
+      return { background: `linear-gradient(to top, ${c} ${pct}%, color-mix(in srgb, ${c} 18%, var(--card)) ${pct}%)` };
+    }
     case "missed":
       return { background: "var(--muted)" };
     case "none":
@@ -491,7 +623,7 @@ function Legend() {
     <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground" aria-hidden>
       {items.map((i) => (
         <li key={i.state} className="flex items-center gap-1.5">
-          <span className="size-3.5 rounded" style={cellStyle(i.state, "blau")} />
+          <span className="size-3.5 rounded" style={cellStyle(i.state, "blau", 0.5)} />
           {i.label}
         </li>
       ))}

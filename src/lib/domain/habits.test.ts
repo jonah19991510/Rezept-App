@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   checkIndex,
+  completeDayStreak,
   dayRates,
   daySummary,
   daytimeOfTime,
@@ -13,14 +14,22 @@ import {
   periodKpis,
   periodProgress,
   reorderWithin,
+  routineCheckIndex,
   routineProgress,
+  routinesDone,
+  routineView,
   scheduleLabel,
   scheduleSummary,
+  setRoutineItem,
+  slotLabel,
+  sortRoutines,
   sortSchedule,
+  targetForRoutines,
   todayGroups,
   weekdayRates,
   type Habit,
   type HabitCheck,
+  type HabitRoutine,
   type ScheduleEntry,
 } from "./habits";
 
@@ -38,7 +47,7 @@ const habit = (patch: Partial<Habit> = {}): Habit => ({
   notes: null,
   color: "blau",
   position: 0,
-  routine: null,
+  routineIds: [],
   startDate: "2026-10-01",
   pausedOn: null,
   ...patch,
@@ -56,6 +65,7 @@ describe("Beschriftungen", () => {
     expect(frequencyLabel(habit({ frequency: "weekly" }))).toBe("Wöchentlich");
     expect(frequencyLabel(habit({ frequency: "monthly", target: 2 }))).toBe("2× pro Monat");
     expect(scheduleLabel(habit({ daytime: "morgens", atTime: "07:30" }))).toBe("Täglich · Morgens · 07:30");
+    expect(scheduleLabel(habit({ target: 2 }), ["Morgenroutine", "Abendroutine"])).toBe("2× täglich · Morgenroutine, Abendroutine");
   });
 
   it("ordnet Uhrzeiten einer Tageszeit zu", () => {
@@ -101,7 +111,7 @@ describe("fällig und Fortschritt", () => {
       habit({ id: "e", weekdays: [2], position: 4 }), // dienstags, heute nicht dran
       habit({ id: "f", frequency: "monthly", position: 5 }),
     ];
-    const groups = todayGroups(list, "2026-11-02");
+    const groups = todayGroups(list, [], "2026-11-02");
     expect(groups.map((g) => [g.key, g.habits.map((h) => h.id)])).toEqual([
       ["jederzeit", ["c"]],
       ["morgens", ["b"]],
@@ -115,33 +125,103 @@ describe("fällig und Fortschritt", () => {
 });
 
 describe("Routinen", () => {
-  it("stellt Morgen- und Abendroutine als eigene Gruppen an ihren Platz", () => {
+  const routine = (patch: Partial<HabitRoutine>): HabitRoutine => ({ id: "r", name: "Routine", daytime: "morgens", color: "orange", position: 0, habitIds: [], ...patch });
+  const morgen = routine({ id: "m", name: "Morgenroutine", habitIds: ["dehnen", "wasser", "zaehne", "laufen"] });
+  const abend = routine({ id: "a", name: "Abendroutine", daytime: "abends", color: "lila", position: 1, habitIds: ["zaehne", "lesen"] });
+  const mittag = routine({ id: "x", name: "Mittag", daytime: "mittags", habitIds: ["wasser"] });
+
+  it("stellt Routinen an ihre Tageszeit: morgens ganz oben, abends nach den Habits von abends", () => {
     const list = [
-      habit({ id: "wasser", routine: "morgen", daytime: "morgens", position: 2 }),
-      habit({ id: "dehnen", routine: "morgen", daytime: "morgens", position: 0 }),
+      habit({ id: "wasser", routineIds: ["m", "x"], position: 2 }),
+      habit({ id: "dehnen", routineIds: ["m"], position: 0 }),
       habit({ id: "kreatin", daytime: "morgens", position: 1 }),
-      habit({ id: "lesen", routine: "abend", daytime: "abends", position: 3 }),
-      habit({ id: "zaehne", daytime: "abends", position: 4 }),
+      habit({ id: "zaehne", routineIds: ["m", "a"], target: 2, position: 7 }),
+      habit({ id: "lesen", routineIds: ["a"], position: 3 }),
+      habit({ id: "creme", daytime: "abends", position: 4 }),
       habit({ id: "spaet", daytime: "nachts", position: 5 }),
-      habit({ id: "laufen", routine: "morgen", weekdays: [2], position: 6 }), // dienstags, heute nicht dran
+      habit({ id: "laufen", routineIds: ["m"], weekdays: [2], position: 6 }), // dienstags, heute nicht dran
     ];
-    const groups = todayGroups(list, "2026-11-02");
-    expect(groups.map((g) => [g.key, g.routine ?? null, g.habits.map((h) => h.id)])).toEqual([
-      ["routine-morgen", "morgen", ["dehnen", "wasser"]],
-      ["morgens", null, ["kreatin"]],
-      ["abends", null, ["zaehne"]],
-      ["routine-abend", "abend", ["lesen"]],
-      ["nachts", null, ["spaet"]],
+    const groups = todayGroups(list, [abend, mittag, morgen], "2026-11-02");
+    expect(groups.map((g) => [g.key, g.habits.map((h) => h.id)])).toEqual([
+      ["routine-m", ["dehnen", "wasser", "zaehne"]],
+      ["morgens", ["kreatin"]],
+      ["routine-x", ["wasser"]],
+      ["abends", ["creme"]],
+      ["routine-a", ["zaehne", "lesen"]],
+      ["nachts", ["spaet"]],
+    ]);
+    // Ein Habit in zwei Routinen zählt im Tagesfortschritt einmal
+    expect(daySummary(list, checkIndex(checks("zaehne", ["2026-11-02"])), "2026-11-02")).toEqual({ done: 0, due: 7 });
+    expect(sortRoutines([abend, mittag, morgen]).map((r) => r.id)).toEqual(["m", "x", "a"]);
+  });
+
+  it("zeigt eine neue, leere Routine sofort an ihrem Platz, eine heute nicht fällige nicht", () => {
+    const neu = routine({ id: "n", name: "Nach dem Training", daytime: "nachmittags" });
+    const nurDienstags = routine({ id: "d", name: "Dienstag", daytime: "abends", habitIds: ["laufen"] });
+    const list = [habit({ id: "laufen", routineIds: ["d"], weekdays: [2] }), habit({ id: "lesen", daytime: "nachmittags" })];
+    const groups = todayGroups(list, [neu, nurDienstags], "2026-11-02");
+    expect(groups.map((g) => [g.key, g.habits.length])).toEqual([
+      ["routine-n", 0],
+      ["nachmittags", 1],
     ]);
   });
 
-  it("zählt erledigte Punkte (mit Ziel des Tages)", () => {
-    const items = [habit({ id: "a" }), habit({ id: "b", target: 2 }), habit({ id: "c" })];
+  it("hakt je Routine ab: ausdrücklich Abgehaktes zählt dort, die übrige Zahl füllt der Reihe nach", () => {
+    const zaehne = habit({ id: "zaehne", routineIds: ["m", "a"], target: 2 });
+    // abends abgehakt, morgens nicht
+    let index = checkIndex(checks("zaehne", ["2026-11-02"]));
+    let routineIndex = routineCheckIndex([{ routineId: "a", habitId: "zaehne", date: "2026-11-02" }]);
+    expect([...routinesDone(zaehne, index, routineIndex, "2026-11-02")]).toEqual(["a"]);
+    // ohne Angabe der Routine (z. B. in der Statistik abgehakt): zuerst morgens
+    expect([...routinesDone(zaehne, index, routineCheckIndex([]), "2026-11-02")]).toEqual(["m"]);
+
+    // morgens dazu: 2 von 2
+    const on = setRoutineItem(zaehne, "m", true, index, routineIndex, "2026-11-02");
+    expect(on).toEqual({ habitId: "zaehne", date: "2026-11-02", count: 2, routineIds: ["m", "a"] });
+    index = checkIndex([{ habitId: "zaehne", date: "2026-11-02", count: 2 }]);
+    routineIndex = routineCheckIndex(on!.routineIds.map((routineId) => ({ routineId, habitId: "zaehne", date: "2026-11-02" })));
+    // abends wieder weg: 1 von 2, morgens bleibt
+    expect(setRoutineItem(zaehne, "a", false, index, routineIndex, "2026-11-02")).toEqual({ habitId: "zaehne", date: "2026-11-02", count: 1, routineIds: ["m"] });
+    // schon so: keine Änderung
+    expect(setRoutineItem(zaehne, "a", true, index, routineIndex, "2026-11-02")).toBeNull();
+  });
+
+  it("zählt erledigte Punkte einer Routine", () => {
+    const items = [habit({ id: "a", routineIds: ["m"] }), habit({ id: "b", routineIds: ["m", "a"], target: 2 }), habit({ id: "c", routineIds: ["m"] })];
     const index = checkIndex([...checks("a", ["2026-11-02"]), ...checks("b", ["2026-11-02"])]);
-    expect(routineProgress(items, index, "2026-11-02")).toEqual({ done: 1, total: 3, complete: false });
-    const all = checkIndex([...checks("a", ["2026-11-02"]), ...checks("b", ["2026-11-02"], 2), ...checks("c", ["2026-11-02"])]);
-    expect(routineProgress(items, all, "2026-11-02").complete).toBe(true);
-    expect(routineProgress([], all, "2026-11-02").complete).toBe(false);
+    const routineIndex = routineCheckIndex([{ routineId: "a", habitId: "b", date: "2026-11-02" }]);
+    expect(routineProgress("m", items, index, routineIndex, "2026-11-02")).toEqual({ done: 1, total: 3, complete: false });
+    expect(routineProgress("m", [], index, routineIndex, "2026-11-02").complete).toBe(false);
+  });
+
+  it("rechnet eine Routine als eigene Statistik", () => {
+    const list = [habit({ id: "zaehne", routineIds: ["m", "a"], target: 2 }), habit({ id: "lesen", routineIds: ["a"] })];
+    // Mo: abends beides; Di: nur Zähneputzen morgens (ohne Routine abgehakt = morgens); Mi heute: nichts
+    const index = checkIndex([...checks("zaehne", ["2026-11-02", "2026-11-03"]), ...checks("lesen", ["2026-11-02"])]);
+    const routineIndex = routineCheckIndex([{ routineId: "a", habitId: "zaehne", date: "2026-11-02" }]);
+    const view = routineView(abend, list, index, routineIndex, "2026-11-01", "2026-11-04");
+    expect(view.habits.map((h) => [h.id, h.target])).toEqual([
+      ["zaehne", 1],
+      ["lesen", 1],
+    ]);
+    const rates = dayRates(view.habits, view.index, "2026-11-02", "2026-11-04", "2026-11-04");
+    expect(rates.map((r) => [r.done, r.due])).toEqual([
+      [2, 2],
+      [0, 2],
+      [0, 2],
+    ]);
+    expect(completeDayStreak(view.habits, view.index, "2026-11-04", "2026-11-01")).toEqual({ current: 0, best: 1 });
+    // In der Gesamtstatistik ist Zähneputzen am Montag 1 von 2 (halb)
+    const s = habitPeriodStats(list[0], index, "2026-11-02", "2026-11-02", "2026-11-04");
+    expect(s.cells[0]).toMatchObject({ state: "partial", count: 1 });
+  });
+
+  it("passt das Tagesziel an die Zahl der Routinen an", () => {
+    expect(targetForRoutines(1, 1, 2)).toBe(2);
+    expect(targetForRoutines(2, 2, 1)).toBe(1);
+    expect(targetForRoutines(1, 0, 1)).toBe(1);
+    expect(targetForRoutines(3, 1, 2)).toBe(3); // eigenes höheres Ziel bleibt
+    expect(targetForRoutines(3, 2, 0)).toBe(3);
   });
 
   it("verschiebt nur innerhalb der Teilliste, der Rest bleibt an seinem Platz", () => {
@@ -271,10 +351,11 @@ describe("Trainings-Wochenplan", () => {
     category: "kraft",
     durationMin: null,
     notes: null,
+    position: 0,
     ...patch,
   });
 
-  it("sortiert nach Tag und Uhrzeit bzw. Tageszeit", () => {
+  it("sortiert nach Tag, eigener Reihenfolge, dann Uhrzeit bzw. Tageszeit", () => {
     const list = [
       entry({ id: "a", weekday: 2 }),
       entry({ id: "b", daytime: "abends", title: "Dehnen" }),
@@ -282,6 +363,16 @@ describe("Trainings-Wochenplan", () => {
       entry({ id: "d", atTime: "19:00", daytime: "abends" }),
     ];
     expect(sortSchedule(list).map((e) => e.id)).toEqual(["c", "b", "d", "a"]);
+    // per Drag & Drop umsortiert: Abends zuerst
+    const moved = [entry({ id: "c", atTime: "06:30", position: 1 }), entry({ id: "b", daytime: "abends", position: 0 })];
+    expect(sortSchedule(moved).map((e) => e.id)).toEqual(["b", "c"]);
+  });
+
+  it("zeigt Tageszeit und Uhrzeit nur, wenn gesetzt", () => {
+    expect(slotLabel({ daytime: "morgens", atTime: "07:00" })).toBe("Morgens · 07:00");
+    expect(slotLabel({ daytime: "abends", atTime: null })).toBe("Abends");
+    expect(slotLabel({ daytime: null, atTime: "18:30" })).toBe("18:30");
+    expect(slotLabel({ daytime: null, atTime: null })).toBe("");
   });
 
   it("fasst die Woche zusammen", () => {

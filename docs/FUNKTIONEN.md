@@ -1,6 +1,6 @@
 # Topform – Funktionsübersicht
 
-Stand: 10.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Intervall im Verlauf, Trainingstage antippbar, Übungsliste in der Statistik).
+Stand: 10.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: eigene Routinen, ein Habit in mehreren Routinen, Statistik je Routine, Wochenplan sortierbar).
 Live: <https://unser-rezeptbuch.vercel.app> · Next.js 16 · Supabase (Frankfurt) · Vercel (`fra1`)
 
 Die App hat **drei Bereiche** (Umschalter oben links): **Start**, **Essen & Trinken**, **Sport & Gesundheit**.
@@ -67,7 +67,7 @@ Topform
   - ✔ **Heute** – Ringe für kcal und Protein (laut Wochenplan vs. Tagesziel) und Trinken
   - ✔ **Als Nächstes** – nächste Mahlzeit und laufendes/nächstes Training
   - ✔ **Essen & Trinken** – Bereichskarte („noch X kcal“), Schnellzugriffe, offene Einkäufe als Zahl
-  - ✔ **Sport & Gesundheit** – Bereichskarte, Schnellzugriffe Training, Körper, Energie, Habits
+  - ✔ **Sport & Gesundheit** – Bereichskarte, Schnellzugriffe Training, Körper, Getränke, Habits
   - ✔ **Habits heute** (direkt abhaken) · ✔ **Habits diese Woche** · ✔ **Challenges** (heute abhaken) · ✔ **Training geplant**
   - ○ Heute geplant · ○ Einkaufsliste · ○ Was kann ich kochen? · ○ Training diese Woche · ○ Läuft bald ab · ○ Lange nicht gekocht
 
@@ -197,11 +197,12 @@ Topform
 
 ### 3.6 Habits (`/sport/habits`, Tabs Heute · Wochenplan · Statistik · Habits)
 - Gewohnheiten **und Supplemente**, täglich/wöchentlich/monatlich, Ziel je Zeitraum, Wochentage, Tageszeit/Uhrzeit, Dosis, Notizen, Farbe, Pausieren
-- **Morgen- und Abendroutine:** tägliche Habits als Punkte einer Routine (im Habit-Sheet wählbar, eigene Vorschläge), Reihenfolge per Drag & Drop, Punkte einzeln oder alle auf einmal abhaken; zählen in Statistik und Serien wie alle Habits
-- **Heute:** Fortschritt, „Training heute“, Routinen-Karten (Morgenroutine oben, Abendroutine vor „Nachts“), Gruppen nach Tageszeit, abhaken/hochzählen, nachtragen, aktive Challenges abhaken
-- **Wochenplan:** Trainings-Wochenplan mit Tageszeit/Uhrzeit, Art (Kraft, Ausdauer, Mobility, Sport, Erholung), Dauer
-- **Statistik:** Woche/Monat, Quote, Serien, perfekte Tage, Kästchen-Übersicht je Habit, Wochentage der letzten 12 Wochen
-- **Habits:** Listen Morgenroutine · Abendroutine · Weitere Habits, je mit Drag & Drop, pausierte unten
+- **Routinen:** Morgen- und Abendroutine plus **eigene Routinen** (Name mit Vorschlägen, Platz unter „Heute“ als Tageszeit, Farbe, Punkte in Reihenfolge, löschen lässt die Habits stehen); Punkte per Drag & Drop sortieren, einzeln oder alle auf einmal abhaken
+- **Ein Habit in mehreren Routinen** (z. B. Zähneputzen morgens und abends): nur einmal vorhanden, je Routine ein Häkchen, Tagesziel = Zahl der Routinen (oder höher); beim neuen Punkt „Vorhandenes übernehmen“ statt doppelt anlegen
+- **Heute:** Fortschritt, „Training heute“, Routinen-Karten an ihrer Tageszeit (morgens ganz oben, abends nach den Habits von abends), Gruppen nach Tageszeit, abhaken/hochzählen, nachtragen, aktive Challenges abhaken; neue (noch leere) Routinen stehen sofort als Karte an ihrem Platz, „Routine anlegen“ unten
+- **Wochenplan:** Trainings-Wochenplan mit Tageszeit (optional) und Uhrzeit (optional), Art (Kraft, Ausdauer, Mobility, Sport, Erholung), Dauer; **Einheiten eines Tages per Drag & Drop sortieren**
+- **Statistik:** Woche/Monat, Quote, Serien, perfekte Tage, Kästchen-Übersicht je Habit (teilweise erledigt = anteilig gefüllt, z. B. 1 von 2 halb), Wochentage der letzten 12 Wochen; Filter Gewohnheiten · Supplemente · **je Routine** (Quote, komplette Tage, Serie „komplett“, Kästchen der Punkte, Abhaken in dieser Routine); Übersicht **Routinen** mit Quote und Serie; ein Supplement in einer Routine zählt in beiden Ansichten
+- **Habits:** je Routine eine Liste (Stift bearbeitet die Routine, „Punkt hinzufügen“) · Weitere Habits, je mit Drag & Drop, „Routine anlegen“, pausierte unten
 
 ### 3.7 Statistik Gym (`/sport/statistik`)
 - Zeitraum KW (blätterbar) · 4 Wochen · 3 Monate · 1 Jahr · Alles
@@ -273,7 +274,7 @@ Aus `PROGRESS.md` („Offene Punkte“):
 - Kochmodus: Timer überleben kein Neuladen, klingeln im Ruhezustand erst beim Aufwecken
 - Datenexport: Fotos nur als Liste (kein ZIP)
 - Feed zeigt nur die letzten 50 Posts (kein Nachladen)
-- Habit-Routinen: keine eigene Statistik je Routine (Quote/Serie „Routine komplett“), keine Startzeit je Routine
+- Habit-Routinen: keine Startzeit je Routine; Reihenfolge mehrerer Routinen derselben Tageszeit nicht sortierbar (Anlegereihenfolge); Habits mit höherem Tagesziel als Routinen: die übrigen Male nur in der Statistik abhakbar
 - Offen beim Nutzer: Einladungs-Mail sagt noch „Rezeptbuch“; erster Challenge-Rundenwechsel am 01.12.2026 ansehen
 
 Bei der Analyse aufgefallen:

@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { deleteScheduleAction, saveScheduleAction } from "@/app/(app)/sport/habits/actions";
+import { deleteScheduleAction, reorderScheduleAction, saveScheduleAction } from "@/app/(app)/sport/habits/actions";
 import { TagLabel } from "@/components/layout/list-blocks";
 import { chipClass } from "@/components/recipes/chip-select";
 import { EditorSheet, FieldHeading } from "@/components/recipes/editor/editor-parts";
+import { announcements, screenReaderInstructions, SortableRow, useEditorSensors, verticalOnly } from "@/components/recipes/editor/sortable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,12 +37,38 @@ type Editing = { entry: ScheduleEntry | null; weekday: number };
 
 /**
  * Tab „Wochenplan“: wiederkehrende Trainingswoche (z. B. morgens Gym, abends Dehnen/Mobility). Am Handy ein Tag unter
- * dem anderen, am Desktop sieben Spalten. Antippen bearbeitet, „+“ legt für den Tag an (auch für mehrere Tage).
+ * dem anderen, am Desktop sieben Spalten. Antippen bearbeitet, „+“ legt für den Tag an (auch für mehrere Tage), am
+ * Griff ziehen ändert die Reihenfolge innerhalb des Tages (gespeichert beim Ablegen).
  */
 export function WeekSchedule({ entries, todayWeekday }: { entries: ScheduleEntry[]; todayWeekday: number }) {
   const [editing, setEditing] = useState<Editing | null>(null);
-  const sorted = sortSchedule(entries);
+  // Reihenfolge lokal (sofort sichtbar); neue Daten vom Server übernehmen
+  const [local, setLocal] = useState(entries);
+  const [source, setSource] = useState(entries);
+  if (entries !== source) {
+    setSource(entries);
+    setLocal(entries);
+  }
+  const sensors = useEditorSensors();
+  const [, startTransition] = useTransition();
+  const sorted = sortSchedule(local);
   const summary = scheduleSummary(entries);
+
+  /** Verschieben innerhalb eines Tages: Positionen 0, 1, 2 … in neuer Reihenfolge. */
+  const onDragEnd = (day: ScheduleEntry[]) => ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const ids = day.map((e) => e.id);
+    const next = arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id)));
+    const before = local;
+    setLocal(local.map((e) => (next.includes(e.id) ? { ...e, position: next.indexOf(e.id) } : e)));
+    startTransition(async () => {
+      const result = await reorderScheduleAction(next);
+      if (!result.ok) {
+        setLocal(before);
+        toast.error(result.message);
+      }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -90,32 +119,49 @@ export function WeekSchedule({ entries, todayWeekday }: { entries: ScheduleEntry
               {day.length === 0 ? (
                 <p className="hidden px-1 pb-1 text-sm text-muted-foreground xl:block">Ruhetag</p>
               ) : (
-                <ul className="space-y-1.5">
-                  {day.map((e) => {
-                    const c = categoryOf(e.category);
-                    return (
-                      <li key={e.id}>
-                        <button
-                          type="button"
-                          onClick={() => setEditing({ entry: e, weekday: e.weekday })}
-                          className="flex min-h-12 w-full items-stretch gap-3 rounded-2xl px-2 py-2 text-left transition hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-                          style={{ background: `color-mix(in srgb, ${c.color} 10%, transparent)` }}
-                        >
-                          <span className="w-1 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-xs font-medium text-muted-foreground tabular-nums">{slotLabel(e)}</span>
-                            <span className="block font-medium break-words hyphens-auto">{e.title}</span>
-                            <span className="block text-xs text-muted-foreground">
-                              {c.label}
-                              {e.durationMin ? ` · ${formatDuration(e.durationMin)}` : ""}
-                            </span>
-                            {e.notes ? <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{e.notes}</span> : null}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <DndContext
+                  id={`schedule-dnd-${w.n}`}
+                  collisionDetection={closestCenter}
+                  sensors={sensors}
+                  modifiers={[verticalOnly]}
+                  onDragEnd={onDragEnd(day)}
+                  accessibility={{ announcements: announcements((id) => day.find((e) => e.id === id)?.title ?? "Einheit"), screenReaderInstructions }}
+                >
+                  <SortableContext items={day.map((e) => e.id)} strategy={verticalListSortingStrategy}>
+                    <ul className="space-y-1.5">
+                      {day.map((e) => {
+                        const c = categoryOf(e.category);
+                        const slot = slotLabel(e);
+                        return (
+                          <SortableRow
+                            key={e.id}
+                            id={e.id}
+                            handleLabel={`${e.title} verschieben`}
+                            className="rounded-2xl [&>button:first-child]:w-8 xl:[&>button:first-child]:w-6"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setEditing({ entry: e, weekday: e.weekday })}
+                              className="flex min-h-12 min-w-0 flex-1 items-stretch gap-3 rounded-2xl px-2 py-2 text-left transition hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                              style={{ background: `color-mix(in srgb, ${c.color} 10%, transparent)` }}
+                            >
+                              <span className="w-1 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
+                              <span className="min-w-0 flex-1">
+                                {slot ? <span className="block text-xs font-medium text-muted-foreground tabular-nums">{slot}</span> : null}
+                                <span className="block font-medium break-words hyphens-auto">{e.title}</span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {c.label}
+                                  {e.durationMin ? ` · ${formatDuration(e.durationMin)}` : ""}
+                                </span>
+                                {e.notes ? <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">{e.notes}</span> : null}
+                              </span>
+                            </button>
+                          </SortableRow>
+                        );
+                      })}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
               )}
             </section>
           );
@@ -127,7 +173,7 @@ export function WeekSchedule({ entries, todayWeekday }: { entries: ScheduleEntry
   );
 }
 
-type Form = { title: string; category: ScheduleCategory; weekdays: number[]; daytime: Daytime; atTime: string; duration: string; notes: string };
+type Form = { title: string; category: ScheduleCategory; weekdays: number[]; daytime: Daytime | null; atTime: string; duration: string; notes: string };
 
 /** Einheit anlegen (für einen oder mehrere Tage) oder bearbeiten. */
 function ScheduleSheet({ entry, weekday, onClose }: { entry: ScheduleEntry | null; weekday: number; onClose: () => void }) {
@@ -143,7 +189,7 @@ function ScheduleSheet({ entry, weekday, onClose }: { entry: ScheduleEntry | nul
           duration: entry.durationMin ? String(entry.durationMin) : "",
           notes: entry.notes ?? "",
         }
-      : { title: "", category: "kraft", weekdays: [weekday], daytime: "morgens", atTime: "", duration: "", notes: "" },
+      : { title: "", category: "kraft", weekdays: [weekday], daytime: null, atTime: "", duration: "", notes: "" },
   );
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -202,7 +248,7 @@ function ScheduleSheet({ entry, weekday, onClose }: { entry: ScheduleEntry | nul
       open={open}
       onOpenChange={(o) => (o ? setOpen(true) : close())}
       title={entry ? entry.title : "Training einplanen"}
-      description={entry ? `${WEEKDAYS[entry.weekday - 1].long} · ${slotLabel(entry)}` : "Gilt jede Woche."}
+      description={entry ? [WEEKDAYS[entry.weekday - 1].long, slotLabel(entry)].filter(Boolean).join(" · ") : "Gilt jede Woche."}
       footer={
         <>
           {entry ? (
@@ -287,14 +333,22 @@ function ScheduleSheet({ entry, weekday, onClose }: { entry: ScheduleEntry | nul
       </section>
 
       <section>
-        <FieldHeading>Tageszeit</FieldHeading>
+        <FieldHeading aside="optional">Tageszeit</FieldHeading>
         <div className="flex flex-wrap gap-2">
+          <button type="button" aria-pressed={form.daytime == null} onClick={() => patch({ daytime: null, atTime: "" })} className={chipClass(form.daytime == null)}>
+            Keine
+          </button>
           {DAYTIMES.map((d) => (
             <button
               key={d.key}
               type="button"
               aria-pressed={form.daytime === d.key}
-              onClick={() => patch({ daytime: d.key, atTime: form.atTime && daytimeOfTime(form.atTime) !== d.key ? "" : form.atTime })}
+              // erneut antippen nimmt die Tageszeit weg; andere Tageszeit als die Uhrzeit verwirft die Uhrzeit
+              onClick={() =>
+                form.daytime === d.key
+                  ? patch({ daytime: null, atTime: "" })
+                  : patch({ daytime: d.key, atTime: form.atTime && daytimeOfTime(form.atTime) !== d.key ? "" : form.atTime })
+              }
               className={chipClass(form.daytime === d.key)}
             >
               {d.label}
