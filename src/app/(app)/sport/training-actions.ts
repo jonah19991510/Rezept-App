@@ -3,10 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentUser, requireUser } from "@/lib/auth";
+import { isTimed } from "@/lib/domain/exercises";
+import { buildPhases, completedWork, INTERVAL_LIMITS, intervalNote, isIntervalWorkout, totalSeconds, type CompletedWork } from "@/lib/domain/interval-timer";
 import {
   berlinToIso,
   differsFromPlan,
   emptySet,
+  mmss,
   nextPlanDay,
   planDayFromWorkout,
   toSyncPayload,
@@ -148,6 +151,8 @@ export async function applyWorkoutToPlanAction(workoutId: string): Promise<{ ok:
   if (!idSchema.safeParse(workoutId).success) return { ok: false, message: "Ungültiges Training." };
   const session = await getWorkoutSession(workoutId, user.id);
   if (!session?.planId || !session.planDayId) return { ok: false, message: "Das Training gehört zu keinem Plan." };
+  // Runden sind keine Satzzahl: Intervall-Trainings ändern den Plan nicht
+  if (isIntervalWorkout(session)) return { ok: false, message: "Intervall-Trainings ändern den Plan nicht." };
   const plan = await getTrainingPlan(session.planId, user.id);
   const dayIndex = plan?.days.findIndex((d) => d.id === session.planDayId) ?? -1;
   if (!plan || !plan.isOwn || dayIndex < 0) return { ok: false, message: "Den Plan oder Tag gibt es nicht mehr." };
@@ -237,4 +242,136 @@ export async function createPastWorkoutAction(input: z.input<typeof pastWorkoutS
   if (error) return { ok: false, message: "Das Training konnte nicht angelegt werden." };
   revalidateSport(session.id);
   return { ok: true, id: session.id };
+}
+
+// ---------------------------------------------------------------------------
+// Intervall-Training (Timer zum Plan): als beendetes Training mit einem Satz je erledigter Belastung speichern
+// ---------------------------------------------------------------------------
+
+const limit = (key: keyof typeof INTERVAL_LIMITS) => z.number().int().min(INTERVAL_LIMITS[key].min).max(INTERVAL_LIMITS[key].max);
+const intervalSettingsSchema = z.object({ work: limit("work"), rest: limit("rest"), rounds: limit("rounds") });
+
+type IntervalInput = {
+  userId: string;
+  id: string;
+  planId: string | null;
+  dayId: string | null;
+  settings: z.infer<typeof intervalSettingsSchema>;
+  startedAt: string;
+  endedAt: string;
+  /** null = alle Belastungen des Ablaufs (Nachtragen) */
+  completed: CompletedWork[] | null;
+};
+
+/** Training aus einem Intervall-Ablauf bauen und speichern; Übungen ohne erledigte Belastung fallen weg. */
+async function saveIntervalWorkout(input: IntervalInput): Promise<StartWorkoutResult> {
+  const plan = input.planId ? await getTrainingPlan(input.planId, input.userId) : null;
+  if (input.planId && !plan) return { ok: false, message: "Den Plan gibt es nicht mehr." };
+  const day = plan && input.dayId ? plan.days.find((d) => d.id === input.dayId) : null;
+  if (input.dayId && !day) return { ok: false, message: "Den Trainingstag gibt es nicht mehr." };
+  const exercises = day?.exercises ?? [];
+
+  const phases = buildPhases(
+    { ...input.settings, prepare: 0 },
+    exercises.map((e) => ({ name: e.exercise.name, seconds: isTimed(e.exercise.tracking) ? e.targetSeconds : null })),
+  );
+  const all = completedWork(phases, totalSeconds(phases) * 1000);
+  const done = (input.completed ?? all).slice(0, all.length);
+  if (done.length === 0) return { ok: false, message: "Es ist noch keine Belastung erledigt." };
+
+  const perExercise = exercises.map((_, i) => done.filter((w) => w.exercise === i));
+  const roundsDone = exercises.length ? Math.max(...perExercise.map((sets) => sets.length)) : done.length;
+  const session: Session = {
+    id: input.id,
+    planId: plan?.id ?? null,
+    planDayId: day?.id ?? null,
+    title: [plan?.title ?? "Intervall-Training", day?.name, plan ? "Intervall" : null].filter(Boolean).join(" · ").slice(0, 160),
+    startedAt: input.startedAt,
+    endedAt: input.endedAt,
+    note: intervalNote(input.settings, Math.min(roundsDone, input.settings.rounds)),
+    version: 1,
+    exercises: exercises.flatMap((e, i) =>
+      perExercise[i].length
+        ? [
+            {
+              id: uuid(),
+              exercise: e.exercise,
+              repsMin: e.repsMin,
+              repsMax: e.repsMax,
+              targetSeconds: e.targetSeconds,
+              restSeconds: e.restSeconds,
+              warmup: false,
+              note: e.note ?? "",
+              sets: perExercise[i].map((w) => ({ ...emptySet(), seconds: mmss(w.seconds), done: true, doneAt: input.endedAt })),
+            },
+          ]
+        : [],
+    ),
+  };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("sync_workout", { p_workout: toSyncPayload(session) });
+  if (error) return { ok: false, message: "Das Intervall-Training konnte nicht gespeichert werden." };
+  revalidateSport(session.id);
+  return { ok: true, id: session.id };
+}
+
+const intervalRunSchema = z.object({
+  id: z.uuid(),
+  planId: z.uuid(),
+  dayId: z.uuid().nullable(),
+  settings: intervalSettingsSchema,
+  /** aktive Zeit am Timer (ohne Pausen) */
+  elapsedSeconds: z.number().int().min(1).max(12 * 3600),
+  completed: z
+    .array(z.object({ exercise: z.number().int().min(0).max(59).nullable(), seconds: z.number().int().min(1).max(36000) }))
+    .min(1)
+    .max(3000),
+});
+
+/**
+ * Intervall-Timer: „Beenden und speichern“ (am Ende oder vorzeitig). Beginn = jetzt minus aktive Zeit. Die ID kommt vom
+ * Handy, ein zweiter Versuch mit derselben ID legt also kein zweites Training an.
+ */
+export async function saveIntervalRunAction(input: z.input<typeof intervalRunSchema>): Promise<StartWorkoutResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, message: "Nicht angemeldet." };
+  const parsed = intervalRunSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Ungültige Intervall-Daten." };
+  const { elapsedSeconds, ...rest } = parsed.data;
+  const now = Date.now();
+  return saveIntervalWorkout({
+    userId: user.id,
+    ...rest,
+    startedAt: new Date(now - elapsedSeconds * 1000).toISOString(),
+    endedAt: new Date(now).toISOString(),
+  });
+}
+
+const pastIntervalSchema = z.object({
+  planId: z.uuid().nullable(),
+  dayId: z.uuid().nullable(),
+  settings: intervalSettingsSchema,
+  date: z.iso.date(),
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+});
+
+/** Intervall-Training nachtragen: alle Runden erledigt, die Dauer ergibt sich aus Belastung, Pause und Runden. */
+export async function createPastIntervalWorkoutAction(input: z.input<typeof pastIntervalSchema>): Promise<StartWorkoutResult> {
+  const user = await requireUser();
+  const parsed = pastIntervalSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Bitte prüfe Datum, Uhrzeit und Intervall." };
+  const { planId, dayId, settings, date, time } = parsed.data;
+  const startedAt = berlinToIso(date, time);
+  if (!startedAt) return { ok: false, message: "Bitte prüfe Datum und Uhrzeit." };
+  if (new Date(startedAt).getTime() > Date.now()) return { ok: false, message: "Nachtragen geht nur für vergangene Trainings." };
+
+  // Dauer wie im Timer (ohne Vorbereitung); feste Zeiten aus dem Plan zählen mit
+  const plan = planId ? await getTrainingPlan(planId, user.id) : null;
+  const day = plan && dayId ? plan.days.find((d) => d.id === dayId) : null;
+  const phases = buildPhases(
+    { ...settings, prepare: 0 },
+    (day?.exercises ?? []).map((e) => ({ name: e.exercise.name, seconds: isTimed(e.exercise.tracking) ? e.targetSeconds : null })),
+  );
+  const endedAt = new Date(new Date(startedAt).getTime() + totalSeconds(phases) * 1000).toISOString();
+  return saveIntervalWorkout({ userId: user.id, id: uuid(), planId, dayId: planId ? dayId : null, settings, startedAt, endedAt, completed: null });
 }

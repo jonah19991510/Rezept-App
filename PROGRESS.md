@@ -2120,6 +2120,30 @@ Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, 
 bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
 über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
 
+### Intervall im Verlauf, Trainingstage antippbar, alle Übungen in der Statistik (10.11.2026, Wunsch des Nutzers)
+
+**Vom Nutzer getestet** (am eigenen Gerät über den LAN-Server). Keine Migration nötig.
+
+- **Intervall-Timer speichert:** vorher schrieb er bewusst nichts in den Verlauf. Jetzt wie beim Krafttraining „Beenden“
+  oben → Dialog „Training beenden?“ (Dauer, Runden, Belastungen; „Weiter trainieren“ / „Beenden und speichern“, ohne
+  geschaffte Belastung „Verwerfen“); am Ende „Geschafft!“ mit derselben Zusammenfassung und „Beenden und speichern“.
+  `saveIntervalRunAction` legt ein beendetes Training an: ein Satz je geschaffter Belastung mit ihrer Zeit, Titel
+  „Plan · Tag · Intervall“, Notiz „Intervall: 3 Runden · 40 s Belastung · 20 s Pause“. Dauer = aktive Zeit am Timer
+  (Beginn = jetzt minus aktive Zeit). ID vom Handy, ein zweiter Versuch legt kein zweites Training an. Danach
+  `/sport/verlauf/[id]?fertig=1`. Intervall-Trainings (erkannt an der Notiz, `isIntervalWorkout`) bieten kein
+  „In den Plan übernehmen“ an (Runden ≠ Satzzahl).
+- **Intervall nachtragen:** im Dialog „Nachtragen“ Art „Training | Intervall“; beim Intervall Plan, Übungen (Tag oder
+  „Ohne Übungen“), Vorlagen, Belastung/Pause/Runden (vorbelegt mit den im Gerät gemerkten Timer-Einstellungen), Dauer
+  live berechnet (feste Zeiten aus dem Plan zählen mit, ohne Vorbereitung). `createPastIntervalWorkoutAction`.
+  `getTrainingPlans` liefert dafür je Tag `timedSeconds`.
+- **Anzeige:** Wiederholungs-Übungen mit nur einer Zeit zeigen die Zeit (`formatSet`); Verlauf ohne „0 Sätze“.
+- **Statistik:** Trainingstage-Kalender einheitlich gefärbt (ein Training nicht mehr heller), Tage antippbar → darunter
+  die Trainings des Tages mit Dauer, Sätzen, Volumen, Übungen und Link. „Übung im Verlauf“ mit Umschalter „Eine Übung |
+  Alle Übungen“: Liste mit Bestwert, letztem Training und kleinem Tendenz-Graphen (`exerciseTrend`: 1RM, sonst
+  schwerster Satz/Wdh./Zeit/Strecke; Ausgleichsgerade, ±3 % = steigt/fällt, Pfeil und Wort dazu), Filter Kraft ·
+  Dehnen · Reha mehrfach wählbar (Kraft = Kategorie „Training“, also mit Ausdauer). Tipp auf eine Übung → Einzelansicht.
+- 596 Tests (neu: `completedWork`, `intervalNote`, `isIntervalWorkout`, `exerciseTrend`), Typcheck, Lint grün.
+
 ### Morgen- und Abendroutine im Habit Tracker (09.11.2026, Wunsch des Nutzers)
 
 **Live** seit 09.11.2026: Push `04e7db2` → Deployment `dpl_DVKZ7Gd3yvX7Grr6ApTzFcyEwhp4` (`production`, „READY“;

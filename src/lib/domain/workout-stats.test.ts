@@ -6,6 +6,7 @@ import {
   overallHeartRate,
   exerciseProgress,
   exerciseRecords,
+  exerciseTrend,
   inRange,
   mondaysBetween,
   rangeEnd,
@@ -209,5 +210,35 @@ describe("Muskelgruppen, Serie, Kalender, Kennzahlen", () => {
     const list = [stretch("2026-10-05", 30), stretch("2026-10-12", 60)];
     expect(setsPerMuscle(list, 2)).toEqual([]);
     expect(recentRecords(list)).toEqual([]);
+  });
+});
+
+describe("exerciseTrend", () => {
+  it("liest Kraft am geschätzten 1RM ab (76 → 79 → 76 kg: gleich)", () => {
+    const trend = exerciseTrend(exerciseProgress(workouts, "bench"), "weight_reps");
+    expect(trend?.metric).toBe("1rm");
+    expect(trend?.values).toHaveLength(3);
+    expect(trend?.direction).toBe("flat");
+  });
+
+  it("braucht mindestens zwei Trainings", () => {
+    expect(exerciseTrend(exerciseProgress(workouts, "plank"), "time")).toBeNull();
+  });
+
+  it("steigt, fällt oder bleibt gleich", () => {
+    const timed = (seconds: number[]) =>
+      exerciseProgress(
+        seconds.map((s, i) => ({
+          id: `t${i}`,
+          title: "T",
+          date: `2026-10-0${i + 1}`,
+          durationSeconds: 600,
+          exercises: [{ exerciseId: "plank", name: "Plank", muscleGroup: "core" as const, secondaryMuscles: [], tracking: "time" as const, category: "training" as const, sets: [{ kind: "normal" as const, weightKg: null, reps: null, seconds: s, distanceM: null }] }],
+        })),
+        "plank",
+      );
+    expect(exerciseTrend(timed([60, 75, 90]), "time")?.direction).toBe("up");
+    expect(exerciseTrend(timed([90, 75, 60]), "time")?.direction).toBe("down");
+    expect(exerciseTrend(timed([60, 61, 60]), "time")?.direction).toBe("flat");
   });
 });

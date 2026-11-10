@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, Minus, Pause, Play, Plus, RotateCcw, SkipBack, SkipForward, Timer, Trophy, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronLeft, Loader2, Minus, Pause, Play, Plus, RotateCcw, SkipBack, SkipForward, Trophy } from "lucide-react";
+import { saveIntervalRunAction } from "@/app/(app)/sport/training-actions";
 import { useWakeLock } from "@/components/cooking/use-wake-lock";
 import { chipClass } from "@/components/recipes/chip-select";
 import { FieldHeading } from "@/components/recipes/editor/editor-parts";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   buildPhases,
   clockLabel,
+  completedWork,
   DEFAULT_INTERVAL,
   INTERVAL_LIMITS,
   INTERVAL_PRESETS,
@@ -21,6 +25,7 @@ import {
   type IntervalSettings,
 } from "@/lib/domain/interval-timer";
 import { durationLabel } from "@/lib/domain/training-plan";
+import { uuid, workoutDuration } from "@/lib/domain/workout";
 import { cn } from "@/lib/utils";
 import { unlockAudio, useIntervalTimer } from "./use-interval-timer";
 
@@ -37,13 +42,14 @@ const FIELDS: { key: keyof IntervalSettings; label: string; hint: string; step: 
 
 /**
  * Intervall-Timer zum Trainingsplan: Einstellungen (mit oder ohne die Übungen eines Trainingstags), dann der Ablauf im
- * Vollbild. Die letzten Einstellungen merkt sich das Gerät je Plan. Der Timer schreibt nichts in den Trainingsverlauf.
+ * Vollbild. Die letzten Einstellungen merkt sich das Gerät je Plan. „Beenden und speichern“ (am Ende oder vorher über
+ * „Beenden“) legt den Ablauf als Training im Verlauf an, ein Satz je geschaffter Belastung.
  */
 export function IntervalTimer({ planId, planTitle, days, nextDayId }: { planId: string; planTitle: string; days: IntervalDay[]; nextDayId: string | null }) {
   const selectable = useMemo(() => days.filter((d) => d.exercises.length > 0), [days]);
   const [settings, setSettings] = useState<IntervalSettings>(DEFAULT_INTERVAL);
   const [dayId, setDayId] = useState<string | null>(() => (selectable.some((d) => d.id === nextDayId) ? nextDayId : (selectable[0]?.id ?? null)));
-  const [run, setRun] = useState<{ id: number; phases: IntervalPhase[] } | null>(null);
+  const [run, setRun] = useState<RunInfo | null>(null);
   const audio = useRef<AudioContext | null>(null);
 
   const day = selectable.find((d) => d.id === dayId) ?? null;
@@ -71,10 +77,10 @@ export function IntervalTimer({ planId, planTitle, days, nextDayId }: { planId: 
     } catch {
       // Dann merkt sich das Gerät die Einstellungen eben nicht
     }
-    setRun((r) => ({ id: (r?.id ?? 0) + 1, phases }));
+    setRun({ id: uuid(), phases, planId, dayId: day?.id ?? null, settings });
   }
 
-  if (run) return <IntervalRun key={run.id} phases={run.phases} audio={audio} planId={planId} onExit={() => setRun(null)} onRestart={start} />;
+  if (run) return <IntervalRun key={run.id} run={run} audio={audio} onExit={() => setRun(null)} onRestart={start} />;
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-2xl space-y-8 bg-background px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(7rem+env(safe-area-inset-bottom))]">
@@ -210,16 +216,90 @@ const PHASE_TONE: Record<IntervalPhase["kind"], string> = {
 
 const PHASE_KICKER: Record<IntervalPhase["kind"], string> = { prepare: "Gleich geht’s los", work: "Belastung", rest: "Pause" };
 
+/** Ein gestarteter Ablauf; `id` wird beim Speichern die ID des Trainings (zweiter Versuch = dasselbe Training). */
+type RunInfo = { id: string; phases: IntervalPhase[]; planId: string; dayId: string | null; settings: IntervalSettings };
+
+/**
+ * „Beenden und speichern“ wie beim Krafttraining: speichert die geschafften Belastungen und öffnet das Training im
+ * Verlauf. Gezählt wird die aktive Zeit (ohne Pausen am Timer).
+ */
+function useFinishRun(run: RunInfo) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const finish = useCallback(
+    async (elapsedMs: number) => {
+      const completed = completedWork(run.phases, elapsedMs);
+      if (completed.length === 0 || saving) return;
+      setSaving(true);
+      setError(null);
+      try {
+        const result = await saveIntervalRunAction({
+          id: run.id,
+          planId: run.planId,
+          dayId: run.dayId,
+          settings: { work: run.settings.work, rest: run.settings.rest, rounds: run.settings.rounds },
+          elapsedSeconds: Math.max(1, Math.round(elapsedMs / 1000)),
+          completed,
+        });
+        if (result.ok) {
+          router.replace(`/sport/verlauf/${result.id}?fertig=1`);
+          return;
+        }
+        setError(result.message);
+      } catch {
+        setError("Keine Verbindung. Bitte versuch es noch einmal.");
+      }
+      setSaving(false);
+    },
+    [run, router, saving],
+  );
+  return { finish, saving, error };
+}
+
+/** Zusammenfassung wie im Beenden-Dialog des Krafttrainings: Dauer, Runden, Belastungen. */
+function RunSummary({ phases, elapsedMs }: { phases: IntervalPhase[]; elapsedMs: number }) {
+  const completed = completedWork(phases, elapsedMs);
+  const perRound = Math.max(1, phases.filter((p) => p.kind === "work" && p.round === 1).length);
+  const roundsDone = Math.floor(completed.length / perRound);
+  return (
+    <dl className="grid grid-cols-3 gap-2 text-center">
+      <SummaryStat label="Dauer" value={workoutDuration(Math.round(elapsedMs / 1000))} />
+      <SummaryStat label="Runden" value={String(roundsDone)} />
+      <SummaryStat label="Belastungen" value={String(completed.length)} />
+    </dl>
+  );
+}
+
+function SummaryStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-muted p-3">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="font-heading text-lg font-semibold tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
 /** Der laufende Ablauf im Vollbild: große Restzeit, Farbe je Phase, damit man sie auch aus der Entfernung erkennt. */
-function IntervalRun({ phases, audio, planId, onExit, onRestart }: { phases: IntervalPhase[]; audio: React.RefObject<AudioContext | null>; planId: string; onExit: () => void; onRestart: () => void }) {
+function IntervalRun({ run, audio, onExit, onRestart }: { run: RunInfo; audio: React.RefObject<AudioContext | null>; onExit: () => void; onRestart: () => void }) {
+  const { phases } = run;
   const t = useIntervalTimer(phases, audio);
   useWakeLock(t.running);
   const rounds = phases.at(-1)?.round ?? 1;
+  const { finish, saving, error } = useFinishRun(run);
+  const [confirmFinish, setConfirmFinish] = useState(false);
+  const { elapsedMs } = t;
+  const doneCount = completedWork(phases, elapsedMs).length;
+
+  function requestFinish() {
+    if (t.running) t.toggle();
+    setConfirmFinish(true);
+  }
 
   if (t.done) {
     return (
       <main className="grid min-h-dvh place-items-center bg-background p-6 text-center">
-        <div className="max-w-sm space-y-5">
+        <div className="w-full max-w-sm space-y-5">
           <span className="mx-auto grid size-20 place-items-center rounded-3xl bg-sport-soft text-sport">
             <Trophy className="size-10" aria-hidden />
           </span>
@@ -229,18 +309,24 @@ function IntervalRun({ phases, audio, planId, onExit, onRestart }: { phases: Int
               {rounds === 1 ? "1 Runde" : `${rounds} Runden`} in {clockLabel(totalSeconds(phases))} Minuten.
             </p>
           </div>
+          <RunSummary phases={phases} elapsedMs={elapsedMs} />
+          {error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <Button type="button" onClick={() => void finish(elapsedMs)} disabled={saving} className="h-12 w-full rounded-full text-base">
+            {saving ? <Loader2 className="animate-spin" aria-hidden /> : <Check aria-hidden />}
+            Beenden und speichern
+          </Button>
           <div className="flex flex-wrap justify-center gap-2">
-            <Button type="button" onClick={onRestart} className="h-12 rounded-full px-6 text-base">
+            <Button type="button" variant="outline" onClick={onRestart} disabled={saving} className="h-11 rounded-full px-5">
               <RotateCcw aria-hidden />
               Nochmal
             </Button>
-            <Button type="button" variant="outline" onClick={onExit} className="h-12 rounded-full px-5 text-base">
-              <Timer aria-hidden />
-              Einstellungen
+            <Button type="button" variant="ghost" onClick={onExit} disabled={saving} className="h-11 rounded-full px-5">
+              Verwerfen
             </Button>
-            <Link href={`/sport/plaene/${planId}`} className={cn(buttonVariants({ variant: "outline" }), "h-12 rounded-full px-5 text-base")}>
-              Zum Plan
-            </Link>
           </div>
         </div>
       </main>
@@ -252,16 +338,20 @@ function IntervalRun({ phases, audio, planId, onExit, onRestart }: { phases: Int
 
   return (
     <main className={cn("flex min-h-dvh flex-col px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] transition-colors duration-300", PHASE_TONE[t.phase.kind])}>
-      <header className="flex items-center justify-between gap-3">
-        <button type="button" onClick={onExit} aria-label="Timer beenden" title="Beenden" className={cn(roundButton, "size-11 bg-current/10 hover:bg-current/20")}>
-          <X className="size-5" aria-hidden />
-        </button>
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <p className="text-sm font-medium tabular-nums opacity-80" aria-label={`Insgesamt noch ${clockLabel(t.remainingTotal)} Minuten`}>
+          {clockLabel(t.remainingTotal)}
+        </p>
         <p className="text-base font-semibold tabular-nums">
           Runde {t.phase.round} von {rounds}
         </p>
-        <p className="min-w-11 text-right text-sm font-medium tabular-nums opacity-80" aria-label={`Insgesamt noch ${clockLabel(t.remainingTotal)} Minuten`}>
-          {clockLabel(t.remainingTotal)}
-        </p>
+        <button
+          type="button"
+          onClick={requestFinish}
+          className="h-11 justify-self-end rounded-full bg-background px-5 text-sm font-semibold text-foreground shadow-sm transition hover:bg-background/90 focus-visible:ring-3 focus-visible:ring-current focus-visible:outline-none"
+        >
+          Beenden
+        </button>
       </header>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-6 text-center">
@@ -298,6 +388,40 @@ function IntervalRun({ phases, audio, planId, onExit, onRestart }: { phases: Int
           <SkipForward className="size-6" aria-hidden />
         </button>
       </div>
+
+      <Dialog open={confirmFinish} onOpenChange={(open) => !saving && setConfirmFinish(open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Training beenden?</DialogTitle>
+            <DialogDescription>
+              {doneCount === 0
+                ? "Du hast noch keine Belastung geschafft. Ohne geschaffte Belastung wird nichts gespeichert."
+                : "Nur geschaffte Belastungen werden gespeichert."}
+            </DialogDescription>
+          </DialogHeader>
+          <RunSummary phases={phases} elapsedMs={elapsedMs} />
+          {error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmFinish(false)} disabled={saving}>
+              Weiter trainieren
+            </Button>
+            {doneCount === 0 ? (
+              <Button type="button" variant="destructive" onClick={onExit}>
+                Verwerfen
+              </Button>
+            ) : (
+              <Button type="button" onClick={() => void finish(elapsedMs)} disabled={saving}>
+                {saving ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                Beenden und speichern
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

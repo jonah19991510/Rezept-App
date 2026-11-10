@@ -2,20 +2,21 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, TrendingDown, TrendingUp, Trophy, X } from "lucide-react";
 import { ChipRow } from "@/components/layout/list-blocks";
 import { chipClass } from "@/components/recipes/chip-select";
 import { ChartCard, CHART_COLORS, DataTable } from "@/components/stats/chart-card";
 import { WeekSeries } from "@/components/stats/week-series";
 import { Button } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
-import { isTimed, MUSCLE_LABELS } from "@/lib/domain/exercises";
+import { CATEGORY_ORDER, isTimed, MUSCLE_LABELS, type ExerciseCategory, type Tracking } from "@/lib/domain/exercises";
 import { addDays, dayMonth, isoWeekNumber, mondayOf, relativeWeekLabel, weekDays, weekdayShort, weekLabel } from "@/lib/domain/week";
 import { mmss } from "@/lib/domain/workout";
 import {
   exerciseOptions,
   exerciseProgress,
   exerciseRecords,
+  exerciseTrend,
   inRange,
   mondaysBetween,
   overallHeartRate,
@@ -31,6 +32,10 @@ import {
   workoutSets,
   workoutVolume,
   type CalendarDay,
+  type ExerciseOptionStats,
+  type ExerciseSession,
+  type ExerciseTrend,
+  type TrendMetric,
   type RecentRecord,
   type StatsRange,
   type StatsWorkout,
@@ -64,6 +69,34 @@ function recordValue(r: RecentRecord): string {
   return `${formatNumber(r.value, 1)} kg`;
 }
 
+/** Filter der Übungsliste; „Training“ heißt hier Kraft (Ausdauer-Übungen gehören mit dazu). */
+const CATEGORY_FILTER_LABELS: Record<ExerciseCategory, string> = { training: "Kraft", stretching: "Dehnen", rehab: "Reha" };
+
+/** Werte eines Trainings mit der Übung in einer Zeile, je nach Erfassungsart. */
+function sessionValue(s: ExerciseSession, tracking: Tracking): string {
+  if (tracking === "distance_time") {
+    return [s.totalDistanceM != null ? km(s.totalDistanceM) : null, s.totalSeconds != null ? mmss(s.totalSeconds) : null].filter(Boolean).join(" · ") || "–";
+  }
+  if (tracking === "time") return s.maxSeconds != null ? mmss(s.maxSeconds) : "–";
+  if (s.bestWeightKg != null) return `${formatNumber(s.bestWeightKg, 1)} kg × ${s.bestWeightReps ?? "–"}`;
+  if (s.maxReps != null) return `× ${s.maxReps}`;
+  // Intervall-Training: nur die Zeit der Belastung
+  return s.maxSeconds != null ? mmss(s.maxSeconds) : "–";
+}
+
+/** Bestwert einer Übung über alle Trainings im Zeitraum, mit Datum. */
+function bestValue(sessions: ExerciseSession[], tracking: Tracking): { value: string; date?: string } {
+  const r = exerciseRecords(sessions);
+  if (tracking === "distance_time") {
+    if (r.totalDistance) return { value: km(r.totalDistance.value), date: r.totalDistance.date };
+    return r.totalSeconds ? { value: mmss(r.totalSeconds.value), date: r.totalSeconds.date } : { value: "–" };
+  }
+  if (tracking === "time") return r.seconds ? { value: mmss(r.seconds.value), date: r.seconds.date } : { value: "–" };
+  if (r.weight) return { value: `${formatNumber(r.weight.value, 1)} kg ${r.weight.detail ?? ""}`.trim(), date: r.weight.date };
+  if (r.reps) return { value: `× ${r.reps.value}`, date: r.reps.date };
+  return r.seconds ? { value: mmss(r.seconds.value), date: r.seconds.date } : { value: "–" };
+}
+
 const RECORD_LABEL: Record<RecentRecord["kind"], string> = {
   "1rm": "geschätztes 1RM",
   weight: "Gewicht",
@@ -94,6 +127,10 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
   const streak = useMemo(() => streakWeeks(workouts, today), [workouts, today]);
   const options = useMemo(() => exerciseOptions(visible), [visible]);
   const [exerciseId, setExerciseId] = useState<string | null>(null);
+  // „Übung im Verlauf“: eine Übung mit Diagramm oder alle untereinander (gefiltert nach Kategorien, mehrere wählbar)
+  const [exerciseView, setExerciseView] = useState<"single" | "all">("single");
+  const [categories, setCategories] = useState<ExerciseCategory[]>([]);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [cardioMetric, setCardioMetric] = useState<CardioMetric>("distance");
   const exercise = options.find((o) => o.id === exerciseId) ?? options[0] ?? null;
   const sessions = useMemo(() => (exercise ? exerciseProgress(visible, exercise.id) : []), [visible, exercise]);
@@ -198,9 +235,13 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
 
           <ChartCard
             title="Übung im Verlauf"
-            description="Ein Punkt je Training. Tipp auf einen Punkt öffnet das Training."
+            description={
+              exerciseView === "all"
+                ? "Alle Übungen im Zeitraum mit Bestwert und letztem Training. Tipp auf eine Übung zeigt ihren Verlauf."
+                : "Ein Punkt je Training. Tipp auf einen Punkt öffnet das Training."
+            }
             table={
-              exercise ? (
+              exercise && exerciseView === "single" ? (
                 <DataTable
                   head={
                     exercise.tracking === "distance_time"
@@ -226,6 +267,31 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
             }
           >
             {exercise ? (
+              <ChipRow label="Ansicht">
+                {(
+                  [
+                    ["single", "Eine Übung"],
+                    ["all", `Alle Übungen (${options.length})`],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button key={value} type="button" aria-pressed={exerciseView === value} onClick={() => setExerciseView(value)} className={chipClass(exerciseView === value)}>
+                    {label}
+                  </button>
+                ))}
+              </ChipRow>
+            ) : null}
+            {exercise && exerciseView === "all" ? (
+              <ExerciseList
+                options={options}
+                workouts={visible}
+                categories={categories}
+                onCategories={setCategories}
+                onPick={(id) => {
+                  setExerciseId(id);
+                  setExerciseView("single");
+                }}
+              />
+            ) : exercise ? (
               <>
                 <NativeSelect value={exercise.id} onChange={(e) => setExerciseId(e.target.value)} aria-label="Übung" className="max-w-md">
                   {options.map((o) => (
@@ -309,7 +375,7 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
 
             <ChartCard
               title="Trainingstage"
-              description="Die letzten 12 Wochen, eine Zeile pro Woche (Mo–So). Kraft und Ausdauer in eigenen Farben."
+              description="Die letzten 12 Wochen, eine Zeile pro Woche (Mo–So). Kraft und Ausdauer in eigenen Farben. Tipp auf einen Tag zeigt seine Trainings."
               table={
                 <DataTable
                   head={["Woche ab", "Trainings", "Tage mit Ausdauer"]}
@@ -329,10 +395,18 @@ export function SportStatsDashboard({ workouts, today }: { workouts: StatsWorkou
                   </span>
                 ))}
                 {calendar.map((w) => (
-                  <Week key={w.monday} monday={w.monday} days={w.days} current={w.monday === mondayOf(today)} />
+                  <Week
+                    key={w.monday}
+                    monday={w.monday}
+                    days={w.days}
+                    current={w.monday === mondayOf(today)}
+                    selected={selectedDay}
+                    onSelect={(d) => setSelectedDay((current) => (current === d ? null : d))}
+                  />
                 ))}
               </div>
               <KindLegend />
+              {selectedDay ? <DayWorkouts date={selectedDay} workouts={workouts.filter((w) => w.date === selectedDay)} onClose={() => setSelectedDay(null)} /> : null}
             </ChartCard>
           </div>
 
@@ -454,13 +528,13 @@ function RecordTile({ label, value, detail, date: day, compact }: { label: strin
 
 const KIND_LABELS: Record<TrainingKind, string> = { strength: "Kraft", cardio: "Ausdauer", both: "Kraft und Ausdauer" };
 
-/** Farbe eines Tages: Kraft Petrol, Ausdauer Bernstein, beides diagonal geteilt; ein Training heller als mehrere. */
+/** Farbe eines Tages: Kraft Petrol, Ausdauer Bernstein, beides diagonal geteilt (gleich kräftig, egal wie viele Trainings). */
 function dayClass(d: CalendarDay): string {
   if (d.count == null) return "bg-transparent";
   if (d.kind == null) return "bg-muted";
   if (d.kind === "both") return "bg-[linear-gradient(135deg,var(--sport)_50%,var(--cardio)_50%)]";
-  if (d.kind === "cardio") return d.count === 1 ? "bg-cardio/75" : "bg-cardio";
-  return d.count === 1 ? "bg-sport/70" : "bg-sport";
+  if (d.kind === "cardio") return "bg-cardio";
+  return "bg-sport";
 }
 
 function dayText(d: CalendarDay): string {
@@ -469,16 +543,215 @@ function dayText(d: CalendarDay): string {
   return `${date(d.date)}: ${d.count === 1 ? "1 Training" : `${d.count} Trainings`} (${KIND_LABELS[d.kind]})`;
 }
 
-function Week({ monday, days, current }: { monday: string; days: CalendarDay[]; current: boolean }) {
+function Week({
+  monday,
+  days,
+  current,
+  selected,
+  onSelect,
+}: {
+  monday: string;
+  days: CalendarDay[];
+  current: boolean;
+  selected: string | null;
+  onSelect: (date: string) => void;
+}) {
   return (
     <>
       <span className={cn("self-center tabular-nums", current && "font-semibold text-foreground")}>{dayMonth(monday)}</span>
-      {days.map((d) => (
-        <span key={d.date} title={dayText(d) || undefined} className={cn("aspect-square rounded-md", dayClass(d))}>
-          <span className="sr-only">{dayText(d)}</span>
-        </span>
-      ))}
+      {days.map((d) =>
+        d.count == null ? (
+          <span key={d.date} className="aspect-square rounded-md" aria-hidden />
+        ) : (
+          <button
+            key={d.date}
+            type="button"
+            title={dayText(d)}
+            aria-pressed={selected === d.date}
+            onClick={() => onSelect(d.date)}
+            className={cn(
+              "aspect-square rounded-md transition hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+              dayClass(d),
+              selected === d.date && "ring-2 ring-foreground ring-offset-2 ring-offset-card",
+            )}
+          >
+            <span className="sr-only">{dayText(d)}</span>
+          </button>
+        ),
+      )}
     </>
+  );
+}
+
+/** Trainings des angetippten Kalendertags mit ihren Übungen; antippen öffnet das Training. */
+function DayWorkouts({ date: day, workouts, onClose }: { date: string; workouts: StatsWorkout[]; onClose: () => void }) {
+  return (
+    <section className="mt-3 rounded-2xl bg-muted/60 p-3" aria-label={`Trainings am ${date(day)}`} aria-live="polite">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-sans text-sm font-semibold tracking-normal">{date(day)}</h3>
+        <Button type="button" variant="ghost" size="icon-sm" onClick={onClose} aria-label="Tag schließen">
+          <X aria-hidden />
+        </Button>
+      </div>
+      {workouts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Kein Training an diesem Tag.</p>
+      ) : (
+        <ul className="mt-1 divide-y divide-border/70">
+          {workouts.map((w) => {
+            const done = w.exercises.filter((e) => e.sets.some((s) => s.kind === "normal"));
+            const sets = workoutSets(w);
+            const volume = workoutVolume(w);
+            return (
+              <li key={w.id}>
+                <Link href={`/sport/verlauf/${w.id}`} className="block py-2 hover:underline">
+                  <span className="block font-medium wrap-anywhere">{w.title}</span>
+                  <span className="block text-sm text-muted-foreground tabular-nums">
+                    {Math.max(1, Math.round(w.durationSeconds / 60))} Min.
+                    {sets > 0 ? ` · ${sets === 1 ? "1 Satz" : `${sets} Sätze`}` : ""}
+                    {volume > 0 ? ` · ${kg(volume)}` : ""}
+                  </span>
+                  {done.length ? (
+                    <span className="mt-0.5 block text-sm wrap-anywhere text-muted-foreground">
+                      {done.map((e) => `${e.name} (${e.sets.filter((s) => s.kind === "normal").length}×)`).join(", ")}
+                    </span>
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Alle Übungen im Zeitraum untereinander: Bestwert und letztes Training. Kategorien als Filter, mehrere gleichzeitig
+ * wählbar (keine gewählt = alle).
+ */
+function ExerciseList({
+  options,
+  workouts,
+  categories,
+  onCategories,
+  onPick,
+}: {
+  options: ExerciseOptionStats[];
+  workouts: StatsWorkout[];
+  categories: ExerciseCategory[];
+  onCategories: (next: ExerciseCategory[]) => void;
+  onPick: (id: string) => void;
+}) {
+  const counts = new Map<ExerciseCategory, number>();
+  for (const o of options) counts.set(o.category, (counts.get(o.category) ?? 0) + 1);
+  const rows = useMemo(
+    () =>
+      (categories.length ? options.filter((o) => categories.includes(o.category)) : options).map((o) => {
+        const sessions = exerciseProgress(workouts, o.id);
+        const last = sessions.at(-1);
+        return {
+          option: o,
+          best: bestValue(sessions, o.tracking),
+          last: last ? { date: last.date, value: sessionValue(last, o.tracking) } : null,
+          trend: exerciseTrend(sessions, o.tracking),
+        };
+      }),
+    [options, categories, workouts],
+  );
+  const toggle = (c: ExerciseCategory) => onCategories(categories.includes(c) ? categories.filter((x) => x !== c) : CATEGORY_ORDER.filter((x) => x === c || categories.includes(x)));
+
+  return (
+    <>
+      <ChipRow label="Kategorien">
+        <button type="button" aria-pressed={categories.length === 0} onClick={() => onCategories([])} className={chipClass(categories.length === 0)}>
+          Alle
+        </button>
+        {CATEGORY_ORDER.map((c) => (
+          <button key={c} type="button" aria-pressed={categories.includes(c)} onClick={() => toggle(c)} className={chipClass(categories.includes(c))}>
+            {CATEGORY_FILTER_LABELS[c]}
+            <span className="tabular-nums opacity-70">{counts.get(c) ?? 0}</span>
+          </button>
+        ))}
+      </ChipRow>
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">In diesen Kategorien gibt es im Zeitraum keine Übung.</p>
+      ) : (
+        <ul className="divide-y rounded-2xl border">
+          {rows.map(({ option: o, best, last, trend }) => (
+            <li key={o.id}>
+              <button type="button" onClick={() => onPick(o.id)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-muted/50">
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium wrap-anywhere">{o.name}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {MUSCLE_LABELS[o.muscleGroup]} · {CATEGORY_FILTER_LABELS[o.category]} · {o.sessions === 1 ? "1 Training" : `${o.sessions} Trainings`}
+                  </span>
+                </span>
+                <TrendSpark trend={trend} />
+                <span className="w-28 shrink-0 text-right tabular-nums sm:w-36">
+                  <span className="block font-semibold">{best.value}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {best.date ? `Bestwert ${dayMonth(best.date)}` : "Bestwert"}
+                  </span>
+                  {last ? (
+                    <span className="block text-xs text-muted-foreground">
+                      zuletzt {dayMonth(last.date)}: {last.value}
+                    </span>
+                  ) : null}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+const TREND_LABEL: Record<TrendMetric, string> = { "1rm": "Geschätztes 1RM", weight: "Schwerster Satz", reps: "Wiederholungen", seconds: "Zeit", distance: "Strecke" };
+const TREND_FORMAT: Record<TrendMetric, (v: number) => string> = {
+  "1rm": (v) => `${formatNumber(v, 1)} kg`,
+  weight: (v) => `${formatNumber(v, 1)} kg`,
+  reps: (v) => String(v),
+  seconds: mmss,
+  distance: km,
+};
+const TREND_TEXT: Record<ExerciseTrend["direction"], string> = { up: "steigt", down: "fällt", flat: "gleich" };
+const TREND_ICON = { up: TrendingUp, down: TrendingDown, flat: Minus } as const;
+
+/**
+ * Kleiner Verlauf je Übung (ein Punkt je Training, letzter hervorgehoben) mit Richtung als Pfeil und Wort, damit die
+ * Tendenz nicht nur an der Form hängt. Unter zwei Trainings nur ein Strich.
+ */
+function TrendSpark({ trend }: { trend: ExerciseTrend | null }) {
+  if (!trend) {
+    return (
+      <span className="w-16 shrink-0 text-center text-xs text-muted-foreground" title="Ab zwei Trainings siehst du hier die Tendenz.">
+        –
+      </span>
+    );
+  }
+  const w = 64;
+  const h = 24;
+  const pad = 4;
+  const min = Math.min(...trend.values);
+  const max = Math.max(...trend.values);
+  const span = max - min || 1;
+  const points = trend.values.map((v, i) => [pad + (i / (trend.values.length - 1)) * (w - 2 * pad), max === min ? h / 2 : pad + (1 - (v - min) / span) * (h - 2 * pad)] as const);
+  const lastPoint = points.at(-1)!;
+  const format = TREND_FORMAT[trend.metric];
+  const summary = `${TREND_LABEL[trend.metric]} ${TREND_TEXT[trend.direction]}: ${format(trend.values[0])} → ${format(trend.values.at(-1)!)} (${trend.values.length} Trainings)`;
+  const Icon = TREND_ICON[trend.direction];
+  return (
+    <span className="flex w-16 shrink-0 flex-col items-center gap-0.5" title={summary}>
+      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={summary} className="overflow-visible">
+        <polyline points={points.map((p) => p.join(",")).join(" ")} fill="none" stroke={CHART_COLORS[0]} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={lastPoint[0]} cy={lastPoint[1]} r={3.5} fill={CHART_COLORS[0]} stroke="var(--card)" strokeWidth={2} />
+      </svg>
+      <span className="flex items-center gap-0.5 text-[0.7rem] leading-none text-muted-foreground" aria-hidden>
+        <Icon className="size-3" />
+        {TREND_TEXT[trend.direction]}
+      </span>
+    </span>
   );
 }
 

@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { authorName } from "@/lib/domain/community";
-import type { ExerciseOption, LibraryExercise, MuscleGroup } from "@/lib/domain/exercises";
+import { isTimed, type ExerciseOption, type LibraryExercise, type MuscleGroup } from "@/lib/domain/exercises";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,7 +40,8 @@ export type PlanListItem = {
   isArchived: boolean;
   isPublic: boolean;
   updatedAt: string;
-  days: { id: string; name: string; focus: string | null; exerciseCount: number }[];
+  /** `timedSeconds`: je Übung die feste Zeit aus dem Plan (nur Zeit-Übungen, sonst null), für die Dauer im Intervall */
+  days: { id: string; name: string; focus: string | null; exerciseCount: number; timedSeconds: (number | null)[] }[];
 };
 
 /** Eigene Pläne mit ihren Tagen (zuletzt geänderte zuerst). */
@@ -49,7 +50,7 @@ export async function getTrainingPlans(userId: string): Promise<PlanListItem[]> 
   const { data, error } = await supabase
     .from("training_plans")
     .select(
-      "id, title, description, is_archived, is_public, updated_at, training_plan_days!training_plan_days_plan_id_fkey(id, name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(id))",
+      "id, title, description, is_archived, is_public, updated_at, training_plan_days!training_plan_days_plan_id_fkey(id, name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(id, position, target_seconds, exercises!training_plan_exercises_exercise_id_fkey(tracking)))",
     )
     .eq("owner_id", userId)
     .order("updated_at", { ascending: false });
@@ -63,7 +64,15 @@ export async function getTrainingPlans(userId: string): Promise<PlanListItem[]> 
     updatedAt: p.updated_at,
     days: [...p.training_plan_days]
       .sort((a, b) => a.position - b.position)
-      .map((d) => ({ id: d.id, name: d.name, focus: d.focus, exerciseCount: d.training_plan_exercises.length })),
+      .map((d) => ({
+        id: d.id,
+        name: d.name,
+        focus: d.focus,
+        exerciseCount: d.training_plan_exercises.length,
+        timedSeconds: [...d.training_plan_exercises]
+          .sort((a, b) => a.position - b.position)
+          .map((e) => (isTimed(e.exercises.tracking) ? e.target_seconds : null)),
+      })),
   }));
 }
 

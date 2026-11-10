@@ -1,6 +1,6 @@
 # Topform – Funktionsübersicht
 
-Stand: 09.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Morgen- und Abendroutine).
+Stand: 10.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Intervall im Verlauf, Trainingstage antippbar, Übungsliste in der Statistik).
 Live: <https://unser-rezeptbuch.vercel.app> · Next.js 16 · Supabase (Frankfurt) · Vercel (`fra1`)
 
 Die App hat **drei Bereiche** (Umschalter oben links): **Start**, **Essen & Trinken**, **Sport & Gesundheit**.
@@ -181,9 +181,11 @@ Topform
 ### 3.3 Intervall-Timer (`/training/intervall/[Plan-ID]`)
 - Mit Übungen eines Trainingstags oder frei; Vorlagen, Belastung, Pause, Runden, Vorbereitung
 - Vollbild mit Pause, Zurück, Überspringen, Ton, Vibration, Wake Lock; Einstellungen je Plan im Gerät gemerkt
+- **Beenden und speichern** wie beim Krafttraining: „Beenden“ oben öffnet die Zusammenfassung (Dauer, Runden, Belastungen), am Ende direkt; gespeichert wird ein Satz je geschaffter Belastung mit ihrer Zeit (aktive Zeit ohne Pausen, Notiz mit Runden/Belastung/Pause), danach „Training gespeichert“ im Verlauf; zählt in Statistik und „als Nächstes“, ändert den Plan nicht
 
 ### 3.4 Verlauf (`/sport/verlauf`)
 - Trainings nach Monat mit Dauer, Sätzen, Volumen; Detailseite mit allen Sätzen
+- **Nachtragen** als Training (Dauer eintragen, Sätze danach) oder **Intervall** (Plan-Tag oder ohne Übungen, Vorlagen, Belastung/Pause/Runden; Dauer ergibt sich daraus)
 - Fortsetzen, Bearbeiten, Löschen, Teilen in den Feed; reine Ausdauer zeigt Dauer, Tempo, Strecke, Herzfrequenz
 
 ### 3.5 Getränke (`/sport/getraenke`, Tabs Heute · Statistik · Tipps · Verlauf · Getränke)
@@ -205,7 +207,8 @@ Topform
 - Zeitraum KW (blätterbar) · 4 Wochen · 3 Monate · 1 Jahr · Alles
 - Kennzahlen: Trainings (pro Woche), Ø Dauer, Volumen, Serie
 - Trainings/Volumen/Dauer pro Woche; **Übung im Verlauf** (1RM nach Epley, schwerster Satz, bei Ausdauer Strecke/Zeit/Tempo/Herzfrequenz), Bestwerte-Kacheln
-- Sätze pro Muskelgruppe pro Woche (Band 10–20), Trainingstage-Kalender (Kraft/Ausdauer gefärbt), neue Bestwerte
+- **Alle Übungen** untereinander mit Bestwert, letztem Training und kleinem Tendenz-Graphen (steigt/fällt/gleich), Filter Kraft · Dehnen · Reha (mehrere gleichzeitig)
+- Sätze pro Muskelgruppe pro Woche (Band 10–20), Trainingstage-Kalender (Kraft/Ausdauer einheitlich gefärbt, **Tag antippen** zeigt seine Trainings mit Übungen), neue Bestwerte
 
 ### 3.8 Entdecken Sport (`/sport/entdecken`, Tabs Feed · Challenges · Rangliste · Pläne)
 - **Feed:** geteilte Trainings (letzte 50) mit automatischer Zusammenfassung, Bestwerten, **Kudos**, **Kommentaren**, **Nachmachen** (eigener Plan daraus)
@@ -277,3 +280,4 @@ Bei der Analyse aufgefallen:
 - `README.md` steht noch auf „Stand Phase 12“ und beschreibt den Bereich Sport & Gesundheit gar nicht
 - Kommentar in `nav-items.ts` nennt das Lexikon noch „Platzhalter“, obwohl es fertig ist
 - Ein reines Dehntraining zählt im Kalender als Kraft-Training (bewusst offen gelassen)
+- Intervall-Trainings sind nur am Titel („· Intervall“) und an der Notiz erkennbar, nicht an einem eigenen Feld; Filter „Kraft“ in der Übungsliste umfasst auch Ausdauer-Übungen

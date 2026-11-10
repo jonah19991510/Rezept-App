@@ -7,6 +7,7 @@ import { ApplyToPlan, DeleteWorkout } from "@/components/sport/workout-actions";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { MUSCLE_LABELS } from "@/lib/domain/exercises";
+import { isIntervalWorkout } from "@/lib/domain/interval-timer";
 import { differsFromPlan, formatSet, heartRateLabel, planDayFromWorkout, resolveSet, sessionStats } from "@/lib/domain/workout";
 import { formatDayShort } from "@/lib/format";
 import { getPostForWorkout } from "@/lib/server/posts";
@@ -36,7 +37,7 @@ export default async function WorkoutPage({ params, searchParams }: PageProps<"/
 
   // Weicht das Training vom Plan-Tag ab? Dann „übernehmen“ anbieten (nur eigene Pläne)
   let applyDay: string | null = null;
-  if (session.endedAt && session.planId && session.planDayId) {
+  if (session.endedAt && session.planId && session.planDayId && !isIntervalWorkout(session)) {
     const plan = await getTrainingPlan(session.planId, user.id);
     const day = plan?.isOwn ? plan.days.find((d) => d.id === session.planDayId) : undefined;
     if (day) {

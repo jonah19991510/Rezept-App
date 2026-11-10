@@ -142,6 +142,8 @@ export function formatSet(set: LastSet, tracking: Tracking): string {
     ];
     return parts.filter(Boolean).join(" · ") || "–";
   }
+  // Intervall-Training: Wiederholungs-Übungen haben nur die Zeit der Belastung
+  if (set.weightKg == null && set.reps == null && set.seconds != null) return mmss(set.seconds);
   const reps = set.reps != null ? `× ${set.reps}` : "";
   if (tracking === "bodyweight_reps") return set.weightKg ? `+${kg(set.weightKg)} ${reps}`.trim() : reps || "–";
   return set.weightKg != null ? `${kg(set.weightKg)} ${reps}`.trim() : reps || "–";

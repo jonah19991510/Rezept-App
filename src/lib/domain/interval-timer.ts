@@ -34,6 +34,8 @@ export type IntervalPhase = {
   seconds: number;
   /** Runde (ab 1), zu der die Phase gehört */
   round: number;
+  /** Belastung: Position der Übung im Trainingstag (fehlt ohne Übungen) */
+  exercise?: number;
 };
 
 /** Einstellungen aus dem Gerätespeicher: Unbrauchbares wird zum Standard, alles andere in den erlaubten Bereich. */
@@ -54,7 +56,8 @@ export function buildPhases(settings: IntervalSettings, exercises: IntervalExerc
   if (settings.prepare > 0) phases.push({ kind: "prepare", label: "Mach dich bereit", seconds: settings.prepare, round: 1 });
   for (let round = 1; round <= settings.rounds; round++) {
     steps.forEach((step, i) => {
-      phases.push({ kind: "work", label: step.name, seconds: step.seconds && step.seconds > 0 ? step.seconds : settings.work, round });
+      const seconds = step.seconds && step.seconds > 0 ? step.seconds : settings.work;
+      phases.push(exercises.length ? { kind: "work", label: step.name, seconds, round, exercise: i } : { kind: "work", label: step.name, seconds, round });
       const last = round === settings.rounds && i === steps.length - 1;
       if (!last && settings.rest > 0) phases.push({ kind: "rest", label: "Pause", seconds: settings.rest, round });
     });
@@ -86,6 +89,38 @@ export function previousTargetMs(phases: IntervalPhase[], elapsedMs: number): nu
   const { index } = locate(phases, elapsedMs);
   const start = phaseStartMs(phases, index);
   return elapsedMs - start < 2000 ? phaseStartMs(phases, index - 1) : start;
+}
+
+/** Eine erledigte Belastung fürs Speichern: Übung (Position im Tag, null ohne Übungen) und ihre Sekunden. */
+export type CompletedWork = { exercise: number | null; seconds: number };
+
+/** Belastungen, die nach `elapsedMs` vorbei sind (am Ende alle), in ihrer Reihenfolge. */
+export function completedWork(phases: IntervalPhase[], elapsedMs: number): CompletedWork[] {
+  const result: CompletedWork[] = [];
+  let end = 0;
+  for (const p of phases) {
+    end += p.seconds * 1000;
+    if (end > elapsedMs) break;
+    if (p.kind === "work") result.push({ exercise: p.exercise ?? null, seconds: p.seconds });
+  }
+  return result;
+}
+
+/** Notiz am gespeicherten Intervall-Training: „Intervall: 3 Runden · 40 s Belastung · 20 s Pause“. */
+export function intervalNote(settings: Pick<IntervalSettings, "work" | "rest" | "rounds">, roundsDone = settings.rounds): string {
+  const rounds = roundsDone === settings.rounds ? `${settings.rounds === 1 ? "1 Runde" : `${settings.rounds} Runden`}` : `${roundsDone} von ${settings.rounds} Runden`;
+  const rest = settings.rest > 0 ? ` · ${durationText(settings.rest)} Pause` : " · ohne Pause";
+  return `Intervall: ${rounds} · ${durationText(settings.work)} Belastung${rest}`;
+}
+
+/** Gespeichertes Intervall-Training? Erkennbar an der Notiz (es gibt kein eigenes Feld dafür). */
+export function isIntervalWorkout(workout: { note: string | null }): boolean {
+  return (workout.note ?? "").startsWith("Intervall: ");
+}
+
+function durationText(seconds: number): string {
+  if (seconds < 60) return `${seconds} s`;
+  return seconds % 60 === 0 ? `${seconds / 60} Min.` : `${clockLabel(seconds)} Min.`;
 }
 
 /** Sekunden als „m:ss“. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPhases, clockLabel, DEFAULT_INTERVAL, locate, normalizeSettings, phaseStartMs, previousTargetMs, totalSeconds } from "./interval-timer";
+import { buildPhases, clockLabel, completedWork, DEFAULT_INTERVAL, intervalNote, isIntervalWorkout, locate, normalizeSettings, phaseStartMs, previousTargetMs, totalSeconds } from "./interval-timer";
 
 const settings = { prepare: 10, work: 40, rest: 20, rounds: 2 };
 
@@ -76,5 +76,53 @@ describe("clockLabel", () => {
     expect(clockLabel(5)).toBe("0:05");
     expect(clockLabel(125)).toBe("2:05");
     expect(clockLabel(3700)).toBe("61:40");
+  });
+});
+
+describe("completedWork", () => {
+  const exercises = [
+    { name: "Liegestütze", seconds: null },
+    { name: "Plank", seconds: 60 },
+  ];
+  const phases = buildPhases(settings, exercises);
+
+  it("zählt nur Belastungen, die schon vorbei sind", () => {
+    expect(completedWork(phases, 0)).toEqual([]);
+    // Vorbereitung 10 + Liegestütze 40 = 50 s
+    expect(completedWork(phases, 50_000)).toEqual([{ exercise: 0, seconds: 40 }]);
+    expect(completedWork(phases, 49_999)).toEqual([]);
+  });
+
+  it("am Ende alle Belastungen mit Übung und Sekunden", () => {
+    expect(completedWork(phases, totalSeconds(phases) * 1000)).toEqual([
+      { exercise: 0, seconds: 40 },
+      { exercise: 1, seconds: 60 },
+      { exercise: 0, seconds: 40 },
+      { exercise: 1, seconds: 60 },
+    ]);
+  });
+
+  it("ohne Übungen ohne Übungsbezug", () => {
+    const free = buildPhases(settings);
+    expect(completedWork(free, totalSeconds(free) * 1000)).toEqual([
+      { exercise: null, seconds: 40 },
+      { exercise: null, seconds: 40 },
+    ]);
+  });
+});
+
+describe("intervalNote", () => {
+  it("beschreibt Runden, Belastung und Pause", () => {
+    expect(intervalNote({ work: 40, rest: 20, rounds: 3 })).toBe("Intervall: 3 Runden · 40 s Belastung · 20 s Pause");
+    expect(intervalNote({ work: 90, rest: 0, rounds: 1 })).toBe("Intervall: 1 Runde · 1:30 Min. Belastung · ohne Pause");
+    expect(intervalNote({ work: 40, rest: 20, rounds: 5 }, 2)).toBe("Intervall: 2 von 5 Runden · 40 s Belastung · 20 s Pause");
+  });
+});
+
+describe("isIntervalWorkout", () => {
+  it("erkennt Intervall-Trainings an der Notiz", () => {
+    expect(isIntervalWorkout({ note: intervalNote({ work: 40, rest: 20, rounds: 3 }) })).toBe(true);
+    expect(isIntervalWorkout({ note: "Intervall war heute hart" })).toBe(false);
+    expect(isIntervalWorkout({ note: null })).toBe(false);
   });
 });

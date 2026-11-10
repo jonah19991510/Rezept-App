@@ -27,7 +27,7 @@ export default async function HistoryPage() {
   // Für „Nachtragen“: aktive Pläne zuerst, nur Name und Tage
   const planOptions = [...plans]
     .sort((a, b) => Number(a.isArchived) - Number(b.isArchived))
-    .map((p) => ({ id: p.id, title: p.isArchived ? `${p.title} (ausgeblendet)` : p.title, days: p.days.map((d) => ({ id: d.id, name: d.name })) }));
+    .map((p) => ({ id: p.id, title: p.isArchived ? `${p.title} (ausgeblendet)` : p.title, days: p.days.map((d) => ({ id: d.id, name: d.name, timedSeconds: d.timedSeconds })) }));
   const finished = list.filter((w) => w.endedAt);
   const groups = new Map<string, WorkoutListItem[]>();
   for (const w of finished) {
@@ -68,7 +68,8 @@ export default async function HistoryPage() {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{w.title}</span>
                         <span className="block truncate text-sm text-muted-foreground tabular-nums">
-                          {duration(w)} · {w.sets === 1 ? "1 Satz" : `${w.sets} Sätze`}
+                          {duration(w)}
+                          {w.sets > 0 ? ` · ${w.sets === 1 ? "1 Satz" : `${w.sets} Sätze`}` : ""}
                           {w.volumeKg > 0 ? ` · ${formatNumber(Math.round(w.volumeKg), 0)} kg` : ""}
                         </span>
                       </span>

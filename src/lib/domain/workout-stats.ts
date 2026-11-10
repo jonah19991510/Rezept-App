@@ -112,12 +112,30 @@ export function weeklyStats(workouts: StatsWorkout[], mondays: string[]): WeekSt
 }
 
 /** Übungen mit Daten, am häufigsten trainierte zuerst (für die Auswahl). */
-export function exerciseOptions(workouts: StatsWorkout[]): { id: string; name: string; tracking: Tracking; cardio: boolean; sessions: number }[] {
-  const map = new Map<string, { id: string; name: string; tracking: Tracking; cardio: boolean; sessions: number }>();
+export type ExerciseOptionStats = {
+  id: string;
+  name: string;
+  tracking: Tracking;
+  category: ExerciseCategory;
+  muscleGroup: MuscleGroup;
+  cardio: boolean;
+  sessions: number;
+};
+
+export function exerciseOptions(workouts: StatsWorkout[]): ExerciseOptionStats[] {
+  const map = new Map<string, ExerciseOptionStats>();
   for (const w of workouts) {
     for (const e of w.exercises) {
       if (normalSets(e.sets).length === 0) continue;
-      const entry = map.get(e.exerciseId) ?? { id: e.exerciseId, name: e.name, tracking: e.tracking, cardio: isCardioExercise(e), sessions: 0 };
+      const entry = map.get(e.exerciseId) ?? {
+        id: e.exerciseId,
+        name: e.name,
+        tracking: e.tracking,
+        category: e.category,
+        muscleGroup: e.muscleGroup,
+        cardio: isCardioExercise(e),
+        sessions: 0,
+      };
       entry.sessions++;
       map.set(e.exerciseId, entry);
     }
@@ -360,4 +378,49 @@ export function statsTotals(workouts: StatsWorkout[], weeks: number): StatsTotal
     avgMinutes: workouts.length ? Math.round(minutes / workouts.length) : null,
     perWeek: weeks > 0 && workouts.length ? Math.round((workouts.length / weeks) * 10) / 10 : null,
   };
+}
+
+/** Wert, an dem die Tendenz einer Übung abgelesen wird (Liste „Alle Übungen“). */
+export type TrendMetric = "1rm" | "weight" | "reps" | "seconds" | "distance";
+
+export type ExerciseTrend = { metric: TrendMetric; values: number[]; direction: "up" | "down" | "flat" };
+
+const TREND_CANDIDATES: Record<Tracking, TrendMetric[]> = {
+  weight_reps: ["1rm", "weight", "reps", "seconds"],
+  bodyweight_reps: ["reps", "seconds"],
+  time: ["seconds"],
+  distance_time: ["distance", "seconds"],
+};
+
+const TREND_PICK: Record<TrendMetric, (s: ExerciseSession) => number | null> = {
+  "1rm": (s) => s.best1RM,
+  weight: (s) => s.bestWeightKg,
+  reps: (s) => s.maxReps,
+  // Ausdauer: Zeit aller Sätze zusammen, sonst der längste Satz
+  seconds: (s) => s.totalSeconds ?? s.maxSeconds,
+  distance: (s) => s.totalDistanceM,
+};
+
+/**
+ * Tendenz einer Übung über ihre Trainings (älteste zuerst): der erste passende Wert, den mindestens zwei Trainings haben;
+ * Richtung aus der Ausgleichsgeraden (über ±3 % vom Mittel über den ganzen Zeitraum = steigend bzw. fallend).
+ * Weniger als zwei Trainings: null.
+ */
+export function exerciseTrend(sessions: ExerciseSession[], tracking: Tracking): ExerciseTrend | null {
+  for (const metric of TREND_CANDIDATES[tracking]) {
+    const values = sessions.map(TREND_PICK[metric]).filter((v): v is number => v != null && v > 0);
+    if (values.length < 2) continue;
+    const n = values.length;
+    const meanX = (n - 1) / 2;
+    const meanY = values.reduce((a, b) => a + b, 0) / n;
+    let num = 0;
+    let den = 0;
+    values.forEach((y, x) => {
+      num += (x - meanX) * (y - meanY);
+      den += (x - meanX) ** 2;
+    });
+    const change = ((num / den) * (n - 1)) / meanY;
+    return { metric, values, direction: change > 0.03 ? "up" : change < -0.03 ? "down" : "flat" };
+  }
+  return null;
 }

@@ -95,6 +95,7 @@ export function useIntervalTimer(phases: IntervalPhase[], audio: RefObject<Audio
     phase: phases[index],
     nextPhase: phases[index + 1] ?? null,
     index,
+    elapsedMs,
     remainingMs,
     secondsLeft,
     remainingTotal: Math.max(0, totalSeconds(phases) - Math.floor(elapsedMs / 1000)),
