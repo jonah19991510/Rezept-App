@@ -2122,7 +2122,8 @@ bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Tes
 
 ### Trainingspläne nach Art: Krafttraining, Kraftausdauer, Ausdauer (10.11.2026, Wunsch des Nutzers)
 
-**Noch nicht live**, wartet auf den Test des Nutzers am Gerät (LAN-Server). Die Migration
+**Live** seit 10.11.2026: vom Nutzer freigegeben; Push `9286290` → Deployment `dpl_EexPXTB4pJrL9gXYZTggfkcsNb5k`
+(`production`, `fra1`, nach ca. 68 s „READY“; per Vercel-Connector geprüft). Die Migration
 `…20261110150000_training_plan_kind` ist seit 10.11.2026 in der Datenbank (nach ausdrücklichem OK des Nutzers über die
 Supabase-Integration eingespielt). Sie ist additiv: Die Live-Version liest `kind` nicht, speichert Pläne ohne Art
 (dann bleibt sie unverändert bzw. Krafttraining) und läuft weiter.
