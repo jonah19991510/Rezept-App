@@ -1,4 +1,5 @@
 import { formatNumber } from "@/lib/format";
+import type { Enums } from "@/lib/supabase/database.types";
 import { isTimed, MUSCLE_LABELS, normalizeSearch, type MuscleGroup, type Tracking } from "./exercises";
 
 // Sport & Gesundheit, Phase S1: Trainingspläne (Anzeige-Texte, Zusammenfassungen).
@@ -84,6 +85,18 @@ export function planSummary(days: { exercises: unknown[] }[]): string {
   const count = days.reduce((n, d) => n + d.exercises.length, 0);
   return `${days.length === 1 ? "1 Tag" : `${days.length} Tage`} · ${count === 1 ? "1 Übung" : `${formatNumber(count, 0)} Übungen`}`;
 }
+
+/** Art eines Plans (im Editor gewählt), danach ist die Planliste in Abschnitte gegliedert. */
+export type PlanKind = Enums<"training_plan_kind">;
+
+/** Reihenfolge der Abschnitte und der Auswahl im Editor */
+export const PLAN_KINDS: readonly PlanKind[] = ["strength", "strength_endurance", "cardio"];
+
+export const PLAN_KIND_LABELS: Record<PlanKind, string> = {
+  strength: "Krafttraining",
+  strength_endurance: "Kraftausdauer",
+  cardio: "Ausdauer",
+};
 
 /** Sätze gesamt eines Tages (für „ca. 20 Sätze“). */
 export function totalSets(exercises: { sets: number }[]): number {

@@ -1,4 +1,5 @@
 import { isTimed, type ExerciseOption } from "@/lib/domain/exercises";
+import type { PlanKind } from "@/lib/domain/training-plan";
 import type { PlanDetail } from "@/lib/server/sport";
 import type { TrainingPlanInput } from "@/lib/validation/training-plan";
 
@@ -19,7 +20,7 @@ export type DraftExercise = {
 
 export type DraftDay = { key: string; id: string | null; name: string; focus: string; exercises: DraftExercise[] };
 
-export type DraftPlan = { id: string | null; title: string; description: string; days: DraftDay[] };
+export type DraftPlan = { id: string | null; title: string; description: string; kind: PlanKind; days: DraftDay[] };
 
 /** Fortlaufende Schlüssel ab 1 (gleich auf Server und Client, siehe Rezept-Editor). */
 export function keyGenerator(start = 0) {
@@ -51,7 +52,7 @@ export function replaceDraftExercise(draft: DraftExercise, exercise: ExerciseOpt
 }
 
 export function emptyPlan(nextKey: () => string): DraftPlan {
-  return { id: null, title: "", description: "", days: [{ key: nextKey(), id: null, name: "Tag A", focus: "", exercises: [] }] };
+  return { id: null, title: "", description: "", kind: "strength", days: [{ key: nextKey(), id: null, name: "Tag A", focus: "", exercises: [] }] };
 }
 
 const text = (n: number | null) => (n == null ? "" : String(n));
@@ -61,6 +62,7 @@ export function draftFromPlan(plan: PlanDetail, nextKey: () => string): DraftPla
     id: plan.id,
     title: plan.title,
     description: plan.description ?? "",
+    kind: plan.kind,
     days: plan.days.map((d) => ({
       key: nextKey(),
       id: d.id,
@@ -107,6 +109,7 @@ export function draftToInput(plan: DraftPlan): TrainingPlanInput {
     id: plan.id,
     title: plan.title,
     description: plan.description,
+    kind: plan.kind,
     days: plan.days.map((d) => ({
       id: d.id,
       name: d.name,

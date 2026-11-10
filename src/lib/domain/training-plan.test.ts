@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { Constants } from "@/lib/supabase/database.types";
 import {
   durationLabel,
   filterPublicPlans,
   nextDayName,
+  PLAN_KIND_LABELS,
+  PLAN_KINDS,
   planMainMuscles,
   planSummary,
   repsRange,
@@ -91,5 +94,12 @@ describe("Entdecken", () => {
 
   it("nennt die Schwerpunkte nach Sätzen", () => {
     expect(planMainMuscles({ chest: 9, back: 12, quads: 6, core: 0 }, 2)).toEqual(["back", "chest"]);
+  });
+});
+
+describe("PLAN_KINDS", () => {
+  it("deckt alle Arten aus der Datenbank ab, jede mit Namen", () => {
+    expect([...PLAN_KINDS].sort()).toEqual([...Constants.public.Enums.training_plan_kind].sort());
+    expect(PLAN_KINDS.map((k) => PLAN_KIND_LABELS[k])).toEqual(["Krafttraining", "Kraftausdauer", "Ausdauer"]);
   });
 });

@@ -26,11 +26,11 @@ export async function savePlanAction(input: TrainingPlanInput): Promise<SavePlan
   await requireUser();
   const parsed = trainingPlanInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: "Bitte prüfe die markierten Felder.", fieldErrors: flattenIssues(parsed.error) };
-  const { id, title, description, days } = parsed.data;
+  const { id, title, description, kind, days } = parsed.data;
 
   const supabase = await createClient();
   const { data: planId, error } = await supabase.rpc("save_training_plan", {
-    p_plan: { id, title, description },
+    p_plan: { id, title, description, kind },
     p_days: days,
   });
   if (error || !planId) {

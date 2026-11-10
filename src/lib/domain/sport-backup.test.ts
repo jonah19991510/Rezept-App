@@ -15,6 +15,7 @@ const own = { name: "Meine Kabelpresse", muscle_group: "chest", secondary_muscle
 const row: PlanRowForBackup = {
   title: "Push",
   description: null,
+  kind: "strength_endurance",
   is_archived: true,
   training_plan_days: [
     {
@@ -44,6 +45,13 @@ describe("toSportBackupFile", () => {
     expect(file.plans[0].days[0].exercises.map((e) => e.exercise.name)).toEqual(["Bankdrücken (Langhantel)", "Meine Kabelpresse"]);
     expect(file.plans[0].days[0].exercises[0]).not.toHaveProperty("position");
     expect(sportBackupFileSchema.safeParse(JSON.parse(JSON.stringify(file))).success).toBe(true);
+  });
+
+  it("nimmt die Art des Plans mit; ältere Sicherungen ohne Art zählen als Krafttraining", () => {
+    const file = JSON.parse(JSON.stringify(toSportBackupFile([row], [], [], new Date())));
+    expect(sportBackupFileSchema.parse(file).plans[0].kind).toBe("strength_endurance");
+    delete file.plans[0].kind;
+    expect(sportBackupFileSchema.parse(file).plans[0].kind).toBe("strength");
   });
 
   it("lehnt fremde Dateien ab", () => {

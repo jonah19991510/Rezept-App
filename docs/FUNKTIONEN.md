@@ -1,6 +1,6 @@
 # Topform – Funktionsübersicht
 
-Stand: 10.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: eigene Routinen, ein Habit in mehreren Routinen, Statistik je Routine, Wochenplan sortierbar).
+Stand: 10.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Art des Trainingsplans – Krafttraining, Kraftausdauer, Ausdauer – und Planliste in Abschnitten).
 Live: <https://unser-rezeptbuch.vercel.app> · Next.js 16 · Supabase (Frankfurt) · Vercel (`fra1`)
 
 Die App hat **drei Bereiche** (Umschalter oben links): **Start**, **Essen & Trinken**, **Sport & Gesundheit**.
@@ -162,9 +162,10 @@ Topform
 ## 3 Sport & Gesundheit
 
 ### 3.1 Trainingspläne (`/sport/plaene`)
-- Plankarten mit Tagen als Chips; hervorgehoben der zuletzt trainierte Plan mit „Als Nächstes“ (Play-Knopf)
+- Pläne in Abschnitten nach Art: **Krafttraining · Kraftausdauer · Ausdauer** (mit Zahl, z. B. „3 Pläne“; leere Abschnitte entfallen), je Abschnitt eine Karte mit Trennlinien
+- Planzeile: Symbol der Art (Hantel · Blitz · Puls-Linie), Name, „Öffentlich“, Umfang („3 Tage · 37 Übungen“), Tage als Chips; der zuletzt trainierte Plan trägt „Aktiv“ und darunter „Als Nächstes“ (Play-Knopf)
 - Menü: Bearbeiten, Duplizieren, Ausblenden, Löschen; ausgeblendete Pläne unten
-- **Plan-Editor:** Name, Beschreibung, Tage (Name, Fokus-Vorschlag aus Muskelgruppen, sortierbar), Übungen per Drag & Drop, je Übung Sätze, Wdh. von–bis bzw. Min./Sek., Pause, Aufwärmsätze, Notiz, Tauschen; Übungsauswahl mit Suche, Muskelgruppen-Chips, Art (Training/Dehnen/Reha), Mehrfachauswahl, eigene Übung
+- **Plan-Editor:** Name, Art (Krafttraining / Kraftausdauer / Ausdauer), Beschreibung, Tage (Name, Fokus-Vorschlag aus Muskelgruppen, sortierbar), Übungen per Drag & Drop, je Übung Sätze, Wdh. von–bis bzw. Min./Sek., Pause, Aufwärmsätze, Notiz, Tauschen; Übungsauswahl mit Suche, Muskelgruppen-Chips, Art (Training/Dehnen/Reha), Mehrfachauswahl, eigene Übung
 - Planseite: alle Tage/Übungen mit aufklappbarer Anleitung, „Training starten“, Intervall-Timer, **Privat | Öffentlich**
 - Fremde Pläne: direkt trainieren oder „In meine Pläne übernehmen“
 

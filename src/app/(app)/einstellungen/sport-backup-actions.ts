@@ -58,7 +58,7 @@ export async function importSportBackupAction(input: SportBackupFileInput): Prom
       continue;
     }
     const { data: planId, error } = await supabase.rpc("save_training_plan", {
-      p_plan: { id: null, title: plan.title, description: plan.description ?? "" },
+      p_plan: { id: null, title: plan.title, description: plan.description ?? "", kind: plan.kind },
       p_days: planDaysForSave(plan, mapping),
     });
     if (error || !planId) {

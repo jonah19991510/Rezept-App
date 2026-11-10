@@ -2120,6 +2120,30 @@ Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, 
 bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
 über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
 
+### Trainingspläne nach Art: Krafttraining, Kraftausdauer, Ausdauer (10.11.2026, Wunsch des Nutzers)
+
+**Noch nicht live**, wartet auf den Test des Nutzers am Gerät (LAN-Server). Die Migration
+`…20261110150000_training_plan_kind` ist seit 10.11.2026 in der Datenbank (nach ausdrücklichem OK des Nutzers über die
+Supabase-Integration eingespielt). Sie ist additiv: Die Live-Version liest `kind` nicht, speichert Pläne ohne Art
+(dann bleibt sie unverändert bzw. Krafttraining) und läuft weiter.
+
+- **Datenmodell:** Enum `training_plan_kind` (`strength`, `strength_endurance`, `cardio`), Spalte
+  `training_plans.kind` (Standard `strength`). Vorbelegung einmalig: Pläne, deren Übungen überwiegend zur Muskelgruppe
+  „Ausdauer“ gehören, sind Ausdauer (bei Nutzer: „Intervall Laufen“, „12-3-30“); „zuletzt geändert“ blieb dabei
+  unverändert (Trigger kurz aus). `save_training_plan` liest `p_plan ->> 'kind'`, `copy_training_plan` (Duplizieren,
+  Übernehmen) kopiert die Art.
+- **Planliste** `/sport/plaene`: Abschnitte „Krafttraining · Kraftausdauer · Ausdauer“ mit Zahl („3 Pläne“), leere
+  entfallen; je Abschnitt eine Karte mit Trennlinien (`PlanList`). Zeile: Symbol der Art (Hantel · Blitz · Puls-Linie),
+  Name, „Öffentlich“, Umfang, Tage als Chips (Desktop rechts daneben, Handy darunter), Menü. Der zuletzt trainierte
+  Plan trägt „Aktiv“, sein nächster Tag ist markiert, darunter „Als Nächstes“ mit Play-Knopf. Ausgeblendete Pläne
+  ebenso als Liste.
+- **Plan-Editor:** Auswahl „Art“ (Segmente) zwischen Name und Beschreibung; neue Pläne starten mit Krafttraining.
+- **Sport-Sicherung:** Plan mit `kind`; ältere Dateien ohne Art werden als Krafttraining importiert. Datenexport
+  enthält die Spalte automatisch.
+- Tests (Arten vollständig und benannt, Sicherung mit/ohne Art), Typcheck, Lint grün. Im Browser nicht angemeldet
+  geprüft: Der LAN-Server einer anderen Sitzung lief bereits auf Port 3000 (Handy: http://192.168.178.47:3000), ein
+  zweiter Next-Server im selben Ordner startet nicht, das Browser-Pane erreicht Port 3000 nicht.
+
 ### Eigene Routinen, ein Habit in mehreren Routinen, Statistik je Routine, Wochenplan sortierbar (10.11.2026, Wunsch des Nutzers)
 
 **Live** seit 10.11.2026: vom Nutzer am eigenen Gerät über den LAN-Server getestet; Push `abccb99` → Deployment

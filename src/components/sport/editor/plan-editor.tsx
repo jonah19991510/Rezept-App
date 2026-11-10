@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { savePlanAction } from "@/app/(app)/sport/plaene/actions";
 import { FormMessage } from "@/components/forms/form-message";
 import { EditorHeader } from "@/components/recipes/editor/editor-header";
+import { RadioSegments } from "@/components/recipes/editor/editor-parts";
 import {
   announcements,
   screenReaderInstructions,
@@ -18,7 +19,7 @@ import {
 } from "@/components/recipes/editor/sortable";
 import { Button } from "@/components/ui/button";
 import { MUSCLE_LABELS, type ExerciseOption } from "@/lib/domain/exercises";
-import { nextDayName, planSummary, restLabel, targetLabel, totalSets } from "@/lib/domain/training-plan";
+import { nextDayName, PLAN_KIND_LABELS, PLAN_KINDS, planSummary, restLabel, targetLabel, totalSets } from "@/lib/domain/training-plan";
 import { cn } from "@/lib/utils";
 import { flattenIssues } from "@/lib/validation/recipe";
 import { trainingPlanInputSchema } from "@/lib/validation/training-plan";
@@ -58,6 +59,7 @@ export function PlanEditor({
 }) {
   const [title, setTitle] = useState(initial.title);
   const [description, setDescription] = useState(initial.description);
+  const [kind, setKind] = useState(initial.kind);
   const [days, setDays] = useState<DraftDay[]>(initial.days);
   const [exercises, setExercises] = useState(initialExercises);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
@@ -176,7 +178,7 @@ export function PlanEditor({
   }
 
   function save() {
-    const plan: DraftPlan = { id: initial.id, title, description, days };
+    const plan: DraftPlan = { id: initial.id, title, description, kind, days };
     const input = draftToInput(plan);
     const parsed = trainingPlanInputSchema.safeParse(input);
     if (!parsed.success) {
@@ -240,6 +242,21 @@ export function PlanEditor({
             className="mt-0.5 block min-h-11 w-full bg-transparent font-heading text-[1.75rem] leading-tight font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"
           />
           {errors.title ? <p className="mt-1 text-sm text-destructive">{errors.title[0]}</p> : null}
+        </div>
+        <div className="border-t px-4 pt-3 pb-3">
+          <p className="text-sm font-medium text-muted-foreground" aria-hidden>
+            Art
+          </p>
+          <RadioSegments
+            label="Art des Plans"
+            value={kind}
+            options={PLAN_KINDS.map((k) => ({ value: k, label: PLAN_KIND_LABELS[k] }))}
+            onChange={(k) => {
+              setDirty(true);
+              setKind(k);
+            }}
+            className="mt-1.5"
+          />
         </div>
         <div className="border-t px-4 pt-3 pb-3">
           <label htmlFor="plan-description" className="text-sm font-medium text-muted-foreground">

@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { authorName } from "@/lib/domain/community";
 import { isTimed, type ExerciseOption, type LibraryExercise, type MuscleGroup } from "@/lib/domain/exercises";
+import type { PlanKind } from "@/lib/domain/training-plan";
 import type { Tables } from "@/lib/supabase/database.types";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,6 +41,8 @@ export type PlanListItem = {
   isArchived: boolean;
   isPublic: boolean;
   updatedAt: string;
+  /** Krafttraining, Kraftausdauer oder Ausdauer, für die Abschnitte der Planliste */
+  kind: PlanKind;
   /** `timedSeconds`: je Übung die feste Zeit aus dem Plan (nur Zeit-Übungen, sonst null), für die Dauer im Intervall */
   days: { id: string; name: string; focus: string | null; exerciseCount: number; timedSeconds: (number | null)[] }[];
 };
@@ -50,7 +53,7 @@ export async function getTrainingPlans(userId: string): Promise<PlanListItem[]> 
   const { data, error } = await supabase
     .from("training_plans")
     .select(
-      "id, title, description, is_archived, is_public, updated_at, training_plan_days!training_plan_days_plan_id_fkey(id, name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(id, position, target_seconds, exercises!training_plan_exercises_exercise_id_fkey(tracking)))",
+      "id, title, description, kind, is_archived, is_public, updated_at, training_plan_days!training_plan_days_plan_id_fkey(id, name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(id, position, target_seconds, exercises!training_plan_exercises_exercise_id_fkey(tracking)))",
     )
     .eq("owner_id", userId)
     .order("updated_at", { ascending: false });
@@ -62,6 +65,7 @@ export async function getTrainingPlans(userId: string): Promise<PlanListItem[]> 
     isArchived: p.is_archived,
     isPublic: p.is_public,
     updatedAt: p.updated_at,
+    kind: p.kind,
     days: [...p.training_plan_days]
       .sort((a, b) => a.position - b.position)
       .map((d) => ({
@@ -92,6 +96,7 @@ export type PlanDetail = {
   id: string;
   title: string;
   description: string | null;
+  kind: PlanKind;
   isArchived: boolean;
   isPublic: boolean;
   isOwn: boolean;
@@ -106,7 +111,7 @@ export const getTrainingPlan = cache(async (planId: string, userId: string): Pro
   const { data, error } = await supabase
     .from("training_plans")
     .select(
-      `id, title, description, is_archived, is_public, owner_id, profiles!training_plans_owner_id_fkey(display_name), training_plan_days!training_plan_days_plan_id_fkey(id, name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(id, position, sets, reps_min, reps_max, target_seconds, rest_seconds, warmup, note, exercises!training_plan_exercises_exercise_id_fkey(${EXERCISE_COLUMNS})))`,
+      `id, title, description, kind, is_archived, is_public, owner_id, profiles!training_plans_owner_id_fkey(display_name), training_plan_days!training_plan_days_plan_id_fkey(id, name, focus, position, training_plan_exercises!training_plan_exercises_day_id_fkey(id, position, sets, reps_min, reps_max, target_seconds, rest_seconds, warmup, note, exercises!training_plan_exercises_exercise_id_fkey(${EXERCISE_COLUMNS})))`,
     )
     .eq("id", planId)
     .maybeSingle();
@@ -116,6 +121,7 @@ export const getTrainingPlan = cache(async (planId: string, userId: string): Pro
     id: data.id,
     title: data.title,
     description: data.description,
+    kind: data.kind,
     isArchived: data.is_archived,
     isPublic: data.is_public,
     isOwn: data.owner_id === userId,

@@ -33,6 +33,7 @@ export const trainingPlanInputSchema = z.object({
   id: z.uuid().nullable().default(null),
   title: z.string().trim().min(1, "Bitte gib dem Plan einen Namen.").max(100, "Höchstens 100 Zeichen."),
   description: z.string().trim().max(1000, "Höchstens 1000 Zeichen.").default(""),
+  kind: z.enum(Constants.public.Enums.training_plan_kind, { error: "Bitte eine Art wählen." }).default("strength"),
   days: z.array(planDayInputSchema).min(1, "Ein Plan braucht mindestens einen Trainingstag.").max(14, "Höchstens 14 Tage."),
 });
 

@@ -5,13 +5,14 @@ import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
 import { NewRecipeFab } from "@/components/recipes/new-recipe-fab";
 import { ActiveWorkoutBanner } from "@/components/sport/active-workout-banner";
-import { PlanCard } from "@/components/sport/plan-card";
+import { PlanList } from "@/components/sport/plan-card";
 import { SportTabs } from "@/components/sport/sport-tabs";
 import { StartTraining } from "@/components/sport/start-training";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { getTrainingPlans } from "@/lib/server/sport";
 import { getActiveWorkout, getLastPlanDayId, getLastPlanWorkout } from "@/lib/server/workouts";
+import { PLAN_KIND_LABELS, PLAN_KINDS } from "@/lib/domain/training-plan";
 import { nextPlanDay } from "@/lib/domain/workout";
 import { cn } from "@/lib/utils";
 
@@ -50,11 +51,22 @@ export default async function PlansPage() {
       ) : (
         <div className="space-y-6">
           {current.length > 0 ? (
-            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {current.map((p) => (
-                <PlanCard key={p.id} plan={p} next={p.id === featured?.id ? nextDay : undefined} />
-              ))}
-            </ul>
+            // Abschnitte nach Art des Plans; leere Abschnitte entfallen
+            PLAN_KINDS.map((kind) => {
+              const list = current.filter((p) => p.kind === kind);
+              if (list.length === 0) return null;
+              return (
+                <section key={kind} aria-labelledby={`plaene-${kind}`}>
+                  <h2 id={`plaene-${kind}`} className="mb-3 flex items-baseline gap-2 px-1 text-2xl leading-tight font-semibold">
+                    {PLAN_KIND_LABELS[kind]}
+                    <span className="font-sans text-sm font-normal tracking-normal text-muted-foreground tabular-nums">
+                      {list.length === 1 ? "1 Plan" : `${list.length} Pläne`}
+                    </span>
+                  </h2>
+                  <PlanList plans={list} featuredId={featured?.id} next={nextDay} />
+                </section>
+              );
+            })
           ) : (
             <p className="rounded-3xl border border-dashed p-6 text-center text-muted-foreground">
               Alle Pläne sind ausgeblendet. Unten kannst du einen wieder einblenden.
@@ -76,11 +88,7 @@ export default async function PlansPage() {
                   <ChevronDown className="size-4 -rotate-90 transition-transform group-open:rotate-0" aria-hidden />
                 </span>
               </summary>
-              <ul className="mt-2 grid grid-cols-1 gap-3 opacity-80 md:grid-cols-2">
-                {archived.map((p) => (
-                  <PlanCard key={p.id} plan={p} />
-                ))}
-              </ul>
+              <PlanList plans={archived} className="mt-2 opacity-80" />
             </details>
           ) : null}
         </div>

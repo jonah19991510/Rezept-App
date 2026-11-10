@@ -1197,6 +1197,7 @@ export type Database = {
           id: string
           is_archived: boolean
           is_public: boolean
+          kind: Database["public"]["Enums"]["training_plan_kind"]
           owner_id: string
           title: string
           updated_at: string
@@ -1208,6 +1209,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_public?: boolean
+          kind?: Database["public"]["Enums"]["training_plan_kind"]
           owner_id?: string
           title: string
           updated_at?: string
@@ -1219,6 +1221,7 @@ export type Database = {
           id?: string
           is_archived?: boolean
           is_public?: boolean
+          kind?: Database["public"]["Enums"]["training_plan_kind"]
           owner_id?: string
           title?: string
           updated_at?: string
@@ -2393,6 +2396,7 @@ export type Database = {
         | "band"
         | "other"
       exercise_tracking: "weight_reps" | "bodyweight_reps" | "time" | "distance_time"
+      training_plan_kind: "strength" | "strength_endurance" | "cardio"
       muscle_group:
         | "chest"
         | "back"
@@ -2603,6 +2607,7 @@ export const Constants = {
         "other",
       ],
       exercise_tracking: ["weight_reps", "bodyweight_reps", "time", "distance_time"],
+      training_plan_kind: ["strength", "strength_endurance", "cardio"],
       muscle_group: [
         "chest",
         "back",

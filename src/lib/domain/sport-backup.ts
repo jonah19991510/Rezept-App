@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Constants } from "@/lib/supabase/database.types";
+import { Constants, type Enums } from "@/lib/supabase/database.types";
 import { normalizeSearch, type Equipment, type ExerciseCategory, type MuscleGroup, type Tracking } from "./exercises";
 
 // Sport-Sicherung (26.10.2026): eigene Trainingspläne und eigene Übungen als JSON-Datei, die sich wieder importieren
@@ -30,6 +30,8 @@ const timestamp = z.iso.datetime({ offset: true });
 export const sportBackupPlanSchema = z.object({
   title: z.string().trim().min(1).max(100),
   description: z.string().max(1000).nullable(),
+  /** ab 10.11.2026; ältere Sicherungen ohne Art zählen als Krafttraining */
+  kind: z.enum(Constants.public.Enums.training_plan_kind).default("strength"),
   is_archived: z.boolean().default(false),
   days: z
     .array(
@@ -121,6 +123,7 @@ type BackupExerciseRow = {
 export type PlanRowForBackup = {
   title: string;
   description: string | null;
+  kind: Enums<"training_plan_kind">;
   is_archived: boolean;
   training_plan_days: {
     position: number;
@@ -190,6 +193,7 @@ export function toSportBackupFile(
     plans: plans.map((p) => ({
       title: p.title,
       description: p.description,
+      kind: p.kind,
       is_archived: p.is_archived,
       days: [...p.training_plan_days]
         .sort((a, b) => a.position - b.position)
