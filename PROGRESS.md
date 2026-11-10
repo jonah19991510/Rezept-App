@@ -2122,7 +2122,8 @@ bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Tes
 
 ### Intervall im Verlauf, Trainingstage antippbar, alle Übungen in der Statistik (10.11.2026, Wunsch des Nutzers)
 
-**Vom Nutzer getestet** (am eigenen Gerät über den LAN-Server). Keine Migration nötig.
+**Live** seit 10.11.2026: vom Nutzer am eigenen Gerät über den LAN-Server getestet; Push `610df38` → Deployment
+`dpl_4jkXKL2sLS6RYoxP4tXLGtfpqZT7` (`production`, „READY“; per Vercel-Connector geprüft). Keine Migration nötig.
 
 - **Intervall-Timer speichert:** vorher schrieb er bewusst nichts in den Verlauf. Jetzt wie beim Krafttraining „Beenden“
   oben → Dialog „Training beenden?“ (Dauer, Runden, Belastungen; „Weiter trainieren“ / „Beenden und speichern“, ohne
