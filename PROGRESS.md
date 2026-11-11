@@ -2122,7 +2122,8 @@ bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Tes
 
 ### Supplemente & Blutwerte, Medizin & Vorsorge (11.11.2026, Wunsch des Nutzers)
 
-**Stand:** gebaut, noch nicht live. Die Migration `…20261111120000_health_archives` ist seit 11.11.2026 in der
+**Live** seit 11.11.2026: vom Nutzer am LAN-Server getestet und freigegeben; Push `e9b1197` → Deployment
+`dpl_4akHUqzpZfwsDpFnwdfEkVb3w9MQ` (`production`, „READY“; per Vercel-Connector geprüft). Die Migration `…20261111120000_health_archives` ist seit 11.11.2026 in der
 Datenbank (nach ausdrücklichem OK des Nutzers über die Supabase-Integration eingespielt; in Supabase Version
 `20261111102458`). Geprüft: RLS an, je eine Richtlinie, `anon` ohne Zugriff, Spalten passen zu `database.types.ts`;
 der Security-Advisor meldet nichts Neues. Sie ist additiv, die Live-Version ist davon nicht betroffen.
@@ -2147,8 +2148,8 @@ der Security-Advisor meldet nichts Neues. Sie ist additiv, die Live-Version ist 
   Einspielen per SQL gegengeprüft).
 - Geprüft: 615 Tests (12 neue), Typcheck, Lint, Build grün. Oberfläche über eine temporäre Vorschauseite mit
   Beispieldaten (danach gelöscht) bei 375 px und Desktop, hell/dunkel: kein seitliches Scrollen, keine Konsolenfehler,
-  Sheets öffnen, Live-Abgleich beim Eintragen, „Werte vom letzten Test“. **Nicht geprüft:** Speichern mit echter
-  Datenbank (das Browser-Pane ist nicht angemeldet; Test durch den Nutzer am LAN-Server).
+  Sheets öffnen, Live-Abgleich beim Eintragen, „Werte vom letzten Test“. Speichern mit echter Datenbank hat der
+  Nutzer am LAN-Server getestet (das Browser-Pane ist nicht angemeldet).
 
 ### Trainingspläne nach Art: Krafttraining, Kraftausdauer, Ausdauer (10.11.2026, Wunsch des Nutzers)
 
