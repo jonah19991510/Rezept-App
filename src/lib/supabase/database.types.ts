@@ -421,6 +421,302 @@ export type Database = {
           },
         ]
       }
+      supplements: {
+        Row: {
+          active: boolean
+          brand: string | null
+          created_at: string
+          form: string
+          id: string
+          ingredients: Json
+          name: string
+          note: string | null
+          price_eur: number | null
+          serving_label: string | null
+          servings_per_day: number
+          servings_per_pack: number | null
+          shop: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          brand?: string | null
+          created_at?: string
+          form?: string
+          id?: string
+          ingredients?: Json
+          name: string
+          note?: string | null
+          price_eur?: number | null
+          serving_label?: string | null
+          servings_per_day?: number
+          servings_per_pack?: number | null
+          shop?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          active?: boolean
+          brand?: string | null
+          created_at?: string
+          form?: string
+          id?: string
+          ingredients?: Json
+          name?: string
+          note?: string | null
+          price_eur?: number | null
+          serving_label?: string | null
+          servings_per_day?: number
+          servings_per_pack?: number | null
+          shop?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blood_tests: {
+        Row: {
+          created_at: string
+          id: string
+          lab: string | null
+          note: string | null
+          results: Json
+          taken_on: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lab?: string | null
+          note?: string | null
+          results?: Json
+          taken_on: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lab?: string | null
+          note?: string | null
+          results?: Json
+          taken_on?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blood_tests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sick_episodes: {
+        Row: {
+          created_at: string
+          ended_on: string | null
+          id: string
+          note: string | null
+          sick_note: boolean
+          started_on: string
+          symptoms: string[]
+          temperatures: Json
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_on?: string | null
+          id?: string
+          note?: string | null
+          sick_note?: boolean
+          started_on: string
+          symptoms?: string[]
+          temperatures?: Json
+          title: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          ended_on?: string | null
+          id?: string
+          note?: string | null
+          sick_note?: boolean
+          started_on?: string
+          symptoms?: string[]
+          temperatures?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sick_episodes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medication_intakes: {
+        Row: {
+          created_at: string
+          dose: string | null
+          episode_id: string | null
+          id: string
+          name: string
+          note: string | null
+          reason: string | null
+          taken_on: string
+          taken_time: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dose?: string | null
+          episode_id?: string | null
+          id?: string
+          name: string
+          note?: string | null
+          reason?: string | null
+          taken_on: string
+          taken_time?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          dose?: string | null
+          episode_id?: string | null
+          id?: string
+          name?: string
+          note?: string | null
+          reason?: string | null
+          taken_on?: string
+          taken_time?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_intakes_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "sick_episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medication_intakes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkups: {
+        Row: {
+          created_at: string
+          doctor: string | null
+          id: string
+          interval_months: number | null
+          name: string
+          next_on: string | null
+          note: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          doctor?: string | null
+          id?: string
+          interval_months?: number | null
+          name: string
+          next_on?: string | null
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          doctor?: string | null
+          id?: string
+          interval_months?: number | null
+          name?: string
+          next_on?: string | null
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkups_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkup_visits: {
+        Row: {
+          checkup_id: string
+          created_at: string
+          id: string
+          note: string | null
+          user_id: string
+          visited_on: string
+        }
+        Insert: {
+          checkup_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          user_id?: string
+          visited_on: string
+        }
+        Update: {
+          checkup_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          user_id?: string
+          visited_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkup_visits_checkup_id_fkey"
+            columns: ["checkup_id"]
+            isOneToOne: false
+            referencedRelation: "checkups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkup_visits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       body_measurements: {
         Row: {
           belly_cm: number | null

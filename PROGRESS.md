@@ -2120,6 +2120,36 @@ Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, 
 bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
 über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
 
+### Supplemente & Blutwerte, Medizin & Vorsorge (11.11.2026, Wunsch des Nutzers)
+
+**Stand:** gebaut, noch nicht live. Die Migration `…20261111120000_health_archives` ist seit 11.11.2026 in der
+Datenbank (nach ausdrücklichem OK des Nutzers über die Supabase-Integration eingespielt; in Supabase Version
+`20261111102458`). Geprüft: RLS an, je eine Richtlinie, `anon` ohne Zugriff, Spalten passen zu `database.types.ts`;
+der Security-Advisor meldet nichts Neues. Sie ist additiv, die Live-Version ist davon nicht betroffen.
+
+- **Profilmenü (Sport):** zwei neue Punkte „Supplemente & Blutwerte“ (`/sport/supplemente`, Tabs Supplemente ·
+  Blutwerte) und „Medizin & Vorsorge“ (`/sport/medizin`, Tabs Krankheitstage · Medikamente · Vorsorge).
+- **Migration** (additiv): Tabellen `supplements` (Inhaltsstoffe als jsonb), `blood_tests` (Werte als jsonb `results`),
+  `sick_episodes` (Symptome text[], Fieber als jsonb), `medication_intakes` (optional `episode_id`, `on delete set
+  null`), `checkups` und `checkup_visits`; RLS nur eigene Zeilen, Einnahmen/Besuche nur zu eigenen Krankheiten/Vorsorgen.
+- **Supplemente** (`lib/domain/supplements.ts`): 25 Stoffe mit Empfehlung (DGE, sonst EFSA; m/w), Obergrenze (EFSA-UL)
+  und BfR-Höchstmenge für NEM; IE-Umrechnung für Vitamin D/A/E. Ergebnis „Zu viel“ (über UL), „Über BfR-Höchstmenge“,
+  „Passt“, „Unter Empfehlung“; Tagessumme über alle aktiven Supplemente; Kosten je Portion/Tag/Monat, Packung reicht.
+  Geschlecht aus den Körpermaße-Einstellungen (sonst Männer-Werte mit Hinweis).
+- **Blutwerte** (`lib/domain/blood.ts`): Katalog mit 42 Werten in 6 Gruppen (Einheit, üblicher Bereich m/w, Hinweis);
+  Bereich vom Befund geht vor, bei anderer Einheit als im Katalog kein Bereich. Veränderungen letzter vs. vorletzter
+  Test mit „besser/schlechter“ (Abstand zum Bereich) und Statuswechsel.
+- **Medizin** (`lib/domain/medical.ts`): Krankheitstage je Jahr/12 Monate ohne doppelte Tage, Fieberstufen,
+  Medikamente je Name zusammengefasst, Vorsorge-Fälligkeit (Termin nach dem letzten Besuch, sonst Besuch + Rhythmus;
+  „bald“ = 30 Tage), Monatsrechnung mit Monatsende.
+- Datenexport um `supplemente`, `bluttests`, `krankheitstage`, `medikamente`, `vorsorge`, `vorsorge_besuche` ergänzt;
+  `DATENVERARBEITUNG.md` (Gesundheitsdaten) ergänzt. `database.types.ts` von Hand um die Tabellen ergänzt (nach dem
+  Einspielen per SQL gegengeprüft).
+- Geprüft: 615 Tests (12 neue), Typcheck, Lint, Build grün. Oberfläche über eine temporäre Vorschauseite mit
+  Beispieldaten (danach gelöscht) bei 375 px und Desktop, hell/dunkel: kein seitliches Scrollen, keine Konsolenfehler,
+  Sheets öffnen, Live-Abgleich beim Eintragen, „Werte vom letzten Test“. **Nicht geprüft:** Speichern mit echter
+  Datenbank (das Browser-Pane ist nicht angemeldet; Test durch den Nutzer am LAN-Server).
+
 ### Trainingspläne nach Art: Krafttraining, Kraftausdauer, Ausdauer (10.11.2026, Wunsch des Nutzers)
 
 **Live** seit 10.11.2026: vom Nutzer freigegeben; Push `9286290` → Deployment `dpl_EexPXTB4pJrL9gXYZTggfkcsNb5k`

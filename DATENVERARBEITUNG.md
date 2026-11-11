@@ -151,6 +151,12 @@ Alkohol). Das sollte die spätere Datenschutzerklärung ausdrücklich erwähnen.
 
 ## Änderungsverlauf
 
+- **11.11.2026, Supplemente & Blutwerte, Medizin & Vorsorge:** Neue Tabellen `supplements`, `blood_tests`,
+  `sick_episodes`, `medication_intakes`, `checkups` und `checkup_visits` (RLS nur der Nutzer, Cascade am Profil;
+  Einnahmen nur zu eigenen Krankheiten, Besuche nur zu eigener Vorsorge). Nichts davon wird geteilt oder ist für andere
+  sichtbar. Im Datenexport als `supplemente`, `bluttests`, `krankheitstage`, `medikamente`, `vorsorge` und
+  `vorsorge_besuche`. Blutwerte, Krankheiten, Medikamente und Arztbesuche sind Gesundheitsdaten (Art. 9 DSGVO,
+  Hinweis für die Datenschutzerklärung). Abgleich mit Referenzwerten rechnet die App selbst. Keine neuen Dienstleister.
 - **10.11.2026, Routinen:** Neue Tabellen `habit_routines`, `habit_routine_items` und `habit_routine_checks` (RLS nur
   der Nutzer, Cascade am Profil; Punkte nur aus eigenen Habits). Die bisherige Morgen- und Abendroutine wurde
   übernommen, gleichnamige doppelte Punkte mit OK des Nutzers zu einem Habit zusammengeführt. Wochenplan: Spalte

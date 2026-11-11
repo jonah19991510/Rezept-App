@@ -1,6 +1,6 @@
 # Topform – Funktionsübersicht
 
-Stand: 10.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Art des Trainingsplans – Krafttraining, Kraftausdauer, Ausdauer – und Planliste in Abschnitten).
+Stand: 11.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Supplemente & Blutwerte, Medizin & Vorsorge im Profilmenü).
 Live: <https://unser-rezeptbuch.vercel.app> · Next.js 16 · Supabase (Frankfurt) · Vercel (`fra1`)
 
 Die App hat **drei Bereiche** (Umschalter oben links): **Start**, **Essen & Trinken**, **Sport & Gesundheit**.
@@ -25,7 +25,9 @@ Topform
 │   ├── 3.4 Verlauf                 ├── 3.10 Übungsdatenbank
 │   ├── 3.5 Getränke                ├── 3.11 Körpermaße
 │   └── 3.6 Habits                  ├── 3.12 Energiebedarfsrechner
-│                                   └── 3.13 Lexikon
+│                                   ├── 3.13 Lexikon
+│                                   ├── 3.14 Supplemente & Blutwerte
+│                                   └── 3.15 Medizin & Vorsorge
 ├── 4  Einstellungen & eigene Daten
 └── 5  Admin
 ```
@@ -37,7 +39,7 @@ Topform
 **Navigation**
 - Bereichs-Umschalter (Start · Essen & Trinken · Sport & Gesundheit); Sport-Bereich mit Petrol-Akzent, Essen mit Terrakotta
 - Handy: schwebende untere Leiste (max. 5 Punkte, Tabs vorgeladen); Desktop: Seitenleiste
-- Profilmenü (Avatar): Einstellungen, bereichsabhängige Werkzeuge, Hell/Dunkel/System, Abmelden, Nutzerverwaltung (nur Admin)
+- Profilmenü (Avatar): Einstellungen, bereichsabhängige Werkzeuge (Sport: Übungen, Körpermaße, Energiebedarf, Supplemente & Blutwerte, Medizin & Vorsorge, Lexikon), Hell/Dunkel/System, Abmelden, Nutzerverwaltung (nur Admin)
 - Editoren (Rezept, Plan, Challenge) und Vollbild-Modi (Kochen, Training, Intervall) ohne Navigation
 
 **Accounts & Auth** (`(auth)`, `auth/confirm`)
@@ -248,6 +250,27 @@ Topform
 - Einträge mit Fakten-Tabelle, Textblöcken, Tabellen, Querverweisen `[[Begriff]]`, „Verweise hierher“, Quelle
 - Schreiben nur Admins; Entwürfe (nicht öffentlich), Kategorien verwalten
 
+### 3.14 Supplemente & Blutwerte (`/sport/supplemente`, Profilmenü, Tabs Supplemente · Blutwerte)
+- **Supplement-Archiv:** Name, Marke, gekauft bei, Form (Kapsel, Tablette, Pulver, Tropfen, Flüssig), Portion, Portionen pro Tag, Portionen je Packung, Preis; „Nehme ich gerade“ (Schalter direkt auf der Karte) oder Archiv („nehme ich nicht mehr“); Notiz
+- **Inhaltsstoffe** je Portion aus 25 bekannten Stoffen (Vitamine, Mineralstoffe, Omega-3, Kreatin, Koffein; mg/µg/g, IE wird umgerechnet) oder freier Name (z. B. „D3“ wird als Vitamin D erkannt)
+- **Abgleich:** je Stoff Tagesmenge vs. Empfehlung (DGE, sonst EFSA; nach Geschlecht aus den Körpermaße-Einstellungen) und Obergrenze (EFSA) bzw. BfR-Höchstmenge für Nahrungsergänzung → „Passt“, „Unter Empfehlung“, „Über BfR-Höchstmenge“, „Zu viel“, Hinweis „nah an der Obergrenze“; live schon beim Eintragen
+- **Tagessumme** über alle Supplemente, die man gerade nimmt (z. B. Vitamin D aus zwei Produkten), mit Balken, Prozent der Empfehlung und Herkunft
+- Kennzahlen: Anzahl, **Kosten im Monat/Jahr**, Hinweise; je Supplement Kosten pro Monat und „Packung reicht X Tage“
+- **Blutwerte-Archiv:** Bluttest mit Datum, Labor/Praxis, Notiz und Werten aus einem Katalog von 42 Werten in 6 Gruppen (mit Einheit, üblichem Bereich, Erklärung) oder eigenem Wert; Referenzbereich vom Befund optional (geht vor)
+- „Werte vom letzten Test“ übernimmt dieselben Zeilen leer
+- **Veränderungen** ab dem zweiten Test: vorher → jetzt, Differenz und %, besser/schlechter bezogen auf den Bereich, Statuswechsel („Niedrig → jetzt im Bereich“), wichtigste zuerst
+- Alle Werte im Verlauf (Mini-Graph, aufklappbar mit allen Messungen) und die Tests einzeln mit „vorher“-Vergleich; Status Niedrig/Im Bereich/Hoch
+
+### 3.15 Medizin & Vorsorge (`/sport/medizin`, Profilmenü, Tabs Krankheitstage · Medikamente · Vorsorge)
+- **Krankheitstage:** Krankheit mit Bezeichnung (Vorschläge), von–bis oder „noch krank“, Symptome (Chips + eigene), krankgeschrieben, Fiebermessungen (Datum, Uhrzeit, °C; ab 38 °C rot), Notiz
+- Laufende Krankheit oben: Tag X, letzte/höchste Temperatur, **Fieber messen** mit einem Feld, „Wieder gesund“, Medikamente dazu
+- Kennzahlen: Krankheitstage dieses Jahr und letzte 12 Monate (Überschneidungen einmal), Anzahl, krankgeschrieben; häufigste Symptome; Liste nach Jahr
+- **Medikamente:** Einnahme mit Medikament, Dosis, Datum, Uhrzeit, Grund, optional Krankheit (laufende vorausgewählt), Notiz; Vorschläge aus dem Verlauf
+- „Meine Medikamente“ je Name (Anzahl, zuletzt, Gründe) mit **„Nochmal“**; Einnahmen nach Tag (20 Tage, „Ältere anzeigen“)
+- **Vorsorge:** Untersuchung (Vorschläge mit üblichem Rhythmus: Zahnarzt, PZR, Check-up, Hautkrebs-Screening, Augenarzt, Impfungen …), Praxis, Rhythmus in Monaten, fest ausgemachter Termin, Notiz
+- Fälligkeit: Termin oder letzter Besuch + Rhythmus → „Fällig“ (überfällig), „Bald“ (30 Tage), „Geplant“, „Offen“; „Jetzt dran“ oben
+- **„War beim Termin“** trägt den Besuch ein (erledigt den Termin, optional gleich den nächsten), Besuche im Sheet löschbar
+
 ---
 
 ## 4 Einstellungen & eigene Daten (`/einstellungen`, je Bereich gefiltert)
@@ -275,6 +298,9 @@ Aus `PROGRESS.md` („Offene Punkte“):
 - Kochmodus: Timer überleben kein Neuladen, klingeln im Ruhezustand erst beim Aufwecken
 - Datenexport: Fotos nur als Liste (kein ZIP)
 - Feed zeigt nur die letzten 50 Posts (kein Nachladen)
+- Supplemente: nicht mit den Supplement-Habits verknüpft (Einnahme abhaken getrennt vom Archiv); Ernährung zählt im Abgleich nicht mit
+- Blutwerte: keine Umrechnung zwischen Einheiten (z. B. nmol/l ↔ ng/ml), dann Bereich vom Befund eintragen; kein Diagramm je Wert (nur Mini-Graph)
+- Vorsorge/Medikamente: keine Erinnerung per Benachrichtigung, Fälligkeit nur in der App sichtbar
 - Habit-Routinen: keine Startzeit je Routine; Reihenfolge mehrerer Routinen derselben Tageszeit nicht sortierbar (Anlegereihenfolge); Habits mit höherem Tagesziel als Routinen: die übrigen Male nur in der Statistik abhakbar
 - Offen beim Nutzer: Einladungs-Mail sagt noch „Rezeptbuch“; erster Challenge-Rundenwechsel am 01.12.2026 ansehen
 

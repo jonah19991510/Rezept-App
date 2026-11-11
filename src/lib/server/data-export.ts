@@ -90,6 +90,7 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     profile, recipes, plan, batches, planDays, goals, settings, shopping, pantry, prices, cookLogs, favorites, ownIngredients, categories,
     trainingPlans, ownExercises, workouts, drinks, drinkEntries, bodyMeasurements, habits, habitChecks, routines, routineItems, routineChecks, schedule, lexicon,
     ownChallenges, challengeParticipations, challengeEntries, posts, kudos, comments,
+    supplements, bloodTests, sickEpisodes, medications, checkups, checkupVisits,
   ] = await Promise.all([
     supabase.from("profiles").select("display_name, avatar_url, role, hide_from_leaderboard, created_at").eq("id", id).maybeSingle(),
     supabase
@@ -149,6 +150,13 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     supabase.from("workout_posts").select("*").eq("user_id", id).order("trained_at"),
     supabase.from("post_kudos").select("*").eq("user_id", id).order("created_at"),
     supabase.from("post_comments").select("*").eq("user_id", id).order("created_at"),
+    // Supplemente & Blutwerte, Medizin & Vorsorge
+    supabase.from("supplements").select("*").eq("user_id", id).order("name"),
+    supabase.from("blood_tests").select("*").eq("user_id", id).order("taken_on"),
+    supabase.from("sick_episodes").select("*").eq("user_id", id).order("started_on"),
+    supabase.from("medication_intakes").select("*").eq("user_id", id).order("taken_on"),
+    supabase.from("checkups").select("*").eq("user_id", id).order("name"),
+    supabase.from("checkup_visits").select("*").eq("user_id", id).order("visited_on"),
   ]);
 
   return {
@@ -189,6 +197,12 @@ export async function buildPersonalDataExport(user: CurrentUser) {
     geteilte_trainings: must(posts, "Geteilte Trainings"),
     kudos_gegeben: must(kudos, "Kudos"),
     kommentare: must(comments, "Kommentare"),
+    supplemente: must(supplements, "Supplemente"),
+    bluttests: must(bloodTests, "Bluttests"),
+    krankheitstage: must(sickEpisodes, "Krankheitstage"),
+    medikamente: must(medications, "Medikamente"),
+    vorsorge: must(checkups, "Vorsorge"),
+    vorsorge_besuche: must(checkupVisits, "Vorsorge-Besuche"),
   };
 }
 
