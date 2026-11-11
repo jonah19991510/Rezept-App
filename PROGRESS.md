@@ -2130,7 +2130,8 @@ Kennzahlen (Tage dieses Jahr, letzte 30 Tage, Ø Stärke), häufigste, Liste nac
 gleicher Grund am selben Tag). Tab „Krank“ (bisher „Krankheitstage“) und seine Statistik nur noch `kind = krank`.
 `SickSheet` mit Umschalter Krank | Beschwerde; bei Beschwerden ohne Fieber und Krankschreibung (Server leert sie), mit
 Stärke; Hinweis „Als Beschwerde eintragen“, wenn eine Beschwerde als krank eingetragen wird. Migräne und Allergie aus
-den Krankheits-Vorschlägen genommen. Migration `…20261111170000_complaints` am 11.11.2026 nach OK des Nutzers
+den Krankheits-Vorschlägen genommen. Nachgereicht (Wunsch des Nutzers): „Häufigste Symptome“ auch im Tab Beschwerden,
+gleich wie bei Krank. Migration `…20261111170000_complaints` am 11.11.2026 nach OK des Nutzers
 eingespielt; Bestand: „Migräne“ (09.11.) → Beschwerde. Tests (617), Typcheck, Lint grün; Oberfläche über temporäre
 Vorschauseite (gelöscht) bei 375 px geprüft.
 

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { endSickEpisodeAction } from "@/app/(app)/sport/medizin/actions";
 import { EmptyState } from "@/components/layout/empty-state";
 import { Button } from "@/components/ui/button";
-import { complaintStats, episodeDays, topTitles, type MedicationIntake, type SickEpisode } from "@/lib/domain/medical";
+import { complaintStats, episodeDays, topSymptoms, topTitles, type MedicationIntake, type SickEpisode } from "@/lib/domain/medical";
 import { berlinParts } from "@/lib/domain/workout";
 import { cn } from "@/lib/utils";
 import { Fab, longDate, MedicalNote, SectionTitle, shortDate, StatTile } from "./health-parts";
@@ -18,12 +18,13 @@ const monthLabel = (iso: string) => MONTH.format(new Date(`${iso.slice(0, 7)}-01
 
 /**
  * Beschwerden (Kopfschmerzen, Migräne, Rückenschmerzen …): zählen nicht als Krankheitstage. Kennzahlen (Tage dieses
- * Jahr, letzte 30 Tage, Ø Stärke), häufigste Beschwerden, Liste nach Monat mit Stärke und Medikamenten.
+ * Jahr, letzte 30 Tage, Ø Stärke), häufigste Beschwerden und Symptome, Liste nach Monat mit Stärke und Medikamenten.
  */
 export function ComplaintView({ complaints, intakes, today }: { complaints: SickEpisode[]; intakes: MedicationIntake[]; today: string }) {
   const [sheet, setSheet] = useState<{ episode: SickEpisode | null; now: string } | null>(null);
   const stats = complaintStats(complaints, today);
   const top = topTitles(complaints);
+  const symptoms = topSymptoms(complaints);
   const running = complaints.filter((e) => e.end == null);
   const months = [...new Set(complaints.map((e) => e.start.slice(0, 7)))];
 
@@ -63,6 +64,19 @@ export function ComplaintView({ complaints, intakes, today }: { complaints: Sick
                 {top.map((t) => (
                   <li key={t.title} className="rounded-full border bg-card px-3 py-1.5 text-sm">
                     {t.title} <span className="text-muted-foreground tabular-nums">· {t.count}×</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          {symptoms.length ? (
+            <section aria-labelledby="symptome">
+              <SectionTitle id="symptome">Häufigste Symptome</SectionTitle>
+              <ul className="flex flex-wrap gap-2">
+                {symptoms.map((s) => (
+                  <li key={s.symptom} className="rounded-full border bg-card px-3 py-1.5 text-sm">
+                    {s.symptom} <span className="text-muted-foreground tabular-nums">· {s.count}×</span>
                   </li>
                 ))}
               </ul>

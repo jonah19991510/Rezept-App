@@ -1,6 +1,6 @@
 # Topform – Funktionsübersicht
 
-Stand: 11.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Beschwerden wie Kopfschmerzen getrennt von Krankheitstagen).
+Stand: 11.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: häufigste Symptome auch bei den Beschwerden).
 Live: <https://unser-rezeptbuch.vercel.app> · Next.js 16 · Supabase (Frankfurt) · Vercel (`fra1`)
 
 Die App hat **drei Bereiche** (Umschalter oben links): **Start**, **Essen & Trinken**, **Sport & Gesundheit**.
@@ -266,7 +266,7 @@ Topform
 - **Krankheitstage:** Krankheit mit Bezeichnung (Vorschläge), von–bis oder „noch krank“, Symptome (Chips + eigene), krankgeschrieben, Fiebermessungen (Datum, Uhrzeit, °C; ab 38 °C rot), Notiz
 - Laufende Krankheit oben: Tag X, letzte/höchste Temperatur, **Fieber messen** mit einem Feld, „Wieder gesund“, Medikamente dazu
 - Kennzahlen: Krankheitstage dieses Jahr und letzte 12 Monate (Überschneidungen einmal), Anzahl, krankgeschrieben; häufigste Symptome; Liste nach Jahr – **nur echte Krankheiten**, Beschwerden zählen nicht mit
-- **Beschwerden** (`/sport/medizin/beschwerden`): Kopfschmerzen, Migräne, Rücken-, Bauchschmerzen, Verspannung, Allergie … mit **Stärke 1–10**, von–bis oder „hält noch an“ (Knopf „Vorbei“), Begleiterscheinungen, Notiz; Kennzahlen Tage dieses Jahr, letzte 30 Tage, Ø Stärke; häufigste Beschwerden; Liste nach Monat mit Medikamenten
+- **Beschwerden** (`/sport/medizin/beschwerden`): Kopfschmerzen, Migräne, Rücken-, Bauchschmerzen, Verspannung, Allergie … mit **Stärke 1–10**, von–bis oder „hält noch an“ (Knopf „Vorbei“), Begleiterscheinungen, Notiz; Kennzahlen Tage dieses Jahr, letzte 30 Tage, Ø Stärke; häufigste Beschwerden und häufigste Symptome (wie bei Krank); Liste nach Monat mit Medikamenten
 - Im Eingabe-Sheet oben **Krank | Beschwerde** umschaltbar (zum Umsortieren); trägt man z. B. „Kopfschmerzen“ als krank ein, schlägt die App „Als Beschwerde eintragen“ vor
 - **Medikamente:** Einnahme mit Medikament, Dosis, Datum, Uhrzeit, Grund, optional Krankheit oder Beschwerde (laufende Krankheit vorausgewählt), Notiz; Vorschläge aus dem Verlauf
 - „Meine Medikamente“ je Name (Anzahl, zuletzt, Gründe) mit **„Nochmal“**; Einnahmen nach Tag (20 Tage, „Ältere anzeigen“)
