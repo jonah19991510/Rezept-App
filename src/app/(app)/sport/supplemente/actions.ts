@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { servingsPerPack, servingText, type SupplementForm } from "@/lib/domain/supplements";
 import { todayInBerlin } from "@/lib/domain/week";
 import { createClient } from "@/lib/supabase/server";
 import { bloodTestInputSchema, supplementInputSchema, type BloodTestInput, type SupplementInput } from "@/lib/validation/health";
@@ -24,12 +25,16 @@ export async function saveSupplementAction(id: string | null, input: SupplementI
   const parsed = supplementInputSchema.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const d = parsed.data;
+  const servings = servingsPerPack(d.packAmount, d.servingAmount);
   const row = {
     name: d.name,
     brand: d.brand,
     form: d.form,
-    serving_label: d.servingLabel,
-    servings_per_pack: d.servingsPerPack,
+    pack_amount: d.packAmount,
+    serving_amount: d.servingAmount,
+    // berechnet bzw. Anzeige-Text, damit Export und ältere Stände lesbar bleiben
+    servings_per_pack: servings != null ? Math.min(10000, Math.max(0.1, Math.round(servings * 10) / 10)) : null,
+    serving_label: servingText({ form: d.form as SupplementForm, servingAmount: d.servingAmount }).slice(0, 40),
     price_eur: d.priceEur,
     shop: d.shop,
     servings_per_day: d.servingsPerDay,

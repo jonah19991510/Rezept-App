@@ -12,7 +12,7 @@ export async function getSupplements(userId: string): Promise<Supplement[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("supplements")
-    .select("id, name, brand, form, serving_label, servings_per_pack, price_eur, shop, servings_per_day, active, ingredients, note")
+    .select("id, name, brand, form, pack_amount, serving_amount, price_eur, shop, servings_per_day, active, ingredients, note")
     .eq("user_id", userId)
     .order("name");
   if (error) throw new Error(`Supplemente konnten nicht geladen werden (${error.code})`);
@@ -21,8 +21,8 @@ export async function getSupplements(userId: string): Promise<Supplement[]> {
     name: r.name,
     brand: r.brand,
     form: (SUPPLEMENT_FORMS.some((f) => f.value === r.form) ? r.form : "sonstiges") as SupplementForm,
-    servingLabel: r.serving_label,
-    servingsPerPack: num(r.servings_per_pack),
+    packAmount: num(r.pack_amount),
+    servingAmount: Number(r.serving_amount) || 1,
     priceEur: num(r.price_eur),
     shop: r.shop,
     servingsPerDay: Number(r.servings_per_day),

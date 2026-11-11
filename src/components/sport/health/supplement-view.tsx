@@ -13,6 +13,7 @@ import {
   formatAmount,
   formLabel,
   monthlyCost,
+  servingText,
   supplementCost,
   VERDICT_LABEL,
   verdictText,
@@ -179,7 +180,7 @@ function SupplementCard({ supplement: s, sex, onOpen }: { supplement: Supplement
   const worst = worstVerdict(checks);
   const cost = supplementCost(s);
   const meta = [s.brand, formLabel(s.form), s.shop].filter(Boolean).join(" · ");
-  const dosage = `${formatAmount(s.servingsPerDay)}× täglich${s.servingLabel ? ` · ${s.servingLabel}` : ""}`;
+  const dosage = `${formatAmount(s.servingsPerDay)}× täglich ${servingText(s)}`;
 
   function toggle(value: boolean) {
     startTransition(async () => {

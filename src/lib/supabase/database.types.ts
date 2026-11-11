@@ -431,7 +431,9 @@ export type Database = {
           ingredients: Json
           name: string
           note: string | null
+          pack_amount: number | null
           price_eur: number | null
+          serving_amount: number
           serving_label: string | null
           servings_per_day: number
           servings_per_pack: number | null
@@ -448,7 +450,9 @@ export type Database = {
           ingredients?: Json
           name: string
           note?: string | null
+          pack_amount?: number | null
           price_eur?: number | null
+          serving_amount?: number
           serving_label?: string | null
           servings_per_day?: number
           servings_per_pack?: number | null
@@ -465,7 +469,9 @@ export type Database = {
           ingredients?: Json
           name?: string
           note?: string | null
+          pack_amount?: number | null
           price_eur?: number | null
+          serving_amount?: number
           serving_label?: string | null
           servings_per_day?: number
           servings_per_pack?: number | null

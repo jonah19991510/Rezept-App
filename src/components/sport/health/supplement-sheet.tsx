@@ -19,6 +19,9 @@ import {
   NUTRIENTS,
   nutrientOf,
   SUPPLEMENT_FORMS,
+  formUnit,
+  servingsPerPack,
+  servingText,
   supplementAmounts,
   supplementCost,
   VERDICT_LABEL,
@@ -37,8 +40,8 @@ type Form = {
   name: string;
   brand: string;
   form: SupplementForm;
-  servingLabel: string;
-  servingsPerPack: string;
+  packAmount: string;
+  servingAmount: string;
   priceEur: string;
   shop: string;
   servingsPerDay: string;
@@ -54,8 +57,8 @@ function formFrom(s: Supplement | null): Form {
     name: s?.name ?? "",
     brand: s?.brand ?? "",
     form: s?.form ?? "kapsel",
-    servingLabel: s?.servingLabel ?? "",
-    servingsPerPack: s?.servingsPerPack != null ? formatDecimalInput(s.servingsPerPack, 1) : "",
+    packAmount: s?.packAmount != null ? formatDecimalInput(s.packAmount, 1) : "",
+    servingAmount: formatDecimalInput(s?.servingAmount ?? 1, 2),
     priceEur: s?.priceEur != null ? formatDecimalInput(s.priceEur, 2) : "",
     shop: s?.shop ?? "",
     servingsPerDay: formatDecimalInput(s?.servingsPerDay ?? 1, 2),
@@ -92,7 +95,10 @@ export function SupplementSheet({ supplement, sex, onClose }: { supplement: Supp
   const amounts = supplementAmounts({ ingredients: draft, servingsPerDay: perDay });
   const listed = new Set(draft.map((i) => i.nutrient));
   const combined = [...amounts.entries()].filter(([key]) => !listed.has(key)).map(([key, amount]) => checkNutrient(nutrientOf(key)!, amount, sex));
-  const cost = supplementCost({ priceEur: parseDecimal(form.priceEur), servingsPerPack: parseDecimal(form.servingsPerPack), servingsPerDay: perDay });
+  const servingAmount = parseDecimal(form.servingAmount) ?? 0;
+  const servings = servingsPerPack(parseDecimal(form.packAmount), servingAmount);
+  const cost = supplementCost({ priceEur: parseDecimal(form.priceEur), packAmount: parseDecimal(form.packAmount), servingAmount, servingsPerDay: perDay });
+  const unit = formUnit(form.form);
 
   function close() {
     setOpen(false);
@@ -120,12 +126,14 @@ export function SupplementSheet({ supplement, sex, onClose }: { supplement: Supp
       toast.error(message);
     };
     for (const [field, value] of [
-      ["servingsPerPack", form.servingsPerPack],
+      ["packAmount", form.packAmount],
       ["priceEur", form.priceEur],
       ["servingsPerDay", form.servingsPerDay],
     ] as const) {
       if (value.trim() !== "" && num(value) == null) return bad(field);
     }
+    const serving = num(form.servingAmount);
+    if (serving == null || serving <= 0) return bad("servingAmount", "Bitte die Menge je Portion eintragen (z. B. 1).");
     const rows = form.rows.filter((r) => r.nutrient || r.name.trim() || r.amount.trim());
     const ingredients: Ingredient[] = [];
     for (const r of rows) {
@@ -141,8 +149,8 @@ export function SupplementSheet({ supplement, sex, onClose }: { supplement: Supp
         name: form.name,
         brand: form.brand || null,
         form: form.form,
-        servingLabel: form.servingLabel || null,
-        servingsPerPack: num(form.servingsPerPack),
+        packAmount: num(form.packAmount),
+        servingAmount: serving,
         priceEur: num(form.priceEur),
         shop: form.shop || null,
         servingsPerDay: num(form.servingsPerDay) ?? 1,
@@ -231,28 +239,30 @@ export function SupplementSheet({ supplement, sex, onClose }: { supplement: Supp
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field id="supp-serving" label="Eine Portion" error={err("servingLabel")}>
-          <Input id="supp-serving" value={form.servingLabel} maxLength={40} onChange={(e) => set("servingLabel", e.target.value)} placeholder="z. B. 1 Kapsel" className="h-12 text-base" />
-        </Field>
-        <Field id="supp-perday" label="Portionen pro Tag" error={err("servingsPerDay")}>
-          <UnitInput id="supp-perday" unit="× tägl." inputMode="decimal" value={form.servingsPerDay} onChange={(e) => set("servingsPerDay", e.target.value)} className="pr-16" aria-invalid={Boolean(err("servingsPerDay"))} />
-        </Field>
-        <Field id="supp-pack" label="Portionen je Packung" error={err("servingsPerPack")}>
-          <Input id="supp-pack" inputMode="decimal" value={form.servingsPerPack} onChange={(e) => set("servingsPerPack", e.target.value)} placeholder="z. B. 90" className="h-12 text-base tabular-nums" aria-invalid={Boolean(err("servingsPerPack"))} />
+        <Field id="supp-pack" label="Packungsinhalt" error={err("packAmount")}>
+          <UnitInput id="supp-pack" unit={unit} inputMode="decimal" value={form.packAmount} onChange={(e) => set("packAmount", e.target.value)} placeholder="z. B. 90" className="pr-24" aria-invalid={Boolean(err("packAmount"))} />
         </Field>
         <Field id="supp-price" label="Preis je Packung" error={err("priceEur")}>
           <UnitInput id="supp-price" unit="€" inputMode="decimal" value={form.priceEur} onChange={(e) => set("priceEur", e.target.value)} placeholder="z. B. 14,90" aria-invalid={Boolean(err("priceEur"))} />
         </Field>
+        <Field id="supp-serving" label="Eine Portion" error={err("servingAmount")}>
+          <UnitInput id="supp-serving" unit={unit} inputMode="decimal" value={form.servingAmount} onChange={(e) => set("servingAmount", e.target.value)} placeholder="z. B. 3" className="pr-24" aria-invalid={Boolean(err("servingAmount"))} />
+        </Field>
+        <Field id="supp-perday" label="Portionen pro Tag" error={err("servingsPerDay")}>
+          <UnitInput id="supp-perday" unit="× tägl." inputMode="decimal" value={form.servingsPerDay} onChange={(e) => set("servingsPerDay", e.target.value)} className="pr-16" aria-invalid={Boolean(err("servingsPerDay"))} />
+        </Field>
       </div>
-      {cost.perServing != null ? (
+      {servings != null ? (
         <p className="-mt-3 text-sm text-muted-foreground tabular-nums">
-          {euro(cost.perServing)} je Portion · {cost.perMonth != null ? `${euro(cost.perMonth)} im Monat` : ""}
-          {cost.packDays != null ? ` · Packung reicht ${Math.floor(cost.packDays)} Tage` : ""}
+          = {formatAmount(servings)} {servings === 1 ? "Portion" : "Portionen"} je Packung
+          {cost.perServing != null ? ` · ${euro(cost.perServing)} je Portion` : ""}
+          {cost.perMonth != null ? ` · ${euro(cost.perMonth)} im Monat` : ""}
+          {cost.packDays != null ? ` · reicht ${Math.floor(cost.packDays)} Tage` : ""}
         </p>
       ) : null}
 
       <div>
-        <FieldHeading aside="je Portion">Inhaltsstoffe</FieldHeading>
+        <FieldHeading aside={servingAmount > 0 ? `je Portion (${servingText({ form: form.form, servingAmount })})` : "je Portion"}>Inhaltsstoffe</FieldHeading>
         <ul className="grid gap-3">
           {form.rows.map((row) => {
             const n = nutrientOf(row.nutrient);

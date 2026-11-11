@@ -2120,6 +2120,17 @@ Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, 
 bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
 über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
 
+### Nachtrag 11.11.2026: Packungsinhalt und Menge je Portion (Bugfix)
+
+Vom Nutzer gemeldet: 90 Kapseln, eine Portion = 3 Kapseln → die App rechnete mit 90 Portionen statt 30. Ursache: Das
+Feld hieß „Portionen je Packung“, die Portion war nur Freitext. Jetzt Felder **Packungsinhalt** und **Eine Portion** in
+der Einheit der Form (Kapseln, Tabletten, g, Tropfen, ml, Stück); Portionen je Packung = Inhalt ÷ Portion, daraus
+Kosten und „reicht X Tage“. Migration `…20261111150000_supplement_pack_amount` (Spalten `pack_amount`,
+`serving_amount`; Bestand umgerechnet: Zahl am Anfang des Portions-Texts = Menge je Portion, bisheriger Wert =
+Packungsinhalt; `servings_per_pack` neu berechnet, `serving_label` schreibt die App weiter als Anzeige-Text) am
+11.11.2026 nach OK des Nutzers eingespielt; vorher per Lese-Abfrage geprüft. Drei Einträge: 90/3 → 30, 300/1 → 300,
+90/3 → 30. Tests (616), Typcheck, Lint grün.
+
 ### Nachtrag 11.11.2026: EPA und DHA einzeln, zusammen als Omega-3
 
 Wunsch des Nutzers: bei Omega-3 EPA und DHA einzeln angeben, die App rechnet zusammen. Neue Stoffe `epa` und `dha` mit

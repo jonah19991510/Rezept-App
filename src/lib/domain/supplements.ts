@@ -84,6 +84,27 @@ export const SUPPLEMENT_FORMS = [
 export type SupplementForm = (typeof SUPPLEMENT_FORMS)[number]["value"];
 export const formLabel = (f: SupplementForm) => SUPPLEMENT_FORMS.find((x) => x.value === f)?.label ?? "Sonstiges";
 
+/** Einheit, in der Packungsinhalt und Portion gezählt werden (je Form; Einzahl/Mehrzahl). */
+const FORM_UNIT: Record<SupplementForm, [string, string]> = {
+  kapsel: ["Kapsel", "Kapseln"],
+  tablette: ["Tablette", "Tabletten"],
+  pulver: ["g", "g"],
+  tropfen: ["Tropfen", "Tropfen"],
+  fluessig: ["ml", "ml"],
+  sonstiges: ["Stück", "Stück"],
+};
+export const formUnit = (f: SupplementForm, amount = 2) => FORM_UNIT[f][amount === 1 ? 0 : 1];
+
+const fmtAmount = (v: number) => new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 }).format(v);
+
+/** „3 Kapseln“, „5 g“ */
+export const servingText = (s: { form: SupplementForm; servingAmount: number }) => `${fmtAmount(s.servingAmount)} ${formUnit(s.form, s.servingAmount)}`;
+
+/** Portionen je Packung aus Packungsinhalt und Menge je Portion (90 Kapseln, 3 je Portion → 30). */
+export function servingsPerPack(packAmount: number | null, servingAmount: number): number | null {
+  return packAmount != null && packAmount > 0 && servingAmount > 0 ? packAmount / servingAmount : null;
+}
+
 export type Ingredient = {
   /** bekannter Stoff (Schlüssel aus NUTRIENTS) oder null für einen freien Namen */
   nutrient: string | null;
@@ -97,8 +118,10 @@ export type Supplement = {
   name: string;
   brand: string | null;
   form: SupplementForm;
-  servingLabel: string | null;
-  servingsPerPack: number | null;
+  /** Packungsinhalt in der Einheit der Form (z. B. 90 Kapseln) */
+  packAmount: number | null;
+  /** Menge je Portion in derselben Einheit (z. B. 3 Kapseln); die Inhaltsstoffe gelten je Portion */
+  servingAmount: number;
   priceEur: number | null;
   shop: string | null;
   servingsPerDay: number;
@@ -256,10 +279,11 @@ export function dailyTotals(supplements: Supplement[], sex: Sex | null): TotalCh
 export type Cost = { perServing: number | null; perDay: number | null; perMonth: number | null; /** Packung reicht so viele Tage */ packDays: number | null };
 
 /** Kosten aus Packungspreis, Portionen je Packung und Portionen pro Tag (Monat = 30 Tage). */
-export function supplementCost(s: Pick<Supplement, "priceEur" | "servingsPerPack" | "servingsPerDay">): Cost {
-  const perServing = s.priceEur != null && s.servingsPerPack ? s.priceEur / s.servingsPerPack : null;
+export function supplementCost(s: Pick<Supplement, "priceEur" | "packAmount" | "servingAmount" | "servingsPerDay">): Cost {
+  const servings = servingsPerPack(s.packAmount, s.servingAmount);
+  const perServing = s.priceEur != null && servings ? s.priceEur / servings : null;
   const perDay = perServing != null ? perServing * s.servingsPerDay : null;
-  const packDays = s.servingsPerPack && s.servingsPerDay > 0 ? s.servingsPerPack / s.servingsPerDay : null;
+  const packDays = servings && s.servingsPerDay > 0 ? servings / s.servingsPerDay : null;
   return { perServing, perDay, perMonth: perDay != null ? perDay * 30 : null, packDays };
 }
 

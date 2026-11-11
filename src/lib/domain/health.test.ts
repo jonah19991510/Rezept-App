@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { buildSeries, changes, normalizeValues, statusOf, type BloodTest } from "./blood";
 import { addMonths, dueInfo, episodeDays, medicationSummaries, normalizeTemperatures, relativeDays, sickDaysBetween, sickStats, sortCheckups, type SickEpisode } from "./medical";
-import { checkNutrient, checkSupplement, dailyTotals, matchNutrient, monthlyCost, normalizeIngredients, nutrientOf, supplementCost, toNutrientUnit, type Supplement } from "./supplements";
+import { checkNutrient, checkSupplement, dailyTotals, matchNutrient, monthlyCost, normalizeIngredients, nutrientOf, servingText, supplementCost, toNutrientUnit, type Supplement } from "./supplements";
 
 const supp = (over: Partial<Supplement>): Supplement => ({
   id: "s1",
   name: "Vitamin D3",
   brand: null,
   form: "kapsel",
-  servingLabel: null,
-  servingsPerPack: null,
+  packAmount: null,
+  servingAmount: 1,
   priceEur: null,
   shop: null,
   servingsPerDay: 1,
@@ -73,11 +73,18 @@ describe("Supplemente", () => {
   });
 
   it("rechnet Kosten", () => {
-    const c = supplementCost({ priceEur: 18, servingsPerPack: 90, servingsPerDay: 2 });
+    const c = supplementCost({ priceEur: 18, packAmount: 90, servingAmount: 1, servingsPerDay: 2 });
     expect(c.perServing).toBeCloseTo(0.2);
     expect(c.perMonth).toBeCloseTo(12);
     expect(c.packDays).toBe(45);
-    expect(monthlyCost([supp({ priceEur: 18, servingsPerPack: 90, servingsPerDay: 2 }), supp({})])).toEqual({ total: expect.closeTo(12), missing: 1 });
+    expect(monthlyCost([supp({ priceEur: 18, packAmount: 90, servingsPerDay: 2 }), supp({})])).toEqual({ total: expect.closeTo(12), missing: 1 });
+    // 90 Kapseln, 3 je Portion, 1 Portion am Tag: 30 Portionen, Packung reicht 30 Tage
+    const c3 = supplementCost({ priceEur: 10.49, packAmount: 90, servingAmount: 3, servingsPerDay: 1 });
+    expect(c3.packDays).toBe(30);
+    expect(c3.perServing).toBeCloseTo(10.49 / 30);
+    expect(c3.perMonth).toBeCloseTo(10.49);
+    expect(servingText({ form: "kapsel", servingAmount: 3 })).toBe("3 Kapseln");
+    expect(servingText({ form: "kapsel", servingAmount: 1 })).toBe("1 Kapsel");
   });
 
   it("prüft Inhaltsstoffe und erkennt Namen", () => {
