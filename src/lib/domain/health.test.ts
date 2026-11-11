@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildSeries, changes, normalizeValues, statusOf, type BloodTest } from "./blood";
 import { addMonths, dueInfo, episodeDays, medicationSummaries, normalizeTemperatures, relativeDays, sickDaysBetween, sickStats, sortCheckups, type SickEpisode } from "./medical";
-import { checkNutrient, dailyTotals, matchNutrient, monthlyCost, normalizeIngredients, nutrientOf, supplementCost, toNutrientUnit, type Supplement } from "./supplements";
+import { checkNutrient, checkSupplement, dailyTotals, matchNutrient, monthlyCost, normalizeIngredients, nutrientOf, supplementCost, toNutrientUnit, type Supplement } from "./supplements";
 
 const supp = (over: Partial<Supplement>): Supplement => ({
   id: "s1",
@@ -53,6 +53,23 @@ describe("Supplemente", () => {
     expect(mg.amount).toBe(300);
     expect(mg.verdict).toBe("zu_viel");
     expect(totals[0].verdict).toBe("zu_viel");
+  });
+
+  it("rechnet EPA und DHA zu Omega-3 zusammen", () => {
+    const fish = supp({ id: "f", name: "Fischöl", servingsPerDay: 2, ingredients: [{ nutrient: "epa", name: "EPA (Omega-3)", amount: 300, unit: "mg" }, { nutrient: "dha", name: "DHA (Omega-3)", amount: 200, unit: "mg" }] });
+    const check = checkSupplement(fish, "m");
+    expect(check.ingredients.every((c) => c.check == null)).toBe(true);
+    expect(check.combined).toHaveLength(1);
+    expect(check.combined[0]).toMatchObject({ amount: 1000, verdict: "passt" });
+    expect(check.combined[0].nutrient.key).toBe("omega3");
+    // Summe auf der Packung angegeben: Teile zählen nicht doppelt
+    const withTotal = supp({ id: "g", name: "Algenöl", ingredients: [{ nutrient: "omega3", name: "Omega-3", amount: 500, unit: "mg" }, { nutrient: "epa", name: "EPA", amount: 200, unit: "mg" }, { nutrient: "dha", name: "DHA", amount: 300, unit: "mg" }] });
+    expect(checkSupplement(withTotal, "m").combined).toHaveLength(0);
+    const totals = dailyTotals([fish, withTotal], "m");
+    expect(totals.find((t) => t.nutrient.key === "omega3")).toMatchObject({ amount: 1500 });
+    expect(totals.some((t) => t.nutrient.key === "epa")).toBe(false);
+    expect(matchNutrient("EPA")?.key).toBe("epa");
+    expect(matchNutrient("Fischöl")?.key).toBe("omega3");
   });
 
   it("rechnet Kosten", () => {

@@ -2120,6 +2120,18 @@ Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, 
 bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
 über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
 
+### Nachtrag 11.11.2026: EPA und DHA einzeln, zusammen als Omega-3
+
+Wunsch des Nutzers: bei Omega-3 EPA und DHA einzeln angeben, die App rechnet zusammen. Neue Stoffe `epa` und `dha` mit
+`partOf: "omega3"` (ohne eigenen Richtwert). `supplementAmounts` rechnet je Supplement die Tagesmengen je bewertbarem
+Stoff; Teile zählen in Omega-3, außer die Packung nennt Omega-3 selbst (dann nur Aufschlüsselung, nicht doppelt).
+`checkSupplement` liefert jetzt `{ ingredients, combined }`: Karte zeigt „EPA 300 mg“, „DHA 200 mg“ und einen Chip
+„Omega-3 gesamt 1.000 mg/Tag · 400 %“; das Sheet zeigt bei EPA/DHA „Zählt zu Omega-3“ und darunter „Omega-3 zusammen“
+mit Abgleich. „EPA“/„DHA“ als freier Name werden erkannt. Keine Migration (Inhaltsstoffe liegen als jsonb). Test neu
+(616), Typcheck, Lint grün; über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft. Dabei lieferte Turbopack
+serverseitig wieder den alten Stand (Hydration-Fehler „1 Stoff“ vs. „2 Stoffe“); `.next/dev` gelöscht, neu gestartet,
+danach ohne Fehler.
+
 ### Supplemente & Blutwerte, Medizin & Vorsorge (11.11.2026, Wunsch des Nutzers)
 
 **Live** seit 11.11.2026: vom Nutzer am LAN-Server getestet und freigegeben; Push `e9b1197` → Deployment

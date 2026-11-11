@@ -128,6 +128,9 @@ export function SupplementView({ supplements, sex }: { supplements: Supplement[]
   );
 }
 
+/** „EPA (Omega-3)“ → „EPA“, „Omega-3 (EPA + DHA)“ → „Omega-3“ (für die kleinen Chips). */
+const shortName = (name: string) => name.replace(/\s*\((Omega-3|EPA \+ DHA)\)$/, "");
+
 /** Ein Stoff der Tagessumme: Menge, Balken bis zur Obergrenze, Ergebnis mit Erklärung, Herkunft. */
 function TotalRow({ total }: { total: TotalCheck }) {
   const n = total.nutrient;
@@ -197,9 +200,9 @@ function SupplementCard({ supplement: s, sex, onOpen }: { supplement: Supplement
         <Switch checked={s.active} disabled={pending} onCheckedChange={toggle} aria-label={s.active ? `${s.name}: nehme ich gerade` : `${s.name}: wieder nehmen`} className="mt-1.5" />
       </div>
 
-      {checks.length ? (
+      {checks.ingredients.length ? (
         <ul className="flex flex-wrap gap-1.5">
-          {checks.map((c, i) => (
+          {checks.ingredients.map((c, i) => (
             <li
               key={i}
               className={cn(
@@ -209,8 +212,22 @@ function SupplementCard({ supplement: s, sex, onOpen }: { supplement: Supplement
               )}
               title={c.check ? verdictText(c.check) : undefined}
             >
-              {c.ingredient.name} {formatAmount(c.ingredient.amount)} {c.ingredient.unit}
+              {shortName(c.ingredient.name)} {formatAmount(c.ingredient.amount)} {c.ingredient.unit}
               {c.check?.percentOfRec != null ? <span className="text-muted-foreground"> · {Math.round(c.check.percentOfRec)} % am Tag</span> : null}
+            </li>
+          ))}
+          {checks.combined.map((c) => (
+            <li
+              key={c.nutrient.key}
+              className={cn(
+                "rounded-full border border-transparent bg-muted px-2.5 py-1 text-xs font-medium tabular-nums",
+                c.verdict === "zu_viel" && "bg-destructive/12 text-destructive",
+                c.verdict === "ueber_bfr" && "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+              )}
+              title={verdictText(c)}
+            >
+              {shortName(c.nutrient.label)} gesamt {formatAmount(c.amount)} {c.nutrient.unit}/Tag
+              {c.percentOfRec != null ? <span className="font-normal text-muted-foreground"> · {Math.round(c.percentOfRec)} %</span> : null}
             </li>
           ))}
         </ul>

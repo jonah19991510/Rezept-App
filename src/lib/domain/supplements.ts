@@ -27,6 +27,8 @@ export type Nutrient = {
   aliases?: string[];
   /** kurzer Hinweis unter dem Stoff */
   hint?: string;
+  /** Teil eines Sammelstoffs (EPA, DHA → Omega-3): zählt in dessen Summe, hat selbst keinen Richtwert */
+  partOf?: string;
 };
 
 const DGE = "DGE";
@@ -54,7 +56,9 @@ export const NUTRIENTS: Nutrient[] = [
   { key: "jod", label: "Jod", unit: "µg", rec: { m: 200, w: 200, source: DGE }, ul: { value: 600, source: EFSA }, bfr: 100, aliases: ["iod", "jodid"] },
   { key: "kupfer", label: "Kupfer", unit: "mg", rec: { m: 1.6, w: 1.3, source: EFSA }, ul: { value: 5, source: EFSA }, aliases: ["copper"] },
   { key: "kalium", label: "Kalium", unit: "mg", rec: { m: 4000, w: 4000, source: DGE }, aliases: ["potassium"] },
-  { key: "omega3", label: "Omega-3 (EPA + DHA)", unit: "mg", rec: { m: 250, w: 250, source: EFSA }, ul: { value: 5000, source: EFSA, note: "als sicher bewertet" }, aliases: ["omega 3", "epa", "dha", "fischöl", "algenöl", "epa+dha"] },
+  { key: "omega3", label: "Omega-3 (EPA + DHA)", unit: "mg", rec: { m: 250, w: 250, source: EFSA }, ul: { value: 5000, source: EFSA, note: "als sicher bewertet" }, aliases: ["omega 3", "omega-3", "fischöl", "algenöl", "epa+dha", "epa + dha"], hint: "Zählt EPA und DHA zusammen." },
+  { key: "epa", label: "EPA (Omega-3)", unit: "mg", partOf: "omega3", aliases: ["epa", "eicosapentaensäure"] },
+  { key: "dha", label: "DHA (Omega-3)", unit: "mg", partOf: "omega3", aliases: ["dha", "docosahexaensäure"] },
   { key: "kreatin", label: "Kreatin", unit: "g", rec: { m: 3, w: 3, source: "EFSA (wirksame Menge)" }, aliases: ["creatin", "creatine", "kreatin-monohydrat", "creatin monohydrat"] },
   { key: "koffein", label: "Koffein", unit: "mg", ul: { value: 400, source: EFSA, note: "pro Tag, höchstens 200 mg auf einmal" }, aliases: ["caffeine", "coffein"], hint: "Kaffee und Energydrinks kommen dazu (Getränke-Tracker)." },
 ];
@@ -191,16 +195,42 @@ export function verdictText(check: NutrientCheck): string {
 const fmt = (v: number) => new Intl.NumberFormat("de-DE", { maximumFractionDigits: v < 10 ? 2 : v < 100 ? 1 : 0 }).format(v);
 export { fmt as formatAmount };
 
-/** Inhaltsstoff eines Supplements geprüft (mit seiner Tagesmenge allein). */
+/**
+ * Tagesmengen eines Supplements je bewertbarem Stoff. Teile (EPA, DHA) zählen in ihren Sammelstoff (Omega-3) – außer
+ * die Packung nennt die Summe selbst, dann sind die Teile nur die Aufschlüsselung und zählen nicht doppelt.
+ */
+export function supplementAmounts(s: Pick<Supplement, "ingredients" | "servingsPerDay">): Map<string, number> {
+  const explicit = new Set(s.ingredients.map((i) => i.nutrient).filter((k): k is string => k != null));
+  const sums = new Map<string, number>();
+  for (const ing of s.ingredients) {
+    const nutrient = nutrientOf(ing.nutrient);
+    if (!nutrient) continue;
+    const target = nutrient.partOf ? nutrientOf(nutrient.partOf) : nutrient;
+    if (!target || (nutrient.partOf && explicit.has(nutrient.partOf))) continue;
+    const amount = toNutrientUnit(dailyAmount(ing, s.servingsPerDay), ing.unit, target);
+    if (amount == null) continue;
+    sums.set(target.key, (sums.get(target.key) ?? 0) + amount);
+  }
+  return sums;
+}
+
+/** Inhaltsstoff eines Supplements geprüft (mit seiner Tagesmenge allein); Teile wie EPA/DHA ohne eigene Prüfung. */
 export type IngredientCheck = { ingredient: Ingredient; daily: number; check: NutrientCheck | null };
 
-export function checkSupplement(s: Supplement, sex: Sex | null): IngredientCheck[] {
-  return s.ingredients.map((ingredient) => {
+/** Ergebnis je Inhaltsstoff, dazu je Sammelstoff, der nur aus Teilen entsteht, eine eigene Zeile („Omega-3 gesamt“). */
+export type SupplementCheck = { ingredients: IngredientCheck[]; combined: NutrientCheck[] };
+
+export function checkSupplement(s: Supplement, sex: Sex | null): SupplementCheck {
+  const amounts = supplementAmounts(s);
+  const listed = new Set(s.ingredients.map((i) => i.nutrient));
+  const ingredients = s.ingredients.map((ingredient) => {
     const daily = dailyAmount(ingredient, s.servingsPerDay);
     const nutrient = nutrientOf(ingredient.nutrient);
-    const converted = nutrient ? toNutrientUnit(daily, ingredient.unit, nutrient) : null;
-    return { ingredient, daily, check: nutrient && converted != null ? checkNutrient(nutrient, converted, sex) : null };
+    const amount = nutrient && !nutrient.partOf ? amounts.get(nutrient.key) : undefined;
+    return { ingredient, daily, check: nutrient && amount != null ? checkNutrient(nutrient, amount, sex) : null };
   });
+  const combined = [...amounts.entries()].filter(([key]) => !listed.has(key)).map(([key, amount]) => checkNutrient(nutrientOf(key)!, amount, sex));
+  return { ingredients, combined };
 }
 
 /** Tagessumme je bekanntem Stoff über alle Supplemente, die man gerade nimmt; mit den beteiligten Supplementen. */
@@ -210,17 +240,11 @@ export function dailyTotals(supplements: Supplement[], sex: Sex | null): TotalCh
   const sums = new Map<string, { amount: number; sources: TotalCheck["sources"] }>();
   for (const s of supplements) {
     if (!s.active || s.servingsPerDay <= 0) continue;
-    for (const ing of s.ingredients) {
-      const nutrient = nutrientOf(ing.nutrient);
-      if (!nutrient) continue;
-      const amount = toNutrientUnit(dailyAmount(ing, s.servingsPerDay), ing.unit, nutrient);
-      if (amount == null) continue;
-      const entry = sums.get(nutrient.key) ?? { amount: 0, sources: [] };
+    for (const [key, amount] of supplementAmounts(s)) {
+      const entry = sums.get(key) ?? { amount: 0, sources: [] };
       entry.amount += amount;
-      const same = entry.sources.find((x) => x.id === s.id);
-      if (same) same.amount += amount;
-      else entry.sources.push({ id: s.id, name: s.name, amount });
-      sums.set(nutrient.key, entry);
+      entry.sources.push({ id: s.id, name: s.name, amount });
+      sums.set(key, entry);
     }
   }
   const order: Record<Verdict, number> = { zu_viel: 0, ueber_bfr: 1, unter: 2, passt: 3, ohne: 4 };
@@ -253,9 +277,9 @@ export function monthlyCost(supplements: Supplement[]): { total: number; missing
 }
 
 /** Schlimmstes Ergebnis eines Supplements (für die Karte). */
-export function worstVerdict(checks: IngredientCheck[]): Verdict | null {
+export function worstVerdict(checks: SupplementCheck): Verdict | null {
   const order: Verdict[] = ["zu_viel", "ueber_bfr", "unter", "passt", "ohne"];
-  const found = checks.map((c) => c.check?.verdict).filter((v): v is Verdict => v != null);
+  const found = [...checks.ingredients.map((c) => c.check?.verdict), ...checks.combined.map((c) => c.verdict)].filter((v): v is Verdict => v != null);
   if (!found.length) return null;
   return order.find((v) => found.includes(v)) ?? null;
 }

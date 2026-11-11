@@ -19,8 +19,8 @@ import {
   NUTRIENTS,
   nutrientOf,
   SUPPLEMENT_FORMS,
+  supplementAmounts,
   supplementCost,
-  toNutrientUnit,
   VERDICT_LABEL,
   type AmountUnit,
   type Ingredient,
@@ -83,6 +83,15 @@ export function SupplementSheet({ supplement, sex, onClose }: { supplement: Supp
   const err = (key: string) => errors[key]?.[0];
 
   const perDay = parseDecimal(form.servingsPerDay) ?? 0;
+  // Tagesmengen des Entwurfs je Stoff (EPA + DHA zusammen als Omega-3) für die Vorschau beim Eintragen
+  const draft: Ingredient[] = form.rows.flatMap((r) => {
+    const n = nutrientOf(r.nutrient);
+    const amount = parseDecimal(r.amount);
+    return n && amount != null ? [{ nutrient: n.key, name: n.label, amount, unit: r.unit }] : [];
+  });
+  const amounts = supplementAmounts({ ingredients: draft, servingsPerDay: perDay });
+  const listed = new Set(draft.map((i) => i.nutrient));
+  const combined = [...amounts.entries()].filter(([key]) => !listed.has(key)).map(([key, amount]) => checkNutrient(nutrientOf(key)!, amount, sex));
   const cost = supplementCost({ priceEur: parseDecimal(form.priceEur), servingsPerPack: parseDecimal(form.servingsPerPack), servingsPerDay: perDay });
 
   function close() {
@@ -247,9 +256,10 @@ export function SupplementSheet({ supplement, sex, onClose }: { supplement: Supp
         <ul className="grid gap-3">
           {form.rows.map((row) => {
             const n = nutrientOf(row.nutrient);
-            const amount = parseDecimal(row.amount);
-            const converted = n && amount != null ? toNutrientUnit(amount * perDay, row.unit, n) : null;
-            const check = n && converted != null ? checkNutrient(n, converted, sex) : null;
+            const daily = n && !n.partOf ? amounts.get(n.key) : undefined;
+            const check = n && daily != null ? checkNutrient(n, daily, sex) : null;
+            const parent = n?.partOf ? nutrientOf(n.partOf) : null;
+            const hasParts = n != null && draft.some((i) => nutrientOf(i.nutrient)?.partOf === n.key);
             return (
               <li key={row.key} className="grid gap-2 rounded-2xl border bg-card p-3">
                 <div className="flex items-center gap-2">
@@ -298,11 +308,32 @@ export function SupplementSheet({ supplement, sex, onClose }: { supplement: Supp
                     {check.percentOfRec != null ? ` · ${Math.round(check.percentOfRec)} % der Empfehlung` : ""}
                   </p>
                 ) : null}
+                {parent ? (
+                  <p className="text-xs text-muted-foreground">
+                    Zählt zu {parent.label}
+                    {listed.has(parent.key) ? " – die Summe steht schon oben, deshalb nicht doppelt." : ", zusammen mit den anderen Teilen."}
+                  </p>
+                ) : null}
+                {hasParts ? <p className="text-xs text-muted-foreground">EPA und DHA darunter zählen nur als Aufschlüsselung, die Summe gilt.</p> : null}
                 {err(`row-${row.key}`) ? <p className="text-sm text-destructive">{err(`row-${row.key}`)}</p> : null}
               </li>
             );
           })}
         </ul>
+        {combined.map((c) => (
+          <div key={c.nutrient.key} className="mt-3 grid gap-1.5 rounded-2xl border border-dashed p-3">
+            <p className="flex items-baseline justify-between gap-3 text-sm">
+              <span className="font-medium">{c.nutrient.label.replace(/\s*\(.*\)$/, "")} zusammen</span>
+              <span className="shrink-0 font-semibold whitespace-nowrap tabular-nums">
+                {formatAmount(c.amount)} {c.nutrient.unit} am Tag
+              </span>
+            </p>
+            <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground tabular-nums">
+              <ToneBadge tone={verdictTone(c.verdict)}>{VERDICT_LABEL[c.verdict]}</ToneBadge>
+              {c.percentOfRec != null ? `${Math.round(c.percentOfRec)} % der Empfehlung` : ""}
+            </p>
+          </div>
+        ))}
         <Button type="button" variant="outline" className="mt-3 h-11 w-full rounded-full" onClick={() => setForm((f) => ({ ...f, rows: [...f.rows, emptyRow()] }))}>
           <Plus aria-hidden />
           Inhaltsstoff hinzufügen
