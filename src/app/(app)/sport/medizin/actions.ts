@@ -44,13 +44,17 @@ export async function saveSickEpisodeAction(id: string | null, input: SickEpisod
   if (!parsed.success) return invalid(parsed.error);
   const d = parsed.data;
   if (d.start > todayInBerlin()) return { ok: false, fieldErrors: { start: ["Der Beginn liegt in der Zukunft."] } };
+  const complaint = d.kind === "beschwerde";
   const row = {
+    kind: d.kind,
+    severity: d.severity,
     title: d.title,
     started_on: d.start,
     ended_on: d.end,
     symptoms: [...new Set(d.symptoms.filter(Boolean))],
-    sick_note: d.sickNote,
-    temperatures: sortTemperatures(d.temperatures),
+    // Beschwerden: keine Krankschreibung, kein Fieber
+    sick_note: complaint ? false : d.sickNote,
+    temperatures: complaint ? [] : sortTemperatures(d.temperatures),
     note: d.note,
   };
   const supabase = await createClient();

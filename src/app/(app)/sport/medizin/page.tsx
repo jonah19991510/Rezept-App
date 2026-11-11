@@ -10,5 +10,6 @@ export const metadata: Metadata = { title: "Krankheitstage" };
 export default async function SickPage() {
   const user = await requireUser();
   const [episodes, intakes] = await Promise.all([getSickEpisodes(user.id), getMedicationIntakes(user.id)]);
-  return <SickView episodes={episodes} intakes={intakes} today={todayInBerlin()} />;
+  // Beschwerden (z. B. Kopfschmerzen) haben einen eigenen Tab und zählen hier nicht mit
+  return <SickView episodes={episodes.filter((e) => e.kind === "krank")} intakes={intakes} today={todayInBerlin()} />;
 }

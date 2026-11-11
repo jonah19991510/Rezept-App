@@ -80,6 +80,8 @@ export const temperatureSchema = z.object({
 
 export const sickEpisodeInputSchema = z
   .object({
+    kind: z.enum(["krank", "beschwerde"]),
+    severity: z.number().int().min(1, "Stärke 1 bis 10.").max(10, "Stärke 1 bis 10.").nullable(),
     title: required(60, "Bitte angeben, was du hattest."),
     start: date,
     end: date.nullable(),

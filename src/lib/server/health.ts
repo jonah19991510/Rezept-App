@@ -45,17 +45,19 @@ export async function getBloodTests(userId: string): Promise<BloodTest[]> {
   return data.map((r) => ({ id: r.id, date: r.taken_on, lab: r.lab, note: r.note, values: normalizeValues(r.results) }));
 }
 
-/** Krankheiten, neueste zuerst. */
+/** Krankheiten und Beschwerden, neueste zuerst (Art steht in `kind`). */
 export async function getSickEpisodes(userId: string): Promise<SickEpisode[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("sick_episodes")
-    .select("id, title, started_on, ended_on, symptoms, sick_note, temperatures, note")
+    .select("id, kind, severity, title, started_on, ended_on, symptoms, sick_note, temperatures, note")
     .eq("user_id", userId)
     .order("started_on", { ascending: false });
   if (error) throw new Error(`Krankheitstage konnten nicht geladen werden (${error.code})`);
   return data.map((r) => ({
     id: r.id,
+    kind: r.kind === "beschwerde" ? "beschwerde" : "krank",
+    severity: r.severity,
     title: r.title,
     start: r.started_on,
     end: r.ended_on,

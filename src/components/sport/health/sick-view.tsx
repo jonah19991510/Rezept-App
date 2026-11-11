@@ -91,7 +91,7 @@ export function SickView({ episodes, intakes, today }: { episodes: SickEpisode[]
       <MedicalNote>Bei hohem oder anhaltendem Fieber, Atemnot oder starken Beschwerden ärztliche Hilfe holen (Bereitschaftsdienst 116 117, Notruf 112).</MedicalNote>
 
       <Fab onClick={() => open(null)}>Krank eintragen</Fab>
-      {sheet ? <SickSheet key={sheet.episode?.id ?? "neu"} episode={sheet.episode} today={today} now={now} onClose={() => setSheet(null)} /> : null}
+      {sheet ? <SickSheet key={sheet.episode?.id ?? "neu"} episode={sheet.episode} kind="krank" today={today} now={now} onClose={() => setSheet(null)} /> : null}
     </>
   );
 }

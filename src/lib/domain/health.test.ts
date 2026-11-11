@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSeries, changes, normalizeValues, statusOf, type BloodTest } from "./blood";
-import { addMonths, dueInfo, episodeDays, medicationSummaries, normalizeTemperatures, relativeDays, sickDaysBetween, sickStats, sortCheckups, type SickEpisode } from "./medical";
+import { addMonths, complaintStats, dueInfo, episodeDays, medicationSummaries, normalizeTemperatures, relativeDays, sickDaysBetween, sickStats, sortCheckups, topTitles, type SickEpisode } from "./medical";
 import { checkNutrient, checkSupplement, dailyTotals, matchNutrient, monthlyCost, normalizeIngredients, nutrientOf, servingText, supplementCost, toNutrientUnit, type Supplement } from "./supplements";
 
 const supp = (over: Partial<Supplement>): Supplement => ({
@@ -133,6 +133,8 @@ describe("Blutwerte", () => {
 describe("Medizin & Vorsorge", () => {
   const ep = (start: string, end: string | null, over: Partial<SickEpisode> = {}): SickEpisode => ({
     id: start,
+    kind: "krank",
+    severity: null,
     title: "Erkältung",
     start,
     end,
@@ -149,6 +151,19 @@ describe("Medizin & Vorsorge", () => {
     const list = [ep("2025-12-30", "2026-01-02"), ep("2026-01-02", "2026-01-04", { sickNote: true }), ep("2026-11-10", null)];
     expect(sickDaysBetween(list, "2026-01-01", "2026-11-11", "2026-11-11")).toBe(6);
     expect(sickStats(list, "2026-11-11")).toEqual({ thisYear: 6, last12Months: 8, episodesThisYear: 3, withSickNote: 1 });
+  });
+
+  it("zählt Beschwerden getrennt", () => {
+    const list = [
+      ep("2026-11-02", "2026-11-02", { kind: "beschwerde", title: "Kopfschmerzen", severity: 6 }),
+      ep("2026-11-05", "2026-11-06", { kind: "beschwerde", title: "kopfschmerzen", severity: 4 }),
+      ep("2026-03-01", "2026-03-01", { kind: "beschwerde", title: "Migräne", severity: null }),
+    ];
+    expect(complaintStats(list, "2026-11-11")).toEqual({ daysThisYear: 4, daysLast30: 3, countThisYear: 3, avgSeverity: 5 });
+    expect(topTitles(list)).toEqual([
+      { title: "Kopfschmerzen", count: 2 },
+      { title: "Migräne", count: 1 },
+    ]);
   });
 
   it("prüft Fiebermessungen", () => {

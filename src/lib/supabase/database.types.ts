@@ -535,7 +535,9 @@ export type Database = {
           created_at: string
           ended_on: string | null
           id: string
+          kind: string
           note: string | null
+          severity: number | null
           sick_note: boolean
           started_on: string
           symptoms: string[]
@@ -548,7 +550,9 @@ export type Database = {
           created_at?: string
           ended_on?: string | null
           id?: string
+          kind?: string
           note?: string | null
+          severity?: number | null
           sick_note?: boolean
           started_on: string
           symptoms?: string[]
@@ -561,7 +565,9 @@ export type Database = {
           created_at?: string
           ended_on?: string | null
           id?: string
+          kind?: string
           note?: string | null
+          severity?: number | null
           sick_note?: boolean
           started_on?: string
           symptoms?: string[]

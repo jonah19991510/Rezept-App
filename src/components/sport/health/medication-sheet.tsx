@@ -175,12 +175,12 @@ export function MedicationSheet({
           </datalist>
         </Field>
         {episodeOptions.length ? (
-          <Field id="med-episode" label="Gehört zu Krankheit · optional">
+          <Field id="med-episode" label="Gehört zu Krankheit/Beschwerde · optional">
             <NativeSelect id="med-episode" value={form.episodeId} onChange={(e) => set("episodeId", e.target.value)}>
               <option value="">Keine</option>
               {episodeOptions.map((e) => (
                 <option key={e.id} value={e.id}>
-                  {e.title} ({e.end == null ? `seit ${shortDate(e.start)}` : `${shortDate(e.start)}–${shortDate(e.end)}`})
+                  {e.title} ({e.end == null ? `seit ${shortDate(e.start)}` : e.start === e.end ? shortDate(e.start) : `${shortDate(e.start)}–${shortDate(e.end)}`})
                 </option>
               ))}
             </NativeSelect>

@@ -2120,6 +2120,20 @@ Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, 
 bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
 über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
 
+### Nachtrag 11.11.2026: Beschwerden getrennt von Krankheitstagen
+
+Wunsch des Nutzers: Kopfschmerzen sollen nicht als krank zählen (verfälscht „wie oft krank im Jahr“), sondern einen
+eigenen Punkt haben. `sick_episodes` hat jetzt `kind` (`krank` | `beschwerde`) und `severity` (1–10). Neuer Tab
+**Beschwerden** (`/sport/medizin/beschwerden`, `ComplaintView`): Vorschläge (Kopfschmerzen, Migräne, Rücken- und
+Bauchschmerzen, Nackenverspannung, Übelkeit, Allergie, Schlafprobleme), Stärke 1–10, „hält noch an“ mit „Vorbei“,
+Kennzahlen (Tage dieses Jahr, letzte 30 Tage, Ø Stärke), häufigste, Liste nach Monat mit Medikamenten (verknüpft oder
+gleicher Grund am selben Tag). Tab „Krank“ (bisher „Krankheitstage“) und seine Statistik nur noch `kind = krank`.
+`SickSheet` mit Umschalter Krank | Beschwerde; bei Beschwerden ohne Fieber und Krankschreibung (Server leert sie), mit
+Stärke; Hinweis „Als Beschwerde eintragen“, wenn eine Beschwerde als krank eingetragen wird. Migräne und Allergie aus
+den Krankheits-Vorschlägen genommen. Migration `…20261111170000_complaints` am 11.11.2026 nach OK des Nutzers
+eingespielt; Bestand: „Migräne“ (09.11.) → Beschwerde. Tests (617), Typcheck, Lint grün; Oberfläche über temporäre
+Vorschauseite (gelöscht) bei 375 px geprüft.
+
 ### Nachtrag 11.11.2026: Packungsinhalt und Menge je Portion (Bugfix)
 
 Vom Nutzer gemeldet: 90 Kapseln, eine Portion = 3 Kapseln → die App rechnete mit 90 Portionen statt 30. Ursache: Das

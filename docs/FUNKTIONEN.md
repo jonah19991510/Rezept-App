@@ -1,6 +1,6 @@
 # Topform – Funktionsübersicht
 
-Stand: 11.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Supplemente mit Packungsinhalt und Menge je Portion, daraus die Portionen je Packung).
+Stand: 11.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Beschwerden wie Kopfschmerzen getrennt von Krankheitstagen).
 Live: <https://unser-rezeptbuch.vercel.app> · Next.js 16 · Supabase (Frankfurt) · Vercel (`fra1`)
 
 Die App hat **drei Bereiche** (Umschalter oben links): **Start**, **Essen & Trinken**, **Sport & Gesundheit**.
@@ -262,11 +262,13 @@ Topform
 - **Veränderungen** ab dem zweiten Test: vorher → jetzt, Differenz und %, besser/schlechter bezogen auf den Bereich, Statuswechsel („Niedrig → jetzt im Bereich“), wichtigste zuerst
 - Alle Werte im Verlauf (Mini-Graph, aufklappbar mit allen Messungen) und die Tests einzeln mit „vorher“-Vergleich; Status Niedrig/Im Bereich/Hoch
 
-### 3.15 Medizin & Vorsorge (`/sport/medizin`, Profilmenü, Tabs Krankheitstage · Medikamente · Vorsorge)
+### 3.15 Medizin & Vorsorge (`/sport/medizin`, Profilmenü, Tabs Krank · Beschwerden · Medikamente · Vorsorge)
 - **Krankheitstage:** Krankheit mit Bezeichnung (Vorschläge), von–bis oder „noch krank“, Symptome (Chips + eigene), krankgeschrieben, Fiebermessungen (Datum, Uhrzeit, °C; ab 38 °C rot), Notiz
 - Laufende Krankheit oben: Tag X, letzte/höchste Temperatur, **Fieber messen** mit einem Feld, „Wieder gesund“, Medikamente dazu
-- Kennzahlen: Krankheitstage dieses Jahr und letzte 12 Monate (Überschneidungen einmal), Anzahl, krankgeschrieben; häufigste Symptome; Liste nach Jahr
-- **Medikamente:** Einnahme mit Medikament, Dosis, Datum, Uhrzeit, Grund, optional Krankheit (laufende vorausgewählt), Notiz; Vorschläge aus dem Verlauf
+- Kennzahlen: Krankheitstage dieses Jahr und letzte 12 Monate (Überschneidungen einmal), Anzahl, krankgeschrieben; häufigste Symptome; Liste nach Jahr – **nur echte Krankheiten**, Beschwerden zählen nicht mit
+- **Beschwerden** (`/sport/medizin/beschwerden`): Kopfschmerzen, Migräne, Rücken-, Bauchschmerzen, Verspannung, Allergie … mit **Stärke 1–10**, von–bis oder „hält noch an“ (Knopf „Vorbei“), Begleiterscheinungen, Notiz; Kennzahlen Tage dieses Jahr, letzte 30 Tage, Ø Stärke; häufigste Beschwerden; Liste nach Monat mit Medikamenten
+- Im Eingabe-Sheet oben **Krank | Beschwerde** umschaltbar (zum Umsortieren); trägt man z. B. „Kopfschmerzen“ als krank ein, schlägt die App „Als Beschwerde eintragen“ vor
+- **Medikamente:** Einnahme mit Medikament, Dosis, Datum, Uhrzeit, Grund, optional Krankheit oder Beschwerde (laufende Krankheit vorausgewählt), Notiz; Vorschläge aus dem Verlauf
 - „Meine Medikamente“ je Name (Anzahl, zuletzt, Gründe) mit **„Nochmal“**; Einnahmen nach Tag (20 Tage, „Ältere anzeigen“)
 - **Vorsorge:** Untersuchung (Vorschläge mit üblichem Rhythmus: Zahnarzt, PZR, Check-up, Hautkrebs-Screening, Augenarzt, Impfungen …), Praxis, Rhythmus in Monaten, fest ausgemachter Termin, Notiz
 - Fälligkeit: Termin oder letzter Besuch + Rhythmus → „Fällig“ (überfällig), „Bald“ (30 Tage), „Geplant“, „Offen“; „Jetzt dran“ oben

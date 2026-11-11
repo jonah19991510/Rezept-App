@@ -6,7 +6,13 @@ import { addDays, daysBetween } from "./week";
 // Krankheitstage
 // ---------------------------------------------------------------------------
 
-export const SICK_TITLES = ["Erkältung", "Grippe", "Corona", "Magen-Darm", "Migräne", "Halsentzündung", "Verletzung", "Allergie"] as const;
+export const SICK_TITLES = ["Erkältung", "Grippe", "Corona", "Magen-Darm", "Halsentzündung", "Bronchitis", "Infekt", "Verletzung"] as const;
+
+/** Beschwerden: zählen nicht als krank (eigener Tab, eigene Statistik). */
+export const COMPLAINT_TITLES = ["Kopfschmerzen", "Migräne", "Rückenschmerzen", "Nackenverspannung", "Bauchschmerzen", "Übelkeit", "Allergie", "Schlafprobleme"] as const;
+
+/** Art eines Eintrags: krank (zählt als Krankheitstag) oder Beschwerde (z. B. Kopfschmerzen). */
+export type EpisodeKind = "krank" | "beschwerde";
 
 export const SYMPTOMS = [
   "Fieber",
@@ -30,6 +36,9 @@ export type Temperature = { date: string; time: string | null; celsius: number }
 
 export type SickEpisode = {
   id: string;
+  kind: EpisodeKind;
+  /** Stärke 1–10 (bei Beschwerden) */
+  severity: number | null;
   title: string;
   start: string;
   /** null = noch krank */
@@ -96,6 +105,33 @@ export function sickStats(episodes: SickEpisode[], today: string): SickStats {
     episodesThisYear: thisYear.length,
     withSickNote: thisYear.filter((e) => e.sickNote).length,
   };
+}
+
+export type ComplaintStats = { daysThisYear: number; daysLast30: number; countThisYear: number; avgSeverity: number | null };
+
+/** Beschwerden: Tage dieses Jahr und in den letzten 30 Tagen, Anzahl, Ø Stärke (dieses Jahr). */
+export function complaintStats(complaints: SickEpisode[], today: string): ComplaintStats {
+  const yearStart = `${today.slice(0, 4)}-01-01`;
+  const thisYear = complaints.filter((e) => (e.end ?? today) >= yearStart);
+  const rated = thisYear.filter((e) => e.severity != null);
+  return {
+    daysThisYear: sickDaysBetween(complaints, yearStart, today, today),
+    daysLast30: sickDaysBetween(complaints, addDays(today, -29), today, today),
+    countThisYear: thisYear.length,
+    avgSeverity: rated.length ? rated.reduce((sum, e) => sum + e.severity!, 0) / rated.length : null,
+  };
+}
+
+/** Häufigste Bezeichnungen (z. B. „Kopfschmerzen · 5×“). */
+export function topTitles(episodes: SickEpisode[], limit = 5): { title: string; count: number }[] {
+  const counts = new Map<string, { title: string; count: number }>();
+  for (const e of episodes) {
+    const key = e.title.trim().toLowerCase();
+    const entry = counts.get(key) ?? { title: e.title, count: 0 };
+    entry.count++;
+    counts.set(key, entry);
+  }
+  return [...counts.values()].sort((a, b) => b.count - a.count || a.title.localeCompare(b.title, "de")).slice(0, limit);
 }
 
 /** Häufigste Symptome (für die Übersicht). */
