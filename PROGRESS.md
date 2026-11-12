@@ -2120,6 +2120,15 @@ Balken) „Trainings der Woche“ mit Mo–So (Ruhetag, Dauer, Sätze, Volumen, 
 bleiben übergreifend. `rangeStart`/`rangeEnd`/`inRange` mit Wochen-Grenzen (Test). 445 Tests, Typcheck, Lint grün;
 über eine temporäre Vorschauseite (gelöscht) bei 375 px geprüft (Chip, Blättern auf KW 43, kein seitliches Scrollen).
 
+### Nachtrag 12.11.2026: Mangan, Molybdän, Bor, Chrom, Coenzym Q10
+
+Wunsch des Nutzers: neue Inhaltsstoffe bei den Supplementen. Referenzwerte (Erwachsene): Mangan Empfehlung 3 mg
+(EFSA-AI), BfR-Höchstmenge NEM 0,5 mg; Molybdän 65 µg (EFSA-AI), Obergrenze 600 µg (EFSA-UL); Bor ohne Empfehlung,
+Obergrenze 10 mg (EFSA-UL); Chrom ohne festgelegten Bedarf (DGE, EFSA), BfR-Höchstmenge 60 µg; Coenzym Q10 ohne
+offiziellen Richtwert. Namen wie „Ubiquinol“, „Chrompicolinat“ werden erkannt. Keine Migration (Inhaltsstoffe als
+jsonb, Prüfung über die Stoffliste). Test neu (618), Typcheck, Lint grün; Darstellung per temporärer Seite (gelöscht)
+geprüft.
+
 ### Nachtrag 11.11.2026: Beschwerden getrennt von Krankheitstagen
 
 Wunsch des Nutzers: Kopfschmerzen sollen nicht als krank zählen (verfälscht „wie oft krank im Jahr“), sondern einen

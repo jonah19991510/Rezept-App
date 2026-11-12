@@ -55,6 +55,19 @@ describe("Supplemente", () => {
     expect(totals[0].verdict).toBe("zu_viel");
   });
 
+  it("kennt Mangan, Molybdän, Bor, Chrom und Q10", () => {
+    expect(checkNutrient(nutrientOf("mangan")!, 2, "m").verdict).toBe("ueber_bfr");
+    expect(checkNutrient(nutrientOf("molybdaen")!, 50, "w").verdict).toBe("unter");
+    expect(checkNutrient(nutrientOf("bor")!, 3, "m").verdict).toBe("passt");
+    expect(checkNutrient(nutrientOf("bor")!, 12, "m").verdict).toBe("zu_viel");
+    expect(checkNutrient(nutrientOf("chrom")!, 40, "m").verdict).toBe("ohne");
+    expect(checkNutrient(nutrientOf("chrom")!, 200, "m").verdict).toBe("ueber_bfr");
+    expect(checkNutrient(nutrientOf("q10")!, 100, "m").verdict).toBe("ohne");
+    expect(matchNutrient("Ubiquinol")?.key).toBe("q10");
+    expect(matchNutrient("Chrompicolinat")?.key).toBe("chrom");
+    expect(matchNutrient("Molybdän")?.key).toBe("molybdaen");
+  });
+
   it("rechnet EPA und DHA zu Omega-3 zusammen", () => {
     const fish = supp({ id: "f", name: "Fischöl", servingsPerDay: 2, ingredients: [{ nutrient: "epa", name: "EPA (Omega-3)", amount: 300, unit: "mg" }, { nutrient: "dha", name: "DHA (Omega-3)", amount: 200, unit: "mg" }] });
     const check = checkSupplement(fish, "m");

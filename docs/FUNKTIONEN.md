@@ -1,6 +1,6 @@
 # Topform – Funktionsübersicht
 
-Stand: 11.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: häufigste Symptome auch bei den Beschwerden).
+Stand: 12.11.2026 (abgeleitet aus Code, `SPEC.md` und `PROGRESS.md`; zuletzt ergänzt: Mangan, Molybdän, Bor, Chrom und Coenzym Q10 bei den Supplementen).
 Live: <https://unser-rezeptbuch.vercel.app> · Next.js 16 · Supabase (Frankfurt) · Vercel (`fra1`)
 
 Die App hat **drei Bereiche** (Umschalter oben links): **Start**, **Essen & Trinken**, **Sport & Gesundheit**.
@@ -252,7 +252,7 @@ Topform
 
 ### 3.14 Supplemente & Blutwerte (`/sport/supplemente`, Profilmenü, Tabs Supplemente · Blutwerte)
 - **Supplement-Archiv:** Name, Marke, gekauft bei, Form (Kapsel, Tablette, Pulver, Tropfen, Flüssig), **Packungsinhalt** und **eine Portion** in der Einheit der Form (z. B. 90 Kapseln, 3 je Portion → 30 Portionen je Packung), Portionen pro Tag, Preis je Packung; „Nehme ich gerade“ (Schalter direkt auf der Karte) oder Archiv („nehme ich nicht mehr“); Notiz
-- **Inhaltsstoffe** je Portion aus 27 bekannten Stoffen (Vitamine, Mineralstoffe, Omega-3, Kreatin, Koffein; mg/µg/g, IE wird umgerechnet) oder freier Name (z. B. „D3“ wird als Vitamin D erkannt)
+- **Inhaltsstoffe** je Portion aus 32 bekannten Stoffen (Vitamine, Mineralstoffe und Spurenelemente inkl. Mangan, Molybdän, Bor, Chrom, dazu Omega-3, Coenzym Q10, Kreatin, Koffein; mg/µg/g, IE wird umgerechnet) oder freier Name (z. B. „D3“ wird als Vitamin D erkannt)
 - **EPA und DHA einzeln** eintragbar: zählen zusammen als Omega-3 (je Supplement „Omega-3 gesamt“, in der Tagessumme über alle Produkte); steht die Omega-3-Summe selbst auf der Packung, sind EPA/DHA nur Aufschlüsselung und zählen nicht doppelt
 - **Abgleich:** je Stoff Tagesmenge vs. Empfehlung (DGE, sonst EFSA; nach Geschlecht aus den Körpermaße-Einstellungen) und Obergrenze (EFSA) bzw. BfR-Höchstmenge für Nahrungsergänzung → „Passt“, „Unter Empfehlung“, „Über BfR-Höchstmenge“, „Zu viel“, Hinweis „nah an der Obergrenze“; live schon beim Eintragen
 - **Tagessumme** über alle Supplemente, die man gerade nimmt (z. B. Vitamin D aus zwei Produkten), mit Balken, Prozent der Empfehlung und Herkunft
